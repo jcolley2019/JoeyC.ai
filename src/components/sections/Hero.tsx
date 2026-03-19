@@ -145,7 +145,7 @@ export function Hero() {
 
     // Animate the lower-third card in
     const card = contentRef.current.querySelector('.hero-card')
-    if (card && window.matchMedia('(min-width: 1201px)').matches) {
+    if (card && window.matchMedia('(min-width: 1151px)').matches) {
       gsap.fromTo(card,
         { opacity: 0, x: 60 },
         { opacity: 1, x: 0, duration: 1, ease: 'power4.out', delay: 0.8 }
@@ -155,7 +155,7 @@ export function Hero() {
 
   return (
     <section
-      className="relative w-full min-h-screen overflow-hidden"
+      className="hero-section relative w-full min-h-screen overflow-hidden"
       style={{ backgroundColor: '#080b16' }}
     >
       {/* Hero headshot — uses vh so it scales with window height, not width */}
@@ -195,7 +195,7 @@ export function Hero() {
         <div className="flex-1 flex items-center justify-end" style={{ paddingRight: 'clamp(4rem, 10vw, 12rem)' }}>
           <div className="hero-card" style={{ opacity: 0, maxWidth: 'clamp(320px, 35vw, 520px)' }}>
             <div
-              className="relative rounded-md overflow-visible"
+              className="relative rounded-md overflow-hidden"
               style={{
                 background: '#000000',
                 border: '1px solid rgba(0, 100, 255, 0.25)',
@@ -296,15 +296,18 @@ export function Hero() {
             }}>
               JoeyC.ai
             </span>
-            <span style={{
-              fontFamily: "'Rajdhani', sans-serif",
-              fontSize: 'clamp(9px, 1.3vw, 14px)',
-              color: '#ffffff',
-              letterSpacing: '0.15em',
-              fontWeight: 600,
-            }}>
-              TECH CREATOR // <span style={{ color: '#4a6fa5' }}>AI ENTHUSIAST</span> // BUILD IN PUBLIC
-            </span>
+            <div style={{ position: 'relative', overflow: 'hidden', display: 'inline-block' }}>
+              <span style={{
+                fontFamily: "'Rajdhani', sans-serif",
+                fontSize: 'clamp(9px, 1.3vw, 14px)',
+                color: '#ffffff',
+                letterSpacing: '0.15em',
+                fontWeight: 600,
+              }}>
+                TECH CREATOR // <span style={{ color: '#4a6fa5' }}>AI ENTHUSIAST</span> // BUILD IN PUBLIC
+              </span>
+              <div className="lower-third-scan absolute top-0 left-0 h-full pointer-events-none z-10" />
+            </div>
           </div>
           <HeroName />
         </div>

@@ -510,7 +510,7 @@ body {
   gap: 6px;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1150px) {
   .hero-card { display: none !important; }
   .hero-fallback-subtitle { display: flex; }
 }
