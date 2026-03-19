@@ -191,8 +191,8 @@ export function Hero() {
       {/* === CONTENT LAYER === */}
       <div ref={contentRef} className="relative z-[10] min-h-screen flex flex-col">
 
-        {/* Lower third card — absolute positioned on desktop, flows on mobile */}
-        <div className="hero-card-wrapper flex-1 relative">
+        {/* Lower third card — vertically centered, right side */}
+        <div className="flex-1 flex items-center justify-end px-6 md:px-12 lg:px-20" style={{ paddingRight: 'calc((100vw - 50%) / 4 + 1rem - 96px)' }}>
           <div className="hero-card" style={{ opacity: 0 }}>
             <div
               className="relative rounded-md overflow-visible"

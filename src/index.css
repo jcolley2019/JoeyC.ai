@@ -27,52 +27,6 @@ html {
    Photo sizing is handled inline with clamp/vh.
    ============================================== */
 
-/* DESKTOP (>1200px): card absolute, right side */
-.hero-card-wrapper {
-  position: relative;
-}
-.hero-card {
-  position: absolute;
-  top: 60%;
-  right: 5%;
-  width: 380px;
-  zoom: 1;
-}
-
-/* MEDIUM DESKTOP (≤1200px) */
-@media (max-width: 1200px) {
-  .hero-card {
-    zoom: 0.85;
-  }
-}
-
-/* SMALL DESKTOP / LARGE TABLET (≤1024px) */
-@media (max-width: 1024px) {
-  .hero-card {
-    zoom: 0.7;
-    right: 2%;
-  }
-}
-
-/* TABLET (≤860px) */
-@media (max-width: 860px) {
-  .hero-card {
-    zoom: 0.6;
-    right: 1%;
-  }
-}
-
-/* MOBILE (≤768px) */
-@media (max-width: 768px) {
-  .hero-card {
-    position: relative;
-    zoom: 0.75;
-    margin: -60px auto 0 auto;
-    left: auto;
-    right: auto;
-    display: block;
-  }
-}
 
 body {
   margin: 0;
