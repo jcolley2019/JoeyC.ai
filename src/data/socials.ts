@@ -1,4 +1,4 @@
-import { FaTiktok, FaInstagram, FaPinterest, FaYoutube, FaGlobe } from 'react-icons/fa6'
+import { FaTiktok, FaInstagram, FaPinterest, FaYoutube, FaGlobe, FaXTwitter } from 'react-icons/fa6'
 import type { SocialLink } from '../types'
 
 export const socials: SocialLink[] = [
@@ -22,6 +22,11 @@ export const socials: SocialLink[] = [
     url: '#',
     icon: FaYoutube,
     comingSoon: true,
+  },
+  {
+    platform: 'X',
+    url: 'https://x.com/buildaiwithjoey',
+    icon: FaXTwitter,
   },
   {
     platform: 'Website',

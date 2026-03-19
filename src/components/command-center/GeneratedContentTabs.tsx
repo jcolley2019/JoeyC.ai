@@ -1,0 +1,519 @@
+import { useState, useMemo, useRef, useCallback } from 'react'
+import { marked } from 'marked'
+import TurndownService from 'turndown'
+import { useLanguage } from '../../hooks/useLanguage'
+
+interface ContentSection {
+  label: string
+  format: 'blog' | 'social' | 'thread' | 'video'
+  platform?: string
+  content: string
+}
+
+interface GeneratedContentTabsProps {
+  rawContent: string
+  onContentChange: (content: string) => void
+  onPublishBlog?: (content: string) => void
+}
+
+// Parse combined multi-format output into sections
+function parseSections(raw: string): ContentSection[] {
+  // Check for section headers like "## 📝 Blog Article" or "## 📱 Tiktok"
+  const sectionRegex = /^## (📝 Blog Article|📱 (\w+)|🎬 Video Prompt|🧵 X Thread)$/gm
+  const matches: { label: string; index: number }[] = []
+  let m: RegExpExecArray | null
+  while ((m = sectionRegex.exec(raw)) !== null) {
+    matches.push({ label: m[1], index: m.index })
+  }
+
+  if (matches.length === 0) {
+    // Single format — guess from content
+    return [{ label: 'Content', format: 'social', content: raw.trim() }]
+  }
+
+  const sections: ContentSection[] = []
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].index + matches[i].label.length + 3 // skip "## label\n"
+    const end = i + 1 < matches.length
+      ? raw.lastIndexOf('---', matches[i + 1].index) > start
+        ? raw.lastIndexOf('---', matches[i + 1].index)
+        : matches[i + 1].index
+      : raw.length
+    const content = raw.slice(start, end).replace(/^[\s-]+/, '').trim()
+    const label = matches[i].label
+
+    let format: ContentSection['format'] = 'social'
+    let platform: string | undefined
+    if (label.includes('Blog')) format = 'blog'
+    else if (label.includes('Video')) format = 'video'
+    else if (label.includes('Thread')) format = 'thread'
+    else if (label.includes('📱')) {
+      format = 'social'
+      platform = label.replace('📱 ', '')
+    }
+
+    sections.push({ label, format, platform, content })
+  }
+
+  return sections
+}
+
+const turndownService = new TurndownService({
+  headingStyle: 'atx',
+  bulletListMarker: '-',
+  codeBlockStyle: 'fenced',
+})
+
+function BlogView({ content, editing, onSave }: { content: string; editing: boolean; onSave: (markdown: string) => void }) {
+  const html = useMemo(() => marked.parse(content, { async: false }) as string, [content])
+  const editorRef = useRef<HTMLDivElement>(null)
+
+  const handleSave = useCallback(() => {
+    if (!editorRef.current) return
+    const md = turndownService.turndown(editorRef.current.innerHTML)
+    onSave(md)
+  }, [onSave])
+
+  // Expose save handler via ref callback
+  const saveRef = useRef(handleSave)
+  saveRef.current = handleSave
+
+  return (
+    <div
+      ref={editorRef}
+      contentEditable={editing}
+      suppressContentEditableWarning
+      className={`prose prose-invert max-w-none px-6 py-6 bg-bg-card border rounded-lg overflow-y-auto focus:outline-none ${
+        editing
+          ? 'border-primary/40 ring-1 ring-primary/20 cursor-text'
+          : 'border-border'
+      }`}
+      style={{ maxHeight: '700px' }}
+      dangerouslySetInnerHTML={{ __html: html }}
+      data-save-ref={editing ? 'true' : undefined}
+    />
+  )
+}
+
+// Helper to extract markdown from a BlogView editor ref
+function getBlogViewMarkdown(container: HTMLElement | null): string | null {
+  if (!container) return null
+  const editor = container.querySelector('[contenteditable="true"]') as HTMLElement | null
+  if (!editor) return null
+  return turndownService.turndown(editor.innerHTML)
+}
+
+// Parse social content into labeled sections (works for TikTok, Instagram, etc.)
+function parseSocialSections(content: string): { header: string; body: string }[] {
+  // Match section headers like "**🎬 HOOK (first 3 seconds)**" or "**📝 SCRIPT**"
+  const sectionRegex = /\*\*([^*]+)\*\*/g
+  const headers: { text: string; index: number }[] = []
+  let match: RegExpExecArray | null
+  while ((match = sectionRegex.exec(content)) !== null) {
+    // Only treat as a section header if it starts at the beginning of a line
+    const before = content.slice(0, match.index)
+    if (match.index === 0 || before.endsWith('\n') || before.endsWith('\n\n')) {
+      headers.push({ text: match[1].trim(), index: match.index })
+    }
+  }
+
+  if (headers.length === 0) {
+    return [{ header: '', body: content }]
+  }
+
+  const sections: { header: string; body: string }[] = []
+  for (let i = 0; i < headers.length; i++) {
+    const headerEnd = headers[i].index + headers[i].text.length + 4 // 4 for the ** markers
+    const bodyEnd = i + 1 < headers.length ? headers[i + 1].index : content.length
+    const body = content.slice(headerEnd, bodyEnd).trim()
+    sections.push({ header: headers[i].text, body })
+  }
+  return sections
+}
+
+function cleanSocialText(text: string, isHashtagSection = false): string {
+  let cleaned = text
+    .replace(/\*\*(.+?)\*\*/g, '$1') // bold markers
+    .replace(/\*(.+?)\*/g, '$1')     // italic markers
+    .replace(/^#+\s*/gm, '')         // header markers
+    .replace(/^[-*]\s/gm, '• ')     // bullets
+
+  if (isHashtagSection) {
+    // In hashtag sections, ensure every word that looks like a hashtag gets the # prefix
+    cleaned = cleaned.replace(/(^|\s)(?!#)([A-Z][A-Za-z0-9]{2,})/gm, '$1#$2')
+  }
+
+  return cleaned
+}
+
+// Renders social content body with support for numbered lists, bullets, and paragraphs
+function SocialBody({ text }: { text: string }) {
+  const blocks = text.split('\n\n')
+  return (
+    <>
+      {blocks.map((block, bi) => {
+        const lines = block.split('\n').filter(Boolean)
+
+        // Check if this block is a numbered list (lines start with 1., 2., etc.)
+        const isNumberedList = lines.length > 1 && lines.every(l => /^\d+[\.\)]\s/.test(l))
+        if (isNumberedList) {
+          return (
+            <ol key={bi} className="list-decimal list-inside space-y-1.5 mb-3 last:mb-0">
+              {lines.map((line, li) => (
+                <li key={li} className="text-sm text-text-primary leading-relaxed">
+                  {line.replace(/^\d+[\.\)]\s*/, '')}
+                </li>
+              ))}
+            </ol>
+          )
+        }
+
+        // Check if this block is a bullet list (lines start with • or - )
+        const isBulletList = lines.length > 1 && lines.every(l => /^[•\-]\s/.test(l))
+        if (isBulletList) {
+          return (
+            <ul key={bi} className="list-disc list-inside space-y-1.5 mb-3 last:mb-0">
+              {lines.map((line, li) => (
+                <li key={li} className="text-sm text-text-primary leading-relaxed">
+                  {line.replace(/^[•\-]\s*/, '')}
+                </li>
+              ))}
+            </ul>
+          )
+        }
+
+        // Regular paragraph block
+        return (
+          <div key={bi} className="mb-3 last:mb-0">
+            {lines.map((line, li) => (
+              <p key={li} className="text-sm text-text-primary leading-relaxed">{line}</p>
+            ))}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+function SocialView({ content }: { content: string }) {
+  const sections = parseSocialSections(content)
+  const hasSections = sections.length > 1 || sections[0]?.header
+
+  if (!hasSections) {
+    // Fallback: simple render for unstructured content
+    const cleaned = cleanSocialText(content)
+    return (
+      <div className="bg-bg-card border border-border rounded-lg px-4 py-3 overflow-y-auto" style={{ maxHeight: '600px' }}>
+        {cleaned.split('\n\n').map((block, i) => (
+          <div key={i} className="mb-4 last:mb-0">
+            {block.split('\n').map((line, j) => (
+              <p key={j} className="text-sm text-text-primary leading-relaxed">{line}</p>
+            ))}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3 overflow-y-auto" style={{ maxHeight: '600px' }}>
+      {sections.map((section, i) => {
+        const isHashtags = /hashtag/i.test(section.header)
+        const cleaned = cleanSocialText(section.body, isHashtags)
+        return (
+          <div key={i} className="bg-bg-card border border-border rounded-lg overflow-hidden">
+            {/* Section header */}
+            {section.header && (
+              <div className="px-4 py-2 border-b border-border bg-bg-section">
+                <h4 className="text-xs font-mono font-semibold text-primary tracking-wide">
+                  {section.header}
+                </h4>
+              </div>
+            )}
+            {/* Section body */}
+            <div className="px-4 py-3">
+              <SocialBody text={cleaned} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ThreadView({ content }: { content: string }) {
+  // Parse tweets: split on --- separators, numbered prefixes (1/, 2.), or double newlines before numbers
+  const tweets = content
+    .split(/\n*---\n*|\n\n(?=\*?\*?\d+[\.\)\/])/)
+    .map(t => t.trim())
+    .filter(Boolean)
+    // Clean each tweet: strip markdown symbols, number prefixes, header markers
+    .map(raw => {
+      return raw
+        .replace(/^#+\s*/gm, '')              // header markers
+        .replace(/\*\*(.+?)\*\*/g, '$1')      // bold **text**
+        .replace(/\*(.+?)\*/g, '$1')          // italic *text*
+        .replace(/^\*?\*?\d+[\.\)\/]\*?\*?\s*/, '') // number prefix like "1/" or "**2.**"
+        .trim()
+    })
+    .filter(Boolean)
+
+  return (
+    <div className="space-y-3 overflow-y-auto" style={{ maxHeight: '600px' }}>
+      {tweets.map((tweet, i) => {
+        const charCount = tweet.length
+        const overLimit = charCount > 280
+        return (
+          <div key={i} className="bg-bg-card border border-border rounded-lg px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <span className="shrink-0 text-xs font-mono text-primary/60 mt-0.5">{i + 1}.</span>
+                <div className="flex-1 text-sm text-text-primary whitespace-pre-wrap leading-relaxed">
+                  {tweet}
+                </div>
+              </div>
+              <span className={`shrink-0 text-[10px] font-mono tabular-nums px-2 py-0.5 rounded-full border ${
+                overLimit
+                  ? 'border-red-400/30 text-red-400 bg-red-400/5'
+                  : 'border-border text-text-secondary'
+              }`}>
+                {charCount}/280
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function VideoView({ content }: { content: string }) {
+  return (
+    <div className="bg-bg-card border border-border rounded-lg px-4 py-3 overflow-y-auto" style={{ maxHeight: '600px' }}>
+      {content.split('\n\n').map((block, i) => {
+        // Detect section headers (bold text with emoji)
+        const isHeader = /^\*\*.+\*\*$/.test(block.trim())
+        if (isHeader) {
+          return (
+            <h3 key={i} className="text-sm font-semibold text-primary mt-4 mb-2 first:mt-0">
+              {block.replace(/\*\*/g, '')}
+            </h3>
+          )
+        }
+        return (
+          <div key={i} className="mb-3 last:mb-0">
+            {block.split('\n').map((line, j) => (
+              <p key={j} className="text-sm text-text-primary leading-relaxed">
+                {line}
+              </p>
+            ))}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export function GeneratedContentTabs({ rawContent, onContentChange, onPublishBlog }: GeneratedContentTabsProps) {
+  const { t } = useLanguage()
+  const sections = useMemo(() => parseSections(rawContent), [rawContent])
+  const [activeTab, setActiveTab] = useState(0)
+  const [editing, setEditing] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const contentContainerRef = useRef<HTMLDivElement>(null)
+
+  const currentSection = sections[activeTab] || sections[0]
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(currentSection?.content || rawContent)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleSave = useCallback(() => {
+    const md = getBlogViewMarkdown(contentContainerRef.current)
+    if (md === null) return
+
+    const newSections = [...sections]
+    newSections[activeTab] = { ...currentSection, content: md }
+    if (sections.length === 1) {
+      onContentChange(md)
+    } else {
+      const rebuilt = newSections
+        .map(s => `## ${s.label}\n\n${s.content}`)
+        .join('\n\n---\n\n')
+      onContentChange(rebuilt)
+    }
+    setEditing(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }, [sections, activeTab, currentSection, onContentChange])
+
+  const handleDiscard = () => {
+    setEditing(false)
+  }
+
+  // Tab display names — exact labels
+  const tabName = (s: ContentSection) => {
+    if (s.format === 'blog') return 'Blog'
+    if (s.format === 'thread') return 'X Thread'
+    if (s.format === 'video') return 'Video Prompt'
+    if (s.platform) {
+      const names: Record<string, string> = {
+        tiktok: 'TikTok',
+        instagram: 'Instagram',
+        pinterest: 'Pinterest',
+        linkedin: 'LinkedIn',
+        youtube: 'YouTube',
+      }
+      return names[s.platform] || s.platform.charAt(0).toUpperCase() + s.platform.slice(1)
+    }
+    return 'Social Post'
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-text-primary">{t('gen.title')}</h2>
+        {editing && (
+          <span className="text-[10px] font-mono text-primary">{t('gen.editing')}</span>
+        )}
+      </div>
+
+      {/* Tabs */}
+      {sections.length > 1 && (
+        <div className="flex gap-1 bg-bg border border-border rounded-lg p-1">
+          {sections.map((section, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                setActiveTab(i)
+                setEditing(false)
+              }}
+              className={`flex-1 px-3 py-2.5 rounded-md text-xs font-mono font-medium transition-all text-center ${
+                activeTab === i
+                  ? 'bg-primary/15 text-primary border border-primary/30 shadow-sm shadow-primary/10'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-card border border-transparent'
+              }`}
+            >
+              {tabName(section)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Content view */}
+      <div ref={contentContainerRef}>
+        {currentSection && (
+          <>
+            {currentSection.format === 'blog' && (
+              <BlogView
+                content={currentSection.content}
+                editing={editing}
+                onSave={() => {}}
+              />
+            )}
+            {currentSection.format === 'social' && <SocialView content={currentSection.content} />}
+            {currentSection.format === 'thread' && <ThreadView content={currentSection.content} />}
+            {currentSection.format === 'video' && <VideoView content={currentSection.content} />}
+          </>
+        )}
+      </div>
+
+      {/* Bottom toolbar — format-specific actions */}
+      <div className="flex items-center gap-2">
+        {/* Blog: Edit + Save/Cancel + Publish */}
+        {currentSection?.format === 'blog' && (
+          <>
+            {!editing ? (
+              <>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+                >
+                  {saved ? t('gen.saved') : t('gen.edit')}
+                </button>
+                <button
+                  onClick={() => onPublishBlog?.(currentSection.content)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  {t('gen.publish')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  {t('gen.save')}
+                </button>
+                <button
+                  onClick={handleDiscard}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-red-400/30 hover:text-red-400 transition-colors"
+                >
+                  {t('gen.cancel')}
+                </button>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Social posts (TikTok, Instagram, LinkedIn, etc.): Edit + Copy */}
+        {currentSection?.format === 'social' && (
+          <>
+            <button
+              onClick={() => {/* TODO: inline edit for social */}}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+            >
+              {t('gen.edit')}
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+            >
+              {copied ? t('gen.copied') : t('gen.copy')}
+            </button>
+          </>
+        )}
+
+        {/* X Thread: Edit + Post to X */}
+        {currentSection?.format === 'thread' && (
+          <>
+            <button
+              onClick={() => {/* TODO: inline edit for thread */}}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+            >
+              {t('gen.edit')}
+            </button>
+            <button
+              onClick={() => {/* TODO: X API integration */}}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-[#1d9bf0]/30 bg-[#1d9bf0]/10 text-[#1d9bf0] hover:bg-[#1d9bf0]/20 transition-colors"
+            >
+              {t('gen.postx')}
+            </button>
+          </>
+        )}
+
+        {/* Video Prompt: Edit + Copy */}
+        {currentSection?.format === 'video' && (
+          <>
+            <button
+              onClick={() => {/* TODO: inline edit for video */}}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+            >
+              {t('gen.edit')}
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+            >
+              {copied ? t('gen.copied') : t('gen.copy')}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
