@@ -156,7 +156,7 @@ export function Hero() {
   return (
     <section
       className="hero-section relative w-full min-h-screen overflow-hidden"
-      style={{ backgroundColor: '#080b16' }}
+      style={{ backgroundColor: '#080b16', overflowX: 'hidden', maxWidth: '100vw' }}
     >
       {/* Hero headshot — uses vh so it scales with window height, not width */}
       <div
@@ -287,7 +287,7 @@ export function Hero() {
         <div className="w-full">
           {/* Fallback subtitle — visible below 1200px when hero-card is hidden */}
           <div className="hero-fallback-subtitle">
-            <span style={{
+            <span className="joeyc-title" style={{
               fontFamily: "'Orbitron', sans-serif",
               fontSize: 'clamp(18px, 2.5vw, 28px)',
               color: '#1a8fff',
@@ -297,7 +297,7 @@ export function Hero() {
               JoeyC.ai
             </span>
             <div style={{ position: 'relative', overflow: 'hidden', display: 'inline-block' }}>
-              <span style={{
+              <span className="tagline-text" style={{
                 fontFamily: "'Rajdhani', sans-serif",
                 fontSize: 'clamp(9px, 1.3vw, 14px)',
                 color: '#ffffff',

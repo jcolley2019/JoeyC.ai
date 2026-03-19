@@ -10,7 +10,7 @@ import { MouseGlow } from './components/ui/MouseGlow'
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-bg noise-overlay">
+    <div className="min-h-screen bg-bg noise-overlay" style={{ overflowX: 'hidden', maxWidth: '100vw' }}>
       <MouseGlow />
       <Navbar />
       <Hero />

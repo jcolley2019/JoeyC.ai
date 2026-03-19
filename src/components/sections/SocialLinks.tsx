@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { socials } from '../../data/socials'
 import { useSocialBurst } from '../../hooks/useSocialBurst'
@@ -7,6 +7,39 @@ export function SocialLinks() {
   const headerRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const { onMouseEnter } = useSocialBurst()
+  const [tappedPlatform, setTappedPlatform] = useState<string | null>(null)
+  const tappedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent, social: typeof socials[number]) => {
+    if (social.comingSoon) return
+    e.preventDefault()
+
+    const touch = e.touches[0]
+    const fakeEvent = {
+      currentTarget: e.currentTarget,
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    } as any
+    onMouseEnter(fakeEvent, social.platform)
+
+    if (tappedPlatform === social.platform) {
+      clearTimeout(tappedTimeoutRef.current!)
+      setTappedPlatform(null)
+      window.open(social.url, '_blank')
+    } else {
+      if (tappedTimeoutRef.current) clearTimeout(tappedTimeoutRef.current)
+      setTappedPlatform(social.platform)
+      tappedTimeoutRef.current = setTimeout(() => {
+        setTappedPlatform(null)
+      }, 3000)
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (tappedTimeoutRef.current) clearTimeout(tappedTimeoutRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     // Header
@@ -68,6 +101,7 @@ export function SocialLinks() {
                 target={social.comingSoon ? undefined : '_blank'}
                 rel="noopener noreferrer"
                 onMouseEnter={(e) => !social.comingSoon && onMouseEnter(e, social.platform)}
+                onTouchStart={(e) => handleTouchStart(e, social)}
                 className={`social-card group relative flex items-center gap-4 p-4 rounded-xl border border-border bg-bg-card transition-all duration-300 hover:scale-105 hover:border-[#4a6fa5]/50 hover:shadow-[0_0_30px_rgba(26,143,255,0.1)] overflow-visible ${
                   social.comingSoon ? 'opacity-40 cursor-default' : ''
                 }`}
@@ -93,6 +127,28 @@ export function SocialLinks() {
                   >
                     <path d="M3 8h10m-4-4l4 4-4 4" />
                   </svg>
+                )}
+                {tappedPlatform === social.platform && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-28px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontSize: '10px',
+                    color: '#1a8fff',
+                    whiteSpace: 'nowrap',
+                    fontFamily: "'Rajdhani', sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '1.5px',
+                    background: 'rgba(0,0,0,0.8)',
+                    padding: '3px 10px',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(26,143,255,0.3)',
+                    zIndex: 50,
+                    animation: 'fadeIn 0.2s ease'
+                  }}>
+                    TAP AGAIN TO VISIT
+                  </div>
                 )}
               </a>
             )

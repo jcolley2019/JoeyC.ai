@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
 @theme {
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -513,4 +518,76 @@ body {
 @media (max-width: 1150px) {
   .hero-card { display: none !important; }
   .hero-fallback-subtitle { display: flex; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Hero tablet overrides */
+@media (max-width: 1150px) {
+  .hero-fallback-subtitle .joeyc-title {
+    font-size: clamp(28px, 5vw, 42px) !important;
+  }
+  .hero-fallback-subtitle .tagline-text {
+    font-size: clamp(11px, 1.8vw, 16px) !important;
+    letter-spacing: 0.12em !important;
+  }
+}
+
+/* Hero mobile overrides */
+@media (max-width: 768px) {
+
+  /* Fix horizontal overflow */
+  .hero-section,
+  .hero-section * {
+    max-width: 100vw !important;
+  }
+  .hero-section {
+    overflow-x: hidden !important;
+  }
+
+  /* Hero photo - taller to show full face */
+  .hero-photo {
+    width: 100vw !important;
+    height: 115vw !important;
+    object-fit: cover !important;
+    object-position: center 5% !important;
+  }
+
+  .hero-card {
+    display: none !important;
+  }
+
+  /* Fallback subtitle - tight under photo */
+  .hero-fallback-subtitle {
+    display: flex !important;
+    gap: 0px !important;
+    margin-top: -50vw !important;
+    width: 100% !important;
+    padding: 0 !important;
+    align-items: center !important;
+  }
+
+  .hero-fallback-subtitle .joeyc-title {
+    font-size: 9.75vw !important;
+    margin-bottom: -3vw !important;
+  }
+
+  .hero-fallback-subtitle .tagline-text {
+    font-size: 3.2vw !important;
+    margin-top: -6vw !important;
+    letter-spacing: 0.06em !important;
+    white-space: nowrap !important;
+  }
+
+  .hero-bg-text {
+    font-size: 17vw !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1 !important;
+    margin-top: 3vw !important;
+    transform: scaleY(1.4) !important;
+    transform-origin: top center !important;
+  }
 }

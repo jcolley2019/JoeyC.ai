@@ -84,7 +84,7 @@ export function Navbar() {
             : 'bg-bg/20 backdrop-blur-sm'
         }`}
       >
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="w-full max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="#" className="flex items-center group">
             <span className="font-display text-sm font-medium text-primary glow-text group-hover:text-primary-hover transition-colors tracking-wider">
               JoeyC.ai
