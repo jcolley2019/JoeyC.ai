@@ -145,7 +145,7 @@ export function Hero() {
 
     // Animate the lower-third card in
     const card = contentRef.current.querySelector('.hero-card')
-    if (card) {
+    if (card && window.matchMedia('(min-width: 1201px)').matches) {
       gsap.fromTo(card,
         { opacity: 0, x: 60 },
         { opacity: 1, x: 0, duration: 1, ease: 'power4.out', delay: 0.8 }
@@ -192,14 +192,14 @@ export function Hero() {
       <div ref={contentRef} className="relative z-[10] min-h-screen flex flex-col">
 
         {/* Lower third card — vertically centered, right side */}
-        <div className="flex-1 flex items-center justify-end px-6 md:px-12 lg:px-20" style={{ paddingRight: 'calc((100vw - 50%) / 4 + 1rem - 96px)' }}>
-          <div className="hero-card" style={{ opacity: 0 }}>
+        <div className="flex-1 flex items-center justify-end" style={{ paddingRight: 'clamp(4rem, 10vw, 12rem)' }}>
+          <div className="hero-card" style={{ opacity: 0, maxWidth: 'clamp(320px, 35vw, 520px)' }}>
             <div
               className="relative rounded-md overflow-visible"
               style={{
                 background: '#000000',
                 border: '1px solid rgba(0, 100, 255, 0.25)',
-                padding: '12px 30px',
+                padding: 'clamp(8px, 1.2vw, 14px) clamp(20px, 3vw, 40px)',
                 boxShadow: '0 15px 35px rgba(0, 0, 0, 0.8), inset 0 0 25px rgba(0, 100, 255, 0.05)',
               }}
             >
@@ -229,7 +229,7 @@ export function Hero() {
                 <span
                   className="font-display font-bold"
                   style={{
-                    fontSize: '40px',
+                    fontSize: 'clamp(22px, 3vw, 42px)',
                     color: '#1a8fff',
                     textShadow: '0 0 15px rgba(0, 120, 255, 0.6)',
                     lineHeight: 1,
@@ -258,15 +258,15 @@ export function Hero() {
               </div>
 
               {/* Row 3: Socials */}
-              <div className="flex items-center justify-evenly w-full mt-3 px-4" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                <a href="https://www.tiktok.com/@buildaiwithjoey" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-white hover:text-[#1a8fff] transition-colors" style={{ fontSize: '18px', fontWeight: 600 }}>
-                  <svg fill="currentColor" viewBox="0 0 448 512" width="20" height="20">
+              <div className="flex items-center justify-evenly w-full px-2" style={{ marginTop: 'clamp(6px, 0.8vw, 12px)', fontFamily: "'Rajdhani', sans-serif" }}>
+                <a href="https://www.tiktok.com/@buildaiwithjoey" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-white hover:text-[#1a8fff] transition-colors" style={{ fontSize: 'clamp(11px, 1.3vw, 18px)', fontWeight: 600 }}>
+                  <svg fill="currentColor" viewBox="0 0 448 512" style={{ width: 'clamp(14px, 1.5vw, 20px)', height: 'clamp(14px, 1.5vw, 20px)' }}>
                     <path d="M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0l88,0a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z"/>
                   </svg>
                   @buildaiwithjoey
                 </a>
-                <a href="https://instagram.com/gobuildai" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-white hover:text-pink-500 transition-colors" style={{ fontSize: '18px', fontWeight: 600 }}>
-                  <svg viewBox="0 0 448 512" width="20" height="20">
+                <a href="https://instagram.com/gobuildai" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-white hover:text-pink-500 transition-colors" style={{ fontSize: 'clamp(11px, 1.3vw, 18px)', fontWeight: 600 }}>
+                  <svg viewBox="0 0 448 512" style={{ width: 'clamp(14px, 1.5vw, 20px)', height: 'clamp(14px, 1.5vw, 20px)' }}>
                     <defs>
                       <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
                         <stop offset="0%" stopColor="#fd5949" />
@@ -285,6 +285,27 @@ export function Hero() {
 
         {/* === BOTTOM: JOEY COLLEY — GSAP staggered letter reveal === */}
         <div className="w-full">
+          {/* Fallback subtitle — visible below 1200px when hero-card is hidden */}
+          <div className="hero-fallback-subtitle">
+            <span style={{
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: 'clamp(18px, 2.5vw, 28px)',
+              color: '#1a8fff',
+              textShadow: '0 0 15px rgba(0, 120, 255, 0.6)',
+              letterSpacing: '0.05em',
+            }}>
+              JoeyC.ai
+            </span>
+            <span style={{
+              fontFamily: "'Rajdhani', sans-serif",
+              fontSize: 'clamp(9px, 1.3vw, 14px)',
+              color: '#ffffff',
+              letterSpacing: '0.15em',
+              fontWeight: 600,
+            }}>
+              TECH CREATOR // <span style={{ color: '#4a6fa5' }}>AI ENTHUSIAST</span> // BUILD IN PUBLIC
+            </span>
+          </div>
           <HeroName />
         </div>
       </div>
