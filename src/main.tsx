@@ -7,6 +7,7 @@ import App from './App'
 import { LanguageProvider } from './hooks/useLanguage'
 import { BlogList } from './pages/BlogList'
 import { BlogPostPage } from './pages/BlogPost'
+import { AuthCallback } from './pages/AuthCallback'
 
 const CommandCenter = lazy(() =>
   import('./components/command-center/CommandCenter').then(m => ({
@@ -32,6 +33,7 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route

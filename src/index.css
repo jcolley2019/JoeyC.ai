@@ -495,6 +495,25 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Command Center — selected platform card */
+.platform-card-selected {
+  background: #1e3a5f !important;
+  border: 1px solid #4a9eff !important;
+  color: #ffffff !important;
+}
+.platform-card-selected .text-xs {
+  color: #93c5fd !important;
+}
+
+/* Command Center — generate button */
+.generate-btn {
+  background: #1a6fcc !important;
+  color: #ffffff !important;
+}
+.generate-btn:hover:not(:disabled) {
+  background: #1d7fe0;
+}
+
 /* Floating particles container */
 .particle {
   position: absolute;

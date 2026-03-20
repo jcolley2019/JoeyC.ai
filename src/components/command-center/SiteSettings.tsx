@@ -30,11 +30,16 @@ function SettingToggle({ label, description, setting }: {
   )
 }
 
-export function SiteSettings() {
+interface SiteSettingsProps {
+  extraPlatform?: { value: boolean | null; loading: boolean; update: (v: boolean) => void }
+}
+
+export function SiteSettings({ extraPlatform: extraPlatformProp }: SiteSettingsProps = {}) {
   const { lang, setLang, t } = useLanguage()
   const contactForm = useSiteSetting('contact_form_enabled', true)
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
-  const extraPlatform = useSiteSetting('extra_platform_youtube', true) // true = YouTube, false = LinkedIn
+  const extraPlatformLocal = useSiteSetting('extra_platform_youtube', true)
+  const extraPlatform = extraPlatformProp || extraPlatformLocal
 
   return (
     <div>

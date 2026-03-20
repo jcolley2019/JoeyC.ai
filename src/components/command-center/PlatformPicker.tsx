@@ -95,7 +95,7 @@ export function PlatformPicker({ value, onChange, cascade, onCascadeChange, show
             onClick={() => togglePlatform(p.value)}
             className={`px-3 py-2 rounded-lg border text-sm transition-all text-left ${
               value.includes(p.value)
-                ? 'border-accent bg-accent/10 text-accent'
+                ? 'platform-card-selected'
                 : 'border-border bg-bg-card text-text-secondary hover:border-border-hover'
             }`}
           >
