@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import { useAdmin } from '../../hooks/useAdmin'
+import { Link } from 'react-router-dom'
 import { useContentGeneration } from '../../hooks/useContentGeneration'
 import { useSiteSetting } from '../../hooks/useSiteSettings'
 import { useLanguage } from '../../hooks/useLanguage'
@@ -17,6 +19,7 @@ import type { OutputFormat, Platform } from '../../types'
 
 export function CommandCenter() {
   const { session, loading: authLoading, login, signUp, signInWithGoogle, logout } = useAuth()
+  const { isMasterAdmin } = useAdmin()
   const { generating, generatingStatus, result, error, usageSummary, generate, extractYouTubeTranscript, setResult, setError } = useContentGeneration()
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)
@@ -175,6 +178,14 @@ export function CommandCenter() {
                   </div>
                 )}
               </div>
+              {isMasterAdmin && (
+                <Link
+                  to="/admin"
+                  className="px-3 py-1.5 text-xs font-mono border border-border rounded-md text-text-secondary hover:text-primary hover:border-primary/30 transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
               <button
                 onClick={logout}
                 className="px-3 py-1.5 text-xs font-mono border border-border rounded-md text-text-secondary hover:text-red-400 hover:border-red-400/30 transition-colors"
