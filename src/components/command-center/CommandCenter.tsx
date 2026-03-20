@@ -16,7 +16,7 @@ import type { BlogClarifyData } from './BlogClarifyForm'
 import type { OutputFormat, Platform } from '../../types'
 
 export function CommandCenter() {
-  const { session, loading: authLoading, login, logout } = useAuth()
+  const { session, loading: authLoading, login, signUp, signInWithGoogle, logout } = useAuth()
   const { generating, generatingStatus, result, error, usageSummary, generate, extractYouTubeTranscript, setResult, setError } = useContentGeneration()
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)
@@ -129,7 +129,7 @@ export function CommandCenter() {
   }
 
   return (
-    <AuthGate onLogin={login} isAuthenticated={!!session}>
+    <AuthGate onLogin={login} onSignUp={signUp} onGoogleSignIn={signInWithGoogle} isAuthenticated={!!session}>
       <div className="min-h-screen command-center-bright">
         {/* Header */}
         <div className="border-b border-border px-6 py-4">
@@ -170,7 +170,7 @@ export function CommandCenter() {
                 {settingsOpen && (
                   <div className="absolute right-0 top-full mt-2 w-72 z-50 rounded-xl border border-border bg-bg-card shadow-xl shadow-black/30">
                     <div className="p-4">
-                      <SiteSettings />
+                      <SiteSettings extraPlatform={extraPlatform} />
                     </div>
                   </div>
                 )}

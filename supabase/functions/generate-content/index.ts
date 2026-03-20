@@ -614,6 +614,18 @@ Deno.serve(async (req) => {
       generated_content: result.content,
     });
 
+    // Log activity metadata (privacy-safe — no content)
+    await adminClient.from("activity_log").insert({
+      user_id: user.id,
+      action: "content_generation",
+      metadata: {
+        input_type: isCascadeDerivative ? (input_type || "text") : input_type,
+        output_format,
+        platform: platform || null,
+        cascade: isCascadeDerivative,
+      },
+    });
+
     return new Response(
       JSON.stringify({
         content: result.content,

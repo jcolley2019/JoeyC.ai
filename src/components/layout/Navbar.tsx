@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import gsap from 'gsap'
+import { useAdmin } from '../../hooks/useAdmin'
 
-const links = [
+const baseLinks = [
   { label: 'About', href: '#about' },
   { label: 'Projects', href: '#portfolio' },
   { label: 'Content & Connect', href: '#content' },
@@ -10,6 +11,14 @@ const links = [
 ]
 
 export function Navbar() {
+  const { isMasterAdmin } = useAdmin()
+
+  const links = useMemo(() => {
+    if (isMasterAdmin) {
+      return [...baseLinks, { label: 'Admin', href: '/admin', isRoute: true }]
+    }
+    return baseLinks
+  }, [isMasterAdmin])
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const overlayRef = useRef<HTMLDivElement>(null)

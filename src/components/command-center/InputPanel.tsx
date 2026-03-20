@@ -134,7 +134,7 @@ export function InputPanel({ inputText, onInputTextChange, onInputTypeChange, ex
           onClick={() => handleTabChange('braindump')}
           className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all ${
             activeTab === 'braindump'
-              ? 'bg-bg-card text-primary border border-border'
+              ? 'border-primary bg-primary/10 text-white'
               : 'text-text-secondary hover:text-text-primary border border-transparent'
           }`}
         >
@@ -144,7 +144,7 @@ export function InputPanel({ inputText, onInputTextChange, onInputTypeChange, ex
           onClick={() => handleTabChange('youtube')}
           className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all ${
             activeTab === 'youtube'
-              ? 'bg-bg-card text-primary border border-border'
+              ? 'border-primary bg-primary/10 text-white'
               : 'text-text-secondary hover:text-text-primary border border-transparent'
           }`}
         >
@@ -165,7 +165,7 @@ export function InputPanel({ inputText, onInputTextChange, onInputTypeChange, ex
               {!isRecording ? (
                 <button
                   onClick={handleStart}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/30 text-primary text-xs font-mono hover:bg-primary/20 transition-all"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/30 text-primary text-sm font-mono hover:bg-primary/20 transition-all"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />

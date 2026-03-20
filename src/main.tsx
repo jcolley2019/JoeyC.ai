@@ -14,6 +14,12 @@ const CommandCenter = lazy(() =>
   }))
 )
 
+const AdminDashboard = lazy(() =>
+  import('./pages/AdminDashboard').then(m => ({
+    default: m.AdminDashboard,
+  }))
+)
+
 const Loading = () => (
   <div className="min-h-screen bg-bg flex items-center justify-center">
     <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
@@ -35,6 +41,14 @@ createRoot(document.getElementById('root')!).render(
               <LanguageProvider>
                 <CommandCenter />
               </LanguageProvider>
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <Suspense fallback={<Loading />}>
+              <AdminDashboard />
             </Suspense>
           }
         />

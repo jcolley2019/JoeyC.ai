@@ -59,3 +59,37 @@ export interface GenerationResponse {
   usage: GenerationUsage
   limits: GenerationLimits
 }
+
+export interface UserRole {
+  id: string
+  user_id: string
+  role: 'master_admin' | 'user'
+  created_at: string
+}
+
+export interface Invitation {
+  id: string
+  email: string
+  invited_by: string
+  status: 'pending' | 'accepted' | 'expired'
+  created_at: string
+  accepted_at: string | null
+}
+
+export interface ActivityLogEntry {
+  id: string
+  user_id: string
+  action: string
+  metadata: {
+    input_type?: string
+    output_format?: string
+    platforms?: string[]
+    platform?: string | null
+    cascade?: boolean
+    method?: string
+  }
+  created_at: string
+  // Joined from auth.users via edge function
+  user_email?: string
+  user_name?: string
+}
