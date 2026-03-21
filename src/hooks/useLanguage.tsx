@@ -51,7 +51,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'input.translating': { en: 'Translating', es: 'Traduciendo' },
 
   // === OutputPanel ===
-  'output.generate': { en: 'Generate Content', es: 'Generar Contenido' },
+  'output.generate': { en: 'GENERATE CONTENT', es: 'GENERAR CONTENIDO' },
   'output.generating': { en: 'Generating...', es: 'Generando...' },
   'output.cascade.generating': { en: 'Researching & Generating...', es: 'Investigando y Generando...' },
 

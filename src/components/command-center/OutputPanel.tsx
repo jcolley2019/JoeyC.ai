@@ -59,7 +59,7 @@ export function OutputPanel({
         id="tour-generate"
         onClick={onGenerate}
         disabled={generating || !inputReady}
-        className="w-full generate-btn font-semibold py-3 rounded-lg relative z-10 disabled:opacity-70 transition-all text-white"
+        className="w-full generate-btn font-semibold py-3 rounded-lg relative z-10 disabled:opacity-70 transition-all text-white text-[15px] tracking-wide"
       >
         <span className="relative z-10">
           {generating ? (
