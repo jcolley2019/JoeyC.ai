@@ -15,6 +15,9 @@ import { BlogPostEditor } from './BlogPostEditor'
 import { BlogClarifyForm } from './BlogClarifyForm'
 import { MediaPromptWizard } from './MediaPromptWizard'
 import { SiteSettings } from './SiteSettings'
+import { OnboardingWizard } from './OnboardingWizard'
+import { BrandSettingsPanel } from './BrandSettingsPanel'
+import { useBrandProfile } from '../../hooks/useBrandProfile'
 import type { BlogClarifyData } from './BlogClarifyForm'
 import type { OutputFormat, Platform } from '../../types'
 
@@ -57,17 +60,21 @@ export function CommandCenter() {
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)
   const { t } = useLanguage()
+  const { profile: brandProfile, loading: brandLoading, saveProfile, uploadLogo, isOnboarded } = useBrandProfile()
+  const [showBrandSettings, setShowBrandSettings] = useState(false)
 
   // Build enabled platforms list — always TikTok/Instagram/Pinterest + YouTube or LinkedIn
   const extraIsYoutube = extraPlatform.value !== false // true or null (loading) = YouTube
   const enabledPlatforms: Platform[] = ['tiktok', 'instagram', 'pinterest', extraIsYoutube ? 'youtube' : 'linkedin']
 
   // Theme
-  const [luxeMode, setLuxeMode] = useState(() => localStorage.getItem('cc-theme') === 'luxe')
+  const [luxeMode, setLuxeMode] = useState(() => {
+    try { return localStorage.getItem('cc-theme') === 'luxe' } catch { return false }
+  })
   const toggleLuxeMode = useCallback(() => {
     setLuxeMode(prev => {
       const next = !prev
-      localStorage.setItem('cc-theme', next ? 'luxe' : 'dark')
+      try { localStorage.setItem('cc-theme', next ? 'luxe' : 'dark') } catch {}
       return next
     })
   }, [])
@@ -184,10 +191,11 @@ export function CommandCenter() {
       platforms,
       cascade,
       usePerplexity: !!perplexityHashtags.value,
+      brand_context: brandProfile ?? undefined,
     }).then(() => {
       setHistoryKey(k => k + 1)
     })
-  }, [inputText, inputType, outputFormats, platforms, cascade, generate, showBlogClarify, hasBlog, blogClarifyData, perplexityHashtags.value])
+  }, [inputText, inputType, outputFormats, platforms, cascade, generate, showBlogClarify, hasBlog, blogClarifyData, perplexityHashtags.value, brandProfile])
 
   // Fires one video generation call per selected platform for tabbed output
   const fireVideoGeneration = useCallback((mediaData: { mediaType: 'video' | 'image'; aiPlatform: string }, igFormat?: string) => {
@@ -316,6 +324,16 @@ export function CommandCenter() {
                   </div>
                 )}
               </div>
+              <button
+                onClick={() => { setSettingsOpen(false); setShowBrandSettings(true) }}
+                className="p-2 rounded-md border border-border text-text-secondary hover:text-primary hover:border-primary/30 transition-all"
+                title="Brand Profile"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </button>
               {isMasterAdmin && (
                 <Link
                   to="/admin"
@@ -390,6 +408,7 @@ export function CommandCenter() {
                       platforms,
                       cascade,
                       usePerplexity: !!perplexityHashtags.value,
+                      brand_context: brandProfile ?? undefined,
                     }).then(() => setHistoryKey(k => k + 1))
                   }}
                 />
@@ -430,6 +449,24 @@ export function CommandCenter() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Brand badge — shown when blog format selected and profile exists */}
+          {hasBlog && brandProfile && isOnboarded && (
+            <div className="mt-8 flex items-center gap-3 px-4 py-2.5 rounded-lg border border-border/50 bg-bg-card/30">
+              {brandProfile.logo_url && (
+                <img src={brandProfile.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
+              )}
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-semibold text-white">{brandProfile.display_name}</span>
+                {brandProfile.title && <span className="text-[12px] text-[#8892a4] ml-2">{brandProfile.title}</span>}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-[#8892a4] capitalize">{brandProfile.style_preset}</span>
+                <div className="w-3 h-3 rounded-full border border-white/20" style={{ backgroundColor: brandProfile.accent_color }} />
+                <button onClick={() => setShowBrandSettings(true)} className="text-[11px] font-mono text-[#4a6fa5] hover:text-white transition-colors">Edit</button>
+              </div>
             </div>
           )}
 
@@ -530,6 +567,48 @@ export function CommandCenter() {
 
         {/* Guided Tour */}
         <GuidedTour active={tourActive} onClose={() => setTourActive(false)} />
+
+        {/* Brand Settings Panel */}
+        <BrandSettingsPanel
+          open={showBrandSettings}
+          onClose={() => setShowBrandSettings(false)}
+          profile={brandProfile}
+          onSave={saveProfile}
+          onUploadLogo={uploadLogo}
+        />
+
+        {/* Onboarding Wizard — shown for new users who haven't completed onboarding */}
+        {!brandLoading && !isOnboarded && (
+          <OnboardingWizard
+            open={true}
+            onComplete={async (data) => {
+              let logoUrl: string | null = null
+              if (data.logoFile) {
+                logoUrl = await uploadLogo(data.logoFile)
+              }
+              await saveProfile({
+                display_name: data.display_name || null,
+                title: data.title || null,
+                bio: data.bio || null,
+                website_url: data.website_url || null,
+                tiktok_handle: data.tiktok_handle || null,
+                instagram_handle: data.instagram_handle || null,
+                pinterest_handle: data.pinterest_handle || null,
+                youtube_handle: data.youtube_handle || null,
+                linkedin_handle: data.linkedin_handle || null,
+                style_preset: data.style_preset,
+                accent_color: data.accent_color,
+                has_branding_kit: data.has_branding_kit,
+                brand_kit_notes: data.brand_kit_notes || null,
+                ...(logoUrl ? { logo_url: logoUrl } : {}),
+                onboarding_completed: true,
+              })
+            }}
+            onSkip={async () => {
+              await saveProfile({ onboarding_completed: true })
+            }}
+          />
+        )}
       </div>
     </AuthGate>
   )

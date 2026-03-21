@@ -63,7 +63,8 @@ const corsHeaders = {
 
 function getSystemPrompt(
   outputFormat: string,
-  platform?: string
+  platform?: string,
+  brandContext?: Record<string, unknown>
 ): string {
   const base =
     "You are a content creation assistant for Joey Colley, a non-traditional AI developer who builds apps with AI tools and documents the journey on social media. Joey's voice is authentic, conversational, slightly irreverent, and anti-corporate-slop. He speaks plainly, uses short sentences, and connects with people who are curious about AI but aren't traditional engineers." + ANTI_SLOP_DIRECTIVE;
@@ -190,7 +191,7 @@ A structured outline for a 5-10 minute video:
   }
 
   if (outputFormat === "blog") {
-    return `${base}\n\nWrite a full, professionally formatted blog article in markdown. This should look like a polished, published article — not a rough draft.
+    const blogPrompt = `${base}\n\nWrite a full, professionally formatted blog article in markdown. This should look like a polished, published article — not a rough draft.
 
 You have access to web search — USE IT to research the topic, find current data, statistics, recent developments, and real examples. Cite your sources naturally within the article (e.g., "According to [source]..." or link inline). This makes the content authoritative and trustworthy.
 
@@ -243,7 +244,40 @@ Include 3-5 illustration placeholders throughout the article at natural visual b
 - Short sentences. Punch. No corporate jargon.
 - Joey's personal experience woven throughout
 - Aim for 1000-2000 words
-- No fluff, no filler, every sentence earns its place`;
+- No fluff, no filler, every sentence earns its place`
+
+    // Inject brand context if provided
+    if (brandContext && brandContext.display_name) {
+      const voiceGuides: Record<string, string> = {
+        modern: 'clear, concise, professional — clean and direct',
+        luxury: 'elegant, aspirational, refined — sophisticated word choices',
+        editorial: 'authoritative, magazine-style — confident and commanding',
+        tech: 'direct, data-driven, forward-thinking — sharp and precise',
+      }
+      const voice = voiceGuides[(brandContext.style_preset as string) || 'modern'] || voiceGuides.modern
+
+      let brandBlock = `\n\n## AUTHOR BRANDING OVERRIDE\nWrite this blog post as ${brandContext.display_name}`
+      if (brandContext.title) brandBlock += `, ${brandContext.title}`
+      brandBlock += '.'
+      if (brandContext.bio) brandBlock += `\nAuthor bio: ${brandContext.bio}`
+      brandBlock += `\nBrand voice: ${voice}`
+      if (brandContext.website_url) brandBlock += `\nWebsite: ${brandContext.website_url}`
+
+      // Build social links for author bio
+      const socials: string[] = []
+      if (brandContext.tiktok_handle) socials.push(`[TikTok](https://www.tiktok.com/@${(brandContext.tiktok_handle as string).replace('@', '')})`)
+      if (brandContext.instagram_handle) socials.push(`[Instagram](https://www.instagram.com/${(brandContext.instagram_handle as string).replace('@', '')})`)
+      if (brandContext.youtube_handle) socials.push(`[YouTube](https://www.youtube.com/@${(brandContext.youtube_handle as string).replace('@', '')})`)
+      if (brandContext.pinterest_handle) socials.push(`[Pinterest](https://www.pinterest.com/${(brandContext.pinterest_handle as string).replace('@', '')})`)
+      if (brandContext.linkedin_handle) socials.push(`[LinkedIn](https://www.linkedin.com/in/${brandContext.linkedin_handle})`)
+
+      brandBlock += `\n\nReplace the default author bio line at the end with:\n---\n**About the Author**\n${brandContext.display_name}${brandContext.title ? ` is a ${brandContext.title}` : ''}. ${brandContext.bio || ''}\nFollow: ${socials.join(' | ') || 'N/A'}`
+      if (brandContext.website_url) brandBlock += `\n${brandContext.website_url}`
+
+      return blogPrompt + brandBlock
+    }
+
+    return blogPrompt;
   }
 
   if (outputFormat === "video") {
@@ -552,6 +586,7 @@ Deno.serve(async (req) => {
       use_perplexity,  // Whether to use Perplexity for hashtag research
       all_platforms,   // All selected platforms (for Perplexity query)
       real_time_hashtags, // Pre-researched hashtags from Perplexity (passed from client)
+      brand_context,      // Brand profile for content personalization
     } = await req.json();
 
     if (!output_format) {
@@ -596,7 +631,7 @@ Deno.serve(async (req) => {
       // Blog mode: research model with web search
       model = MODELS.research;
       maxTokens = MAX_TOKENS_BLOG;
-      systemPrompt = getSystemPrompt(output_format, platform);
+      systemPrompt = getSystemPrompt(output_format, platform, brand_context);
       userMessage = `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nResearch this topic using web search, then write a comprehensive blog article with real data and citations.`;
     } else if (needsHashtags) {
       // Social/thread/video mode

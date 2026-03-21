@@ -632,61 +632,58 @@ body {
   background-color: var(--color-bg) !important;
 }
 
-/* Font: Cormorant Garamond everywhere, preserve mono for code */
-.luxe-mode * { font-family: "Cormorant Garamond", Georgia, serif !important; }
+/* Luxe font — inherits naturally, no wildcard needed */
 .luxe-mode .font-mono { font-family: "Cormorant Garamond", Georgia, serif !important; letter-spacing: 0.04em; }
 
 /* Luxe font weight increases for readability */
-.luxe-mode p, .luxe-mode span, .luxe-mode label, .luxe-mode div { font-weight: 500 !important; }
-.luxe-mode [class*="text-text-secondary"] { font-weight: 500 !important; color: #3d2b1f !important; }
-.luxe-mode [class*="text-sm"], .luxe-mode [class*="text-xs"] { font-weight: 500 !important; }
+.luxe-mode p, .luxe-mode span, .luxe-mode label { font-weight: 500 !important; }
 
-/* Hardcoded text color overrides */
-.luxe-mode .text-white { color: #1a1008 !important; }
-.luxe-mode .text-\[\#94a3b8\] { color: #3d2b1f !important; }
-.luxe-mode .text-\[\#8892a4\] { color: #3d2b1f !important; }
-.luxe-mode .text-\[\#a0aac0\] { color: #3d2b1f !important; }
-.luxe-mode .text-\[\#e2e8f0\] { color: #1a1008 !important; }
-.luxe-mode .text-\[\#4a6fa5\] { color: #b8860b !important; }
-.luxe-mode .text-\[\#4a9eff\] { color: #b8860b !important; }
+/* Text color overrides — use CSS vars where possible */
+.luxe-mode .text-white { color: var(--color-text-primary) !important; }
+.luxe-mode .text-\[\#94a3b8\],
+.luxe-mode .text-\[\#8892a4\],
+.luxe-mode .text-\[\#a0aac0\] { color: var(--color-text-secondary) !important; }
+.luxe-mode .text-\[\#e2e8f0\] { color: var(--color-text-primary) !important; }
+.luxe-mode .text-\[\#4a6fa5\],
+.luxe-mode .text-\[\#4a9eff\],
+.luxe-mode .text-\[\#1d9bf0\] { color: var(--color-primary) !important; }
 .luxe-mode .text-\[\#64748b\] { color: #8b7355 !important; }
-.luxe-mode .text-\[\#1d9bf0\] { color: #b8860b !important; }
 
-/* Hardcoded background color overrides */
-.luxe-mode .bg-\[\#0a0a1a\] { background-color: #f5efe6 !important; }
-.luxe-mode .bg-\[\#0c1020\] { background-color: #ede5d8 !important; }
-.luxe-mode .bg-\[\#1e3a5f\] { background-color: rgba(184, 134, 11, 0.12) !important; }
-.luxe-mode .bg-\[\#4a6fa5\] { background-color: #b8860b !important; }
+/* Background color overrides */
+.luxe-mode .bg-\[\#0a0a1a\] { background-color: var(--color-bg-card) !important; }
+.luxe-mode .bg-\[\#0c1020\] { background-color: var(--color-bg-section) !important; }
+.luxe-mode .bg-\[\#1e3a5f\],
 .luxe-mode .bg-\[rgba\(74\,111\,165\,0\.15\)\] { background-color: rgba(184, 134, 11, 0.12) !important; }
+.luxe-mode .bg-\[\#4a6fa5\] { background-color: var(--color-primary) !important; }
 .luxe-mode .bg-\[\#1e4d2b\] { background-color: rgba(184, 134, 11, 0.15) !important; }
 .luxe-mode .bg-black\/70 { background-color: rgba(250, 246, 240, 0.85) !important; }
 
-/* Hardcoded border color overrides */
-.luxe-mode .border-\[\#1e2a4a\] { border-color: #d4c5a9 !important; }
-.luxe-mode .border-\[\#2a3d6a\] { border-color: #d4c5a9 !important; }
-.luxe-mode .border-\[\#4a6fa5\] { border-color: #b8860b !important; }
+/* Border color overrides */
+.luxe-mode .border-\[\#1e2a4a\],
+.luxe-mode .border-\[\#2a3d6a\] { border-color: var(--color-border) !important; }
+.luxe-mode .border-\[\#4a6fa5\] { border-color: var(--color-primary) !important; }
 .luxe-mode .border-\[\#4a6fa5\]\/60 { border-color: rgba(184, 134, 11, 0.6) !important; }
 .luxe-mode .border-\[\#4a6fa5\]\/40 { border-color: rgba(184, 134, 11, 0.4) !important; }
-.luxe-mode .border-\[\#1d9bf0\]\/30 { border-color: rgba(184, 134, 11, 0.3) !important; }
+.luxe-mode .border-\[\#1d9bf0\]\/30,
 .luxe-mode .border-\[rgba\(74\,111\,165\,0\.3\)\] { border-color: rgba(184, 134, 11, 0.3) !important; }
 
 /* Generate button */
 .luxe-mode .generate-btn {
-  background: linear-gradient(135deg, #b8860b, #d4a017) !important;
-  color: #faf6f0 !important;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover)) !important;
+  color: var(--color-bg) !important;
   font-weight: 700;
 }
 .luxe-mode .generate-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #d4a017, #e6b422) !important;
+  background: linear-gradient(135deg, var(--color-primary-hover), #e6b422) !important;
 }
 
 /* Platform card selected */
 .luxe-mode .platform-card-selected {
   background: rgba(184, 134, 11, 0.12) !important;
-  border: 1px solid #b8860b !important;
-  color: #1a1008 !important;
+  border: 1px solid var(--color-primary) !important;
+  color: var(--color-text-primary) !important;
 }
-.luxe-mode .platform-card-selected .text-xs { color: #3d2b1f !important; }
+.luxe-mode .platform-card-selected .text-xs { color: var(--color-text-secondary) !important; }
 
 /* Input & textarea */
 .luxe-mode textarea,
@@ -694,17 +691,17 @@ body {
 .luxe-mode input[type="email"],
 .luxe-mode input[type="password"] {
   background: #ffffff !important;
-  border-color: #d4c5a9 !important;
-  color: #1a1008 !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
 }
 .luxe-mode textarea::placeholder,
 .luxe-mode input::placeholder { color: #a08060 !important; }
 
 /* Prose (blog view) */
-.luxe-mode .prose h1, .luxe-mode .prose h2, .luxe-mode .prose h3 { color: #1a1008 !important; }
-.luxe-mode .prose p, .luxe-mode .prose li { color: #3d2b1f !important; }
-.luxe-mode .prose a { color: #b8860b !important; }
-.luxe-mode .prose blockquote { border-left-color: #b8860b !important; background: rgba(184, 134, 11, 0.05) !important; }
+.luxe-mode .prose h1, .luxe-mode .prose h2, .luxe-mode .prose h3 { color: var(--color-text-primary) !important; }
+.luxe-mode .prose p, .luxe-mode .prose li { color: var(--color-text-secondary) !important; }
+.luxe-mode .prose a { color: var(--color-primary) !important; }
+.luxe-mode .prose blockquote { border-left-color: var(--color-primary) !important; background: rgba(184, 134, 11, 0.05) !important; }
 
 /* Bump small text in luxe mode for serif readability */
 .luxe-mode .text-xs { font-size: 14px !important; }
@@ -712,10 +709,29 @@ body {
 .luxe-mode textarea { font-size: 16px !important; }
 
 /* Scrollbar */
-.luxe-mode ::-webkit-scrollbar-thumb { background: #d4c5a9; }
-.luxe-mode ::-webkit-scrollbar-track { background: #f5efe6; }
+.luxe-mode ::-webkit-scrollbar-thumb { background: var(--color-border); }
+.luxe-mode ::-webkit-scrollbar-track { background: var(--color-bg-card); }
 
 /* Smooth mode transition */
 .command-center-bright {
   transition: background-color 0.4s ease, color 0.3s ease;
 }
+
+/* ===== BRAND SETTINGS PANEL ===== */
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes slideOutToRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+.brand-panel-enter {
+  animation: slideInFromRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Luxe mode overrides for brand panel & wizard */
+.luxe-mode .border-\[\#4a6fa5\]\/60 { border-color: rgba(184, 134, 11, 0.6) !important; }
+.luxe-mode .bg-\[\#4a6fa5\]\/15 { background-color: rgba(184, 134, 11, 0.15) !important; }
+.luxe-mode .shadow-\[\#4a6fa5\]\/10 { --tw-shadow-color: rgba(184, 134, 11, 0.1) !important; }
+.luxe-mode .shadow-\[\#4a6fa5\]\/20 { --tw-shadow-color: rgba(184, 134, 11, 0.2) !important; }

@@ -93,3 +93,27 @@ export interface ActivityLogEntry {
   user_email?: string
   user_name?: string
 }
+
+export type StylePreset = 'modern' | 'luxury' | 'editorial' | 'tech'
+
+export interface BrandProfile {
+  id: string
+  user_id: string
+  display_name: string | null
+  title: string | null
+  bio: string | null
+  website_url: string | null
+  tiktok_handle: string | null
+  instagram_handle: string | null
+  pinterest_handle: string | null
+  youtube_handle: string | null
+  linkedin_handle: string | null
+  style_preset: StylePreset
+  accent_color: string
+  logo_url: string | null
+  has_branding_kit: boolean
+  brand_kit_notes: string | null
+  onboarding_completed: boolean
+  created_at: string
+  updated_at: string
+}

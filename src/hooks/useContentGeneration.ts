@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { OutputFormat, Platform, GenerationUsage, GenerationLimits } from '../types'
+import type { OutputFormat, Platform, GenerationUsage, GenerationLimits, BrandProfile } from '../types'
 
 interface GenerateParams {
   input_type: 'youtube' | 'text' | 'voice'
@@ -11,6 +11,7 @@ interface GenerateParams {
   use_perplexity?: boolean
   all_platforms?: Platform[]
   real_time_hashtags?: string // Pre-researched hashtags to pass through
+  brand_context?: Partial<BrandProfile>
 }
 
 interface GenerateMultiParams {
@@ -20,6 +21,7 @@ interface GenerateMultiParams {
   platforms: Platform[]
   cascade: boolean // Whether to use blog-first cascade flow
   usePerplexity: boolean // Whether to use Perplexity for hashtag research
+  brand_context?: Partial<BrandProfile> // Brand profile for content personalization
 }
 
 interface GenerateResult {
@@ -145,6 +147,7 @@ export function useContentGeneration() {
           input_type: params.input_type,
           input_text: params.input_text,
           output_format: 'blog',
+          brand_context: params.brand_context,
         })
         allResults.push(blogResult)
 
@@ -229,6 +232,7 @@ export function useContentGeneration() {
                 input_text: params.input_text,
                 output_format: format,
                 real_time_hashtags: realTimeHashtags,
+                ...(format === 'blog' && params.brand_context ? { brand_context: params.brand_context } : {}),
               },
             })
           }

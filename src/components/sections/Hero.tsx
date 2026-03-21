@@ -192,7 +192,7 @@ export function Hero() {
       <div ref={contentRef} className="relative z-[10] min-h-screen flex flex-col">
 
         {/* Lower third card — vertically centered, right side */}
-        <div className="flex-1 flex items-center justify-end" style={{ paddingRight: 'clamp(4rem, 10vw, 12rem)' }}>
+        <div className="flex-1 flex items-end justify-end" style={{ paddingRight: 'clamp(4rem, 10vw, 12rem)', paddingBottom: 'clamp(80px, 12vh, 140px)' }}>
           <div className="hero-card" style={{ opacity: 0, maxWidth: 'clamp(320px, 35vw, 520px)' }}>
             <div
               className="relative rounded-md overflow-hidden"
