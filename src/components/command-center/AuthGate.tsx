@@ -96,11 +96,11 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <p className="font-mono text-xs tracking-[0.2em] uppercase text-primary mb-3">
-            {'// command center'}
+            {'// content studio'}
           </p>
           <h1 className="text-2xl font-bold">{mode === 'login' ? t('auth.title') : 'Create Account'}</h1>
           <p className="text-text-secondary text-sm mt-2">
-            {mode === 'login' ? t('auth.desc') : 'Sign up to access the command center'}
+            {mode === 'login' ? t('auth.desc') : 'Sign up to access the content studio'}
           </p>
         </div>
 

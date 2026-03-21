@@ -6,7 +6,7 @@ const links = [
   { label: 'Projects', href: '#portfolio' },
   { label: 'Content & Connect', href: '#content' },
   { label: 'Contact', href: '#contact' },
-  { label: 'Command Center', href: '/command-center', isRoute: true },
+  { label: 'Content Studio', href: '/command-center', isRoute: true },
 ]
 
 export function Navbar() {

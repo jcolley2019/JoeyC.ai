@@ -46,7 +46,7 @@ export function PlatformPicker({ value, onChange, cascade, onCascadeChange, show
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-[13px] font-mono text-white font-bold uppercase tracking-[0.1em]">{t('platform.label')}</span>
+        <span className="text-[14px] font-mono text-white font-bold uppercase tracking-[0.12em]">{t('platform.label')}</span>
         <div className="flex items-center gap-2">
           <button
             onClick={toggleAll}
@@ -58,34 +58,6 @@ export function PlatformPicker({ value, onChange, cascade, onCascadeChange, show
           >
             {t('platform.all')}
           </button>
-          {showCascade && (
-            <div className="relative group">
-              <button
-                onClick={() => onCascadeChange(!cascade)}
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono transition-all border ${
-                  cascade
-                    ? 'bg-primary/10 border-primary/30 text-primary'
-                    : 'border-border text-text-secondary hover:border-border-hover'
-                }`}
-              >
-                <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 transition-all ${
-                  cascade
-                    ? 'border-primary bg-primary/30 text-primary'
-                    : 'border-text-secondary/40'
-                }`}>
-                  {cascade && (
-                    <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M2 6l3 3 5-5" />
-                    </svg>
-                  )}
-                </span>
-                {t('platform.cascade')}
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 px-3 py-2 rounded-lg bg-bg-card border border-border shadow-xl shadow-black/30 text-xs text-text-secondary opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
-                {t('platform.cascade.tooltip')}
-              </div>
-            </div>
-          )}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">

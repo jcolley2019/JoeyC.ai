@@ -155,7 +155,7 @@ export function AdminDashboard() {
               href="/command-center"
               className="px-3 py-1.5 text-xs font-mono border border-border rounded-md text-text-secondary hover:text-primary hover:border-primary/30 transition-colors"
             >
-              Command Center
+              Content Studio
             </a>
             <button
               onClick={logout}
@@ -171,7 +171,7 @@ export function AdminDashboard() {
         {/* Invite Section */}
         <div className="mb-8 p-6 rounded-xl border border-border bg-bg-card">
           <h2 className="font-semibold text-text-primary mb-1">Invite User</h2>
-          <p className="text-[14px] text-[#94a3b8] mb-4">Send an email invitation to give someone access to the command center.</p>
+          <p className="text-[14px] text-[#94a3b8] mb-4">Send an email invitation to give someone access to the content studio.</p>
           <div className="flex gap-3">
             <input
               type="email"

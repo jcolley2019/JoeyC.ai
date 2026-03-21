@@ -62,6 +62,16 @@ export function CommandCenter() {
   const extraIsYoutube = extraPlatform.value !== false // true or null (loading) = YouTube
   const enabledPlatforms: Platform[] = ['tiktok', 'instagram', 'pinterest', extraIsYoutube ? 'youtube' : 'linkedin']
 
+  // Theme
+  const [luxeMode, setLuxeMode] = useState(() => localStorage.getItem('cc-theme') === 'luxe')
+  const toggleLuxeMode = useCallback(() => {
+    setLuxeMode(prev => {
+      const next = !prev
+      localStorage.setItem('cc-theme', next ? 'luxe' : 'dark')
+      return next
+    })
+  }, [])
+
   const [inputText, setInputText] = useState('')
   const [inputType, setInputType] = useState<'text' | 'youtube' | 'voice'>('text')
   const [outputFormats, setOutputFormats] = useState<OutputFormat[]>(['social'])
@@ -250,17 +260,28 @@ export function CommandCenter() {
 
   return (
     <AuthGate onLogin={login} onSignUp={signUp} onGoogleSignIn={signInWithGoogle} isAuthenticated={!!session}>
-      <div className="min-h-screen command-center-bright">
+      <div className={`min-h-screen command-center-bright ${luxeMode ? 'luxe-mode' : ''}`}>
         {/* Header */}
         <div className="border-b border-border px-6 py-4">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div>
-              <p className="font-mono text-xs tracking-[0.2em] uppercase text-primary">
+              <p className="font-mono text-[13px] tracking-[0.25em] uppercase text-primary font-semibold">
                 {t('cc.header')}
               </p>
-              <h1 className="text-xl font-bold mt-1">{t('cc.title')}</h1>
+              <h1 className="text-2xl font-bold mt-1 tracking-tight">{t('cc.title')}</h1>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={toggleLuxeMode}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono border transition-all ${
+                  luxeMode
+                    ? 'bg-gradient-to-r from-[#b8860b] to-[#d4a017] text-white border-transparent font-semibold'
+                    : 'border-border text-text-secondary hover:text-primary hover:border-primary/30'
+                }`}
+                title={luxeMode ? 'Switch to Dark Mode' : 'Switch to Luxe Mode'}
+              >
+                {luxeMode ? '🌙 Dark' : '✨ Luxe'}
+              </button>
               <button
                 onClick={() => setTourActive(true)}
                 className="p-2 rounded-md border border-border text-text-secondary hover:text-primary hover:border-primary/30 transition-all"
@@ -320,7 +341,7 @@ export function CommandCenter() {
             {/* Left: Input */}
             <div id="tour-input" className="flex flex-col gap-6">
               <div className="shrink-0">
-                <h2 className="text-[18px] font-bold text-white mb-1">{t('cc.input')}</h2>
+                <h2 className="text-[14px] font-bold text-white uppercase tracking-[0.12em] mb-1">{t('cc.input')}</h2>
                 <p className="text-[14px] text-[#94a3b8]">{t('cc.input.desc')}</p>
               </div>
               <InputPanel
@@ -334,7 +355,7 @@ export function CommandCenter() {
             {/* Right: Format selectors + Media + Affiliate + Generate */}
             <div id="tour-output" className="flex flex-col gap-6">
               <div>
-                <h2 className="text-[18px] font-bold text-white mb-1">{t('cc.output')}</h2>
+                <h2 className="text-[14px] font-bold text-white uppercase tracking-[0.12em] mb-1">{t('cc.output')}</h2>
                 <p className="text-[14px] text-[#94a3b8]">{t('cc.output.desc')}</p>
               </div>
               <div className="flex-1 flex flex-col">
@@ -416,7 +437,7 @@ export function CommandCenter() {
           <div id="tour-drafts" className="mt-12 pt-8 border-t border-border">
             {outputFormats.length === 1 && outputFormats[0] === 'video' ? (
               <>
-                <h2 className="text-[18px] font-bold text-white mb-1">Image & Video Prompts</h2>
+                <h2 className="text-[20px] font-bold text-white mb-1">Image & Video Prompts</h2>
                 <p className="text-[14px] text-[#94a3b8] mb-4">
                   {generatedContent
                     ? 'Your platform-optimized prompts are below. Copy and paste into your AI platform.'
@@ -425,7 +446,7 @@ export function CommandCenter() {
               </>
             ) : (
               <>
-                <h2 className="text-[18px] font-bold text-white mb-1">{t('cc.drafts')}</h2>
+                <h2 className="text-[20px] font-bold text-white mb-1">{t('cc.drafts')}</h2>
                 <p className="text-[14px] text-[#94a3b8] mb-4">
                   {generatedContent
                     ? t('cc.drafts.ready')
@@ -452,7 +473,7 @@ export function CommandCenter() {
 
           {/* History */}
           <div id="tour-history" className="mt-12 pt-8 border-t border-border">
-            <h2 className="font-semibold text-text-primary mb-1">{t('cc.history')}</h2>
+            <h2 className="text-[16px] font-bold text-white uppercase tracking-[0.1em] mb-1">{t('cc.history')}</h2>
             <p className="text-[14px] text-[#94a3b8] mb-4">{t('cc.history.desc')}</p>
             <ContentHistory key={historyKey} />
           </div>

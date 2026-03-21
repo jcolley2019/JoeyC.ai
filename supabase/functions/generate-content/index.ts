@@ -247,7 +247,19 @@ Include 3-5 illustration placeholders throughout the article at natural visual b
   }
 
   if (outputFormat === "video") {
-    return `${base}\n\nYou are an expert AI media prompt engineer. Generate a highly optimized prompt for the specified AI platform.
+    return `${base}\n\nCRITICAL INSTRUCTION: You MUST generate a complete separate prompt section for EVERY platform listed in the metadata. If the metadata says platforms are TikTok, Instagram, Pinterest — you MUST output ALL THREE sections. Do not stop after one or two. Every platform gets its own full prompt.
+
+Use EXACTLY this separator format between platforms:
+=== TIKTOK ===
+[full TikTok prompt here]
+=== INSTAGRAM ===
+[full Instagram prompt here]
+=== PINTEREST ===
+[full Pinterest prompt here]
+
+Never skip a platform. Never combine platforms. One section per platform, every time.
+
+You are an expert AI media prompt engineer. Generate a highly optimized prompt for the specified AI platform.
 
 The user's input will include metadata at the end with:
 - Media type (video or image)
@@ -275,11 +287,13 @@ FIREFLY (Adobe): Style references, mood boards, commercial-safe descriptions, gr
 STABLE DIFFUSION: Detailed positive and negative prompts, model-specific keywords (photorealistic, cinematic, 8k), CFG scale suggestions, sampler recommendations.
 NANO BANANA: Optimized natural language descriptions, style references, composition details.
 
-FORMAT YOUR OUTPUT AS:
+FORMAT YOUR OUTPUT — for EACH platform, output this structure:
+
+=== [PLATFORM NAME IN CAPS] ===
 
 🎬 [VIDEO/IMAGE] PROMPT FOR [AI PLATFORM]
-📐 Aspect Ratio: [ratio from metadata]
-🌐 Optimized for: [social platform(s)]
+📐 Aspect Ratio: [ratio for this specific platform]
+🌐 Optimized for: [this platform]
 
 📋 OPTIMIZED PROMPT:
 [Full detailed prompt ready to paste into the AI tool]
@@ -293,7 +307,7 @@ FORMAT YOUR OUTPUT AS:
 - Aspect Ratio: [specific ratio]
 - [Platform-specific settings like --v 6.1, CFG scale, etc.]
 
-If no specific AI platform or media type is provided in the metadata, fall back to a general-purpose video production prompt with scene-by-scene breakdown, voiceover script, and caption/hashtags.`;
+Repeat for EVERY platform in the metadata. If no specific AI platform or media type is provided in the metadata, fall back to a general-purpose video production prompt with scene-by-scene breakdown, voiceover script, and caption/hashtags.`;
   }
 
   if (outputFormat === "thread") {

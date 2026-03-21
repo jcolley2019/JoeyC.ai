@@ -11,7 +11,7 @@ interface LanguageContextValue {
 const translations: Record<string, Record<Lang, string>> = {
   // === CommandCenter ===
   'cc.header': { en: '// command center', es: '// centro de comando' },
-  'cc.title': { en: 'Content Command Center', es: 'Centro de Comando de Contenido' },
+  'cc.title': { en: 'Content Studio', es: 'Estudio de Contenido' },
   'cc.input': { en: 'Input', es: 'Entrada' },
   'cc.input.desc': { en: 'Raw content goes in, polished content comes out.', es: 'Entra contenido en bruto, sale contenido pulido.' },
   'cc.output': { en: 'Output', es: 'Salida' },
@@ -52,8 +52,8 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // === OutputPanel ===
   'output.generate': { en: 'GENERATE CONTENT', es: 'GENERAR CONTENIDO' },
-  'output.generating': { en: 'Generating...', es: 'Generando...' },
-  'output.cascade.generating': { en: 'Researching & Generating...', es: 'Investigando y Generando...' },
+  'output.generating': { en: 'GENERATING...', es: 'GENERANDO...' },
+  'output.cascade.generating': { en: 'RESEARCHING & GENERATING...', es: 'INVESTIGANDO Y GENERANDO...' },
 
   // === FormatSelector ===
   'format.label': { en: 'Format', es: 'Formato' },

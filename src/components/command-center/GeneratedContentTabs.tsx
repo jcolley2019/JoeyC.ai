@@ -27,31 +27,42 @@ const platformNames: Record<string, string> = {
 
 // Try to split video/image prompt content into per-platform sections
 function splitVideoByPlatform(content: string): ContentSection[] | null {
-  // Match headers like "🎬 VIDEO PROMPT FOR TIKTOK", "🎬 IMAGE PROMPT FOR TIKTOK",
-  // "📋 TIKTOK:", "## TIKTOK", "TIKTOK PROMPT", etc.
   const platformKeys = Object.keys(platformNames)
-  const platformPattern = platformKeys.join('|')
-  const headerRegex = new RegExp(
-    `(?:^|\\n)(?:#{1,3}\\s*)?(?:🎬|📋|🖼️)?\\s*(?:VIDEO|IMAGE)?\\s*(?:PROMPT(?:\\s+FOR)?)?\\s*(${platformPattern})(?:\\s*(?:PROMPT|:))?\\s*\\n`,
-    'gi'
-  )
 
+  // Primary: === PLATFORM === separators
+  const separatorRegex = /===\s*(TIKTOK|INSTAGRAM|PINTEREST|YOUTUBE|LINKEDIN)\s*===/gi
   const matches: { platform: string; index: number; fullMatchEnd: number }[] = []
   let m: RegExpExecArray | null
-  while ((m = headerRegex.exec(content)) !== null) {
+  while ((m = separatorRegex.exec(content)) !== null) {
     const platform = m[1].toLowerCase()
     if (platformKeys.includes(platform)) {
       matches.push({ platform, index: m.index, fullMatchEnd: m.index + m[0].length })
     }
   }
 
-  if (matches.length < 2) return null // Not enough platform sections to split
+  // Fallback: emoji-based headers like "🎬 VIDEO PROMPT FOR TIKTOK"
+  if (matches.length < 2) {
+    const platformPattern = platformKeys.join('|')
+    const fallbackRegex = new RegExp(
+      `(?:^|\\n)(?:#{1,3}\\s*)?(?:🎬|📋|🖼️)?\\s*(?:VIDEO|IMAGE)?\\s*(?:PROMPT(?:\\s+FOR)?)?\\s*(${platformPattern})(?:\\s*(?:PROMPT|:))?\\s*\\n`,
+      'gi'
+    )
+    matches.length = 0
+    while ((m = fallbackRegex.exec(content)) !== null) {
+      const platform = m[1].toLowerCase()
+      if (platformKeys.includes(platform)) {
+        matches.push({ platform, index: m.index, fullMatchEnd: m.index + m[0].length })
+      }
+    }
+  }
+
+  if (matches.length < 1) return null
 
   const sections: ContentSection[] = []
   for (let i = 0; i < matches.length; i++) {
     const start = matches[i].fullMatchEnd
     const end = i + 1 < matches.length ? matches[i + 1].index : content.length
-    const sectionContent = content.slice(start, end).replace(/^[\s-]+/, '').replace(/[\s-]+$/, '').trim()
+    const sectionContent = content.slice(start, end).replace(/^[\s-=]+/, '').replace(/[\s-=]+$/, '').trim()
     const pName = platformNames[matches[i].platform] || matches[i].platform
     sections.push({
       label: `🎬 ${pName}`,
@@ -428,7 +439,7 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onP
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-bold text-white">{t('gen.title')}</h2>
+        <h2 className="text-[16px] font-bold text-white uppercase tracking-[0.1em]">{t('gen.title')}</h2>
         <div className="flex items-center gap-3">
           {editing && (
             <span className="text-[10px] font-mono text-primary">{t('gen.editing')}</span>
