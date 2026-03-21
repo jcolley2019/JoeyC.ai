@@ -452,7 +452,7 @@ export function CommandCenter() {
             </div>
           )}
 
-          {/* Brand badge — shown when blog format selected and profile exists */}
+          {/* Brand badge — shown when blog format selected */}
           {hasBlog && brandProfile && isOnboarded && (
             <div className="mt-8 flex items-center gap-3 px-4 py-2.5 rounded-lg border border-border/50 bg-bg-card/30">
               {brandProfile.logo_url && (
@@ -468,6 +468,14 @@ export function CommandCenter() {
                 <button onClick={() => setShowBrandSettings(true)} className="text-[11px] font-mono text-[#4a6fa5] hover:text-white transition-colors">Edit</button>
               </div>
             </div>
+          )}
+          {hasBlog && (!brandProfile || !isOnboarded) && (
+            <button
+              onClick={() => setShowBrandSettings(true)}
+              className="mt-8 w-full flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border/50 text-[#8892a4] hover:text-primary hover:border-primary/30 transition-colors text-left"
+            >
+              <span className="text-sm">✍️ Add your brand to personalize this blog →</span>
+            </button>
           )}
 
           {/* Drafts / Prompts output */}
@@ -500,6 +508,7 @@ export function CommandCenter() {
                   setBlogEditorContent(content)
                   setShowBlogEditor(true)
                 }}
+                brandProfile={brandProfile}
               />
             ) : (
               <div className="text-center py-8 border border-dashed border-border rounded-lg">

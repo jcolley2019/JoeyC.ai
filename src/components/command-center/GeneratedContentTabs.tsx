@@ -1,7 +1,10 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { marked } from 'marked'
 import TurndownService from 'turndown'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
+import { saveAs } from 'file-saver'
 import { useLanguage } from '../../hooks/useLanguage'
+import type { BrandProfile } from '../../types'
 
 interface ContentSection {
   label: string
@@ -15,6 +18,14 @@ interface GeneratedContentTabsProps {
   onContentChange: (content: string) => void
   onClear?: () => void
   onPublishBlog?: (content: string) => void
+  brandProfile?: BrandProfile | null
+}
+
+const PRESET_FONTS: Record<string, string> = {
+  modern: 'Calibri',
+  luxury: 'Garamond',
+  editorial: 'Palatino',
+  tech: 'Arial',
 }
 
 const platformNames: Record<string, string> = {
@@ -357,12 +368,13 @@ function ThreadView({ content }: { content: string }) {
   )
 }
 
-export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onPublishBlog }: GeneratedContentTabsProps) {
+export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onPublishBlog, brandProfile }: GeneratedContentTabsProps) {
   const { t } = useLanguage()
   const sections = useMemo(() => parseSections(rawContent), [rawContent])
   const [activeTab, setActiveTab] = useState(0)
   const [editing, setEditing] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [copiedMd, setCopiedMd] = useState(false)
   const [saved, setSaved] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const contentContainerRef = useRef<HTMLDivElement>(null)
@@ -374,6 +386,165 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onP
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const handleCopyMarkdown = async () => {
+    await navigator.clipboard.writeText(currentSection?.content || rawContent)
+    setCopiedMd(true)
+    setTimeout(() => setCopiedMd(false), 2000)
+  }
+
+  // Download blog as .docx
+  const handleDownloadDocx = useCallback(async () => {
+    const content = currentSection?.content || ''
+    const fontName = PRESET_FONTS[brandProfile?.style_preset || 'modern'] || 'Calibri'
+    const accentHex = (brandProfile?.accent_color || '#2563eb').replace('#', '')
+    const lines = content.split('\n')
+
+    const paragraphs: Paragraph[] = []
+    let inCodeBlock = false
+
+    for (const line of lines) {
+      if (line.startsWith('```')) { inCodeBlock = !inCodeBlock; continue }
+      if (inCodeBlock) {
+        paragraphs.push(new Paragraph({ children: [new TextRun({ text: line, font: 'Consolas', size: 20 })], spacing: { after: 40 } }))
+        continue
+      }
+
+      // Skip image placeholders
+      if (line.match(/^!\[.*\]\(.*\)$/)) continue
+
+      if (line.startsWith('# ')) {
+        paragraphs.push(new Paragraph({
+          children: [new TextRun({ text: line.replace(/^# /, ''), bold: true, font: fontName, size: 36, color: accentHex })],
+          heading: HeadingLevel.HEADING_1,
+          spacing: { after: 200 },
+        }))
+      } else if (line.startsWith('## ')) {
+        paragraphs.push(new Paragraph({
+          children: [new TextRun({ text: line.replace(/^## /, ''), bold: true, font: fontName, size: 28, color: accentHex })],
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 240, after: 120 },
+        }))
+      } else if (line.startsWith('### ')) {
+        paragraphs.push(new Paragraph({
+          children: [new TextRun({ text: line.replace(/^### /, ''), bold: true, font: fontName, size: 24 })],
+          heading: HeadingLevel.HEADING_3,
+          spacing: { before: 200, after: 80 },
+        }))
+      } else if (line.startsWith('> ')) {
+        paragraphs.push(new Paragraph({
+          children: [new TextRun({ text: line.replace(/^> /, ''), italics: true, font: fontName, size: 22, color: '666666' })],
+          indent: { left: 400 },
+          spacing: { after: 80 },
+        }))
+      } else if (line.match(/^[-*] /)) {
+        paragraphs.push(new Paragraph({
+          children: [new TextRun({ text: `• ${line.replace(/^[-*] /, '')}`, font: fontName, size: 22 })],
+          indent: { left: 300 },
+          spacing: { after: 60 },
+        }))
+      } else if (line.match(/^\d+\. /)) {
+        paragraphs.push(new Paragraph({
+          children: [new TextRun({ text: line, font: fontName, size: 22 })],
+          indent: { left: 300 },
+          spacing: { after: 60 },
+        }))
+      } else if (line === '---') {
+        paragraphs.push(new Paragraph({ children: [new TextRun({ text: '─'.repeat(50), color: 'cccccc', size: 16 })], spacing: { before: 200, after: 200 } }))
+      } else if (line.trim() === '') {
+        paragraphs.push(new Paragraph({ children: [], spacing: { after: 80 } }))
+      } else {
+        // Parse inline bold/italic
+        const runs: TextRun[] = []
+        const parts = line.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/)
+        for (const part of parts) {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            runs.push(new TextRun({ text: part.slice(2, -2), bold: true, font: fontName, size: 22 }))
+          } else if (part.startsWith('*') && part.endsWith('*')) {
+            runs.push(new TextRun({ text: part.slice(1, -1), italics: true, font: fontName, size: 22 }))
+          } else if (part.startsWith('`') && part.endsWith('`')) {
+            runs.push(new TextRun({ text: part.slice(1, -1), font: 'Consolas', size: 20 }))
+          } else if (part) {
+            runs.push(new TextRun({ text: part, font: fontName, size: 22 }))
+          }
+        }
+        if (runs.length > 0) {
+          paragraphs.push(new Paragraph({ children: runs, spacing: { after: 80 } }))
+        }
+      }
+    }
+
+    // Add author info if brand profile exists
+    if (brandProfile?.display_name) {
+      paragraphs.push(new Paragraph({ children: [new TextRun({ text: '─'.repeat(50), color: 'cccccc', size: 16 })], spacing: { before: 300, after: 200 } }))
+      paragraphs.push(new Paragraph({
+        children: [new TextRun({ text: `About the Author`, bold: true, font: fontName, size: 24, color: accentHex })],
+        spacing: { after: 80 },
+      }))
+      const bioLine = `${brandProfile.display_name}${brandProfile.title ? ` — ${brandProfile.title}` : ''}${brandProfile.bio ? `. ${brandProfile.bio}` : ''}`
+      paragraphs.push(new Paragraph({ children: [new TextRun({ text: bioLine, font: fontName, size: 22 })], spacing: { after: 60 } }))
+      if (brandProfile.website_url) {
+        paragraphs.push(new Paragraph({ children: [new TextRun({ text: brandProfile.website_url, font: fontName, size: 20, color: accentHex })], spacing: { after: 40 } }))
+      }
+    }
+
+    // Add date
+    paragraphs.unshift(new Paragraph({
+      children: [new TextRun({
+        text: `${brandProfile?.display_name || 'Author'} • ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+        font: fontName, size: 20, color: '888888', italics: true,
+      })],
+      alignment: AlignmentType.LEFT,
+      spacing: { after: 200 },
+    }))
+
+    const doc = new Document({
+      sections: [{ properties: {}, children: paragraphs }],
+    })
+
+    const blob = await Packer.toBlob(doc)
+    const title = lines.find(l => l.startsWith('# '))?.replace(/^# /, '') || 'blog-post'
+    const filename = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50) + '.docx'
+    saveAs(blob, filename)
+  }, [currentSection, brandProfile])
+
+  // Print blog as PDF
+  const handlePrintPdf = useCallback(() => {
+    const content = currentSection?.content || ''
+    const fontFamily = PRESET_FONTS[brandProfile?.style_preset || 'modern'] || 'Calibri'
+    const accent = brandProfile?.accent_color || '#2563eb'
+    const html = marked.parse(content) as string
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Blog Post</title>
+<style>
+  @page { margin: 1in; }
+  body { font-family: '${fontFamily}', serif; font-size: 14px; line-height: 1.7; color: #1a1a1a; max-width: 700px; margin: 0 auto; padding: 40px 20px; }
+  h1 { font-size: 28px; color: ${accent}; margin-bottom: 4px; line-height: 1.2; }
+  h2 { font-size: 22px; color: ${accent}; margin-top: 32px; border-bottom: 1px solid #e5e5e5; padding-bottom: 6px; }
+  h3 { font-size: 18px; color: #333; margin-top: 24px; }
+  p { margin: 8px 0; }
+  blockquote { border-left: 3px solid ${accent}; margin: 16px 0; padding: 8px 16px; background: #f9f9f9; color: #555; font-style: italic; }
+  code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-size: 13px; }
+  pre { background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 32px 0; }
+  a { color: ${accent}; }
+  img { display: none; }
+  .author-meta { color: #888; font-style: italic; font-size: 13px; margin-bottom: 24px; }
+  .author-bio { margin-top: 32px; padding-top: 16px; border-top: 1px solid #ddd; }
+  .author-bio strong { color: ${accent}; }
+</style></head><body>
+<p class="author-meta">${brandProfile?.display_name || 'Author'} &bull; ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+${html}
+${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author</strong><br>${brandProfile.display_name}${brandProfile.title ? ` — ${brandProfile.title}` : ''}${brandProfile.bio ? `. ${brandProfile.bio}` : ''}${brandProfile.website_url ? `<br><a href="${brandProfile.website_url}">${brandProfile.website_url}</a>` : ''}</div>` : ''}
+</body></html>`)
+    printWindow.document.close()
+    setTimeout(() => { printWindow.print() }, 300)
+  }, [currentSection, brandProfile])
 
   const handleSave = useCallback(() => {
     const md = getBlogViewMarkdown(contentContainerRef.current)
@@ -523,6 +694,24 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onP
                   className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
                   {t('gen.publish')}
+                </button>
+                <button
+                  onClick={handleCopyMarkdown}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+                >
+                  {copiedMd ? 'Copied!' : '📋 Markdown'}
+                </button>
+                <button
+                  onClick={handleDownloadDocx}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+                >
+                  📄 .docx
+                </button>
+                <button
+                  onClick={handlePrintPdf}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+                >
+                  📑 PDF
                 </button>
               </>
             ) : (

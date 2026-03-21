@@ -143,6 +143,35 @@ export function BrandSettingsPanel({ open, onClose, profile, onSave, onUploadLog
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+          {/* Live preview */}
+          {(displayName || titleField || bio) && (
+            <section className="rounded-lg border border-[#1e2a4a] bg-[#0c1020] p-4">
+              <span className="text-[10px] font-mono text-[#8892a4] uppercase tracking-widest">Preview</span>
+              <div className="flex items-start gap-3 mt-2">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="" className="w-10 h-10 rounded-md object-contain shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-md bg-[#1e2a4a] shrink-0 flex items-center justify-center text-[#8892a4] text-lg">
+                    {displayName?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-white">{displayName || 'Your Name'}</span>
+                    {titleField && <span className="text-[12px] text-[#8892a4] italic">{titleField}</span>}
+                  </div>
+                  {websiteUrl && <span className="text-[11px] text-[#4a6fa5] block mt-0.5">{websiteUrl}</span>}
+                  {bio && <p className="text-[12px] text-[#a0aac0] mt-1 leading-relaxed line-clamp-2">{bio}</p>}
+                  {(tiktok || instagram || pinterest || youtube || linkedin) && (
+                    <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-[#8892a4] font-mono">
+                      {[tiktok && 'TikTok', instagram && 'Instagram', pinterest && 'Pinterest', youtube && 'YouTube', linkedin && 'LinkedIn'].filter(Boolean).join(' • ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Identity */}
           <section className="space-y-3">
             <h3 className="text-[13px] font-mono font-semibold text-white uppercase tracking-wider">Identity</h3>
