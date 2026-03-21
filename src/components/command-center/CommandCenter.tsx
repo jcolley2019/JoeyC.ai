@@ -576,40 +576,41 @@ export function CommandCenter() {
           onSave={saveProfile}
           onUploadLogo={uploadLogo}
         />
-
-        {/* Onboarding Wizard — shown for new users who haven't completed onboarding */}
-        {!brandLoading && !isOnboarded && (
-          <OnboardingWizard
-            open={true}
-            onComplete={async (data) => {
-              let logoUrl: string | null = null
-              if (data.logoFile) {
-                logoUrl = await uploadLogo(data.logoFile)
-              }
-              await saveProfile({
-                display_name: data.display_name || null,
-                title: data.title || null,
-                bio: data.bio || null,
-                website_url: data.website_url || null,
-                tiktok_handle: data.tiktok_handle || null,
-                instagram_handle: data.instagram_handle || null,
-                pinterest_handle: data.pinterest_handle || null,
-                youtube_handle: data.youtube_handle || null,
-                linkedin_handle: data.linkedin_handle || null,
-                style_preset: data.style_preset,
-                accent_color: data.accent_color,
-                has_branding_kit: data.has_branding_kit,
-                brand_kit_notes: data.brand_kit_notes || null,
-                ...(logoUrl ? { logo_url: logoUrl } : {}),
-                onboarding_completed: true,
-              })
-            }}
-            onSkip={async () => {
-              await saveProfile({ onboarding_completed: true })
-            }}
-          />
-        )}
       </div>
+
+      {/* Onboarding Wizard — rendered OUTSIDE luxe-mode div to avoid theme inheritance */}
+      {!brandLoading && !isOnboarded && (
+        <OnboardingWizard
+          open={true}
+          onThemeChange={(theme) => setLuxeMode(theme === 'luxe')}
+          onComplete={async (data) => {
+            let logoUrl: string | null = null
+            if (data.logoFile) {
+              logoUrl = await uploadLogo(data.logoFile)
+            }
+            await saveProfile({
+              display_name: data.display_name || null,
+              title: data.title || null,
+              bio: data.bio || null,
+              website_url: data.website_url || null,
+              tiktok_handle: data.tiktok_handle || null,
+              instagram_handle: data.instagram_handle || null,
+              pinterest_handle: data.pinterest_handle || null,
+              youtube_handle: data.youtube_handle || null,
+              linkedin_handle: data.linkedin_handle || null,
+              style_preset: data.style_preset,
+              accent_color: data.accent_color,
+              has_branding_kit: data.has_branding_kit,
+              brand_kit_notes: data.brand_kit_notes || null,
+              ...(logoUrl ? { logo_url: logoUrl } : {}),
+              onboarding_completed: true,
+            })
+          }}
+          onSkip={async () => {
+            await saveProfile({ onboarding_completed: true })
+          }}
+        />
+      )}
     </AuthGate>
   )
 }
