@@ -143,7 +143,7 @@ export function Navbar() {
                 }}
                 className={`block text-center py-3 px-6 rounded-lg transition-all duration-300 ${
                   link.isRoute
-                    ? 'text-lg font-medium text-primary hover:bg-primary/10 border border-primary/20 hover:border-primary/40 mt-6'
+                    ? 'text-3xl md:text-5xl font-bold text-[#1a8fff] hover:text-[#4aa3ff] mt-6'
                     : 'text-3xl md:text-5xl font-bold text-text-primary hover:text-primary'
                 }`}
               >
