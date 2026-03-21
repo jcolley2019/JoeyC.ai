@@ -487,12 +487,13 @@ body {
   --color-bg: #0a0a0f;
   --color-bg-card: #0c1020;
   --color-bg-section: #080b16;
-  --color-text-primary: #f0f4ff;
-  --color-text-secondary: #a0aac0;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #94a3b8;
   --color-border: #1e2a4a;
   --color-border-hover: #2a3d6a;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
+  font-size: 14px;
 }
 
 /* Command Center — selected platform card */
@@ -502,16 +503,17 @@ body {
   color: #ffffff !important;
 }
 .platform-card-selected .text-xs {
-  color: #93c5fd !important;
+  color: #ffffff !important;
 }
 
 /* Command Center — generate button */
 .generate-btn {
-  background: #1a6fcc !important;
+  background: #2563eb !important;
   color: #ffffff !important;
+  font-weight: 600;
 }
 .generate-btn:hover:not(:disabled) {
-  background: #1d7fe0;
+  background: #3b82f6;
 }
 
 /* Floating particles container */

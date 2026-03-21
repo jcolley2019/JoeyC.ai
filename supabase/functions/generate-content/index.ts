@@ -247,49 +247,53 @@ Include 3-5 illustration placeholders throughout the article at natural visual b
   }
 
   if (outputFormat === "video") {
-    return `${base}\n\nCreate a complete AI video production prompt package for a 15-30 second short-form video (TikTok/Reels/Shorts). Format with these clearly labeled sections:
+    return `${base}\n\nYou are an expert AI media prompt engineer. Generate a highly optimized prompt for the specified AI platform.
 
-**🎬 VIDEO CONCEPT**
-One-line description of the video idea. What's the hook? What makes someone stop scrolling?
+The user's input will include metadata at the end with:
+- Media type (video or image)
+- AI Platform (the specific tool to optimize for)
+- Aspect Ratios (target dimensions for each social platform)
 
-**⏱️ DURATION & FORMAT**
-Recommended length (15s, 30s, or 60s) and format (talking head, b-roll montage, screen recording, animated explainer, cinematic, etc.)
+PLATFORM-SPECIFIC GUIDELINES:
 
-**📜 SCENE-BY-SCENE BREAKDOWN**
-Break the video into 3-6 scenes. For each scene:
-- **Scene [N]** (X seconds):
-  - **Visual:** Exactly what's on screen — camera angle, movement, subject, background, lighting, mood
-  - **Text overlay:** Any on-screen text or captions
-  - **Audio:** Voiceover line, music mood, or sound effect
-  - **Transition:** How it cuts/transitions to the next scene
+VIDEO PLATFORMS:
+VEO 3: Include camera movement, lighting, audio descriptions (Veo 3 supports audio), cinematic language, shot type, subject, action, setting, mood.
+SORA 2: Highly detailed scene descriptions, physics and realistic motion, time of day, weather, environment, character consistency, world-building.
+KLING AI: Cinematic quality, specific camera angles, motion speed (slow-mo, time-lapse), color grading style, negative prompts (what to avoid).
+HIGGSFIELD: Human motion and performance, body language, facial expressions, wardrobe, styling, environment, great for lifestyle/social content.
+SEEDANCE: Artistic and stylized content, art style references, color palette, visual mood, motion style.
+RUNWAY: Cinematic generation, detailed scene composition, motion brush directions, camera path descriptions, style references.
+PIKA: Short-form motion, style transfer, text-to-video with specific motion descriptions, aspect ratio optimization.
+HAILUO: Realistic human motion, natural expressions, detailed scene descriptions, lighting and atmosphere.
 
-**🎤 VOICEOVER SCRIPT**
-The complete narration script, timed to match each scene. Write it exactly as it should be spoken — casual, punchy, Joey's voice. Include [pause] markers and emphasis with *asterisks*.
+IMAGE PLATFORMS:
+MIDJOURNEY: Use :: weighting, --ar {ratio}, --v 6.1, --style raw for photorealistic, descriptive artistic style references, lighting, mood, composition. Format: [subject], [style], [lighting], [mood], [camera/lens if photo], --ar {ratio} --v 6.1
+DALL-E 3 / CHATGPT: Natural language descriptions, very detailed, mention style explicitly (photorealistic, illustration, oil painting), include composition and mood.
+FLUX: Highly detailed technical descriptions, supports complex scenes, mention "professional photography" or art style, include technical camera details for photos.
+IDEOGRAM: Great for text in images, mention typography style, very good at logos and graphics, use clear composition descriptions.
+FIREFLY (Adobe): Style references, mood boards, commercial-safe descriptions, great for professional/marketing imagery.
+STABLE DIFFUSION: Detailed positive and negative prompts, model-specific keywords (photorealistic, cinematic, 8k), CFG scale suggestions, sampler recommendations.
+NANO BANANA: Optimized natural language descriptions, style references, composition details.
 
-**🎵 MUSIC & SOUND**
-- Recommended music mood/genre (e.g., "lo-fi chill beat", "energetic electronic", "cinematic tension build")
-- Specific sound effects needed (whoosh, notification ding, typing sounds, etc.)
-- Trending audio suggestions if applicable
+FORMAT YOUR OUTPUT AS:
 
-**📝 ON-SCREEN TEXT**
-List all text overlays in order with timing:
-1. (0-3s) "Hook text here"
-2. (4-8s) "Key point"
-etc.
+🎬 [VIDEO/IMAGE] PROMPT FOR [AI PLATFORM]
+📐 Aspect Ratio: [ratio from metadata]
+🌐 Optimized for: [social platform(s)]
 
-**🤖 AI VIDEO GENERATION PROMPT**
-Write a single, detailed prompt optimized for AI video tools (Sora, Veo, Invideo, etc.). Include:
-- Visual style (cinematic, documentary, animated, etc.)
-- Color grading (warm, cool, high contrast, etc.)
-- Camera movements (pan, zoom, tracking, static)
-- Mood and atmosphere
-- Aspect ratio (9:16 for shorts)
+📋 OPTIMIZED PROMPT:
+[Full detailed prompt ready to paste into the AI tool]
 
-**💬 CAPTION & HASHTAGS**
-Post caption and 5-8 relevant hashtags for when the video is published.
+💡 PRO TIPS FOR [AI PLATFORM]:
+- [Tip 1 specific to this platform]
+- [Tip 2]
+- [Tip 3]
 
-**📌 PRODUCTION NOTES**
-Any tips for making this video perform well — best posting times, trending formats to reference, or ways to make it feel authentic rather than AI-generated.`;
+⚙️ RECOMMENDED SETTINGS:
+- Aspect Ratio: [specific ratio]
+- [Platform-specific settings like --v 6.1, CFG scale, etc.]
+
+If no specific AI platform or media type is provided in the metadata, fall back to a general-purpose video production prompt with scene-by-scene breakdown, voiceover script, and caption/hashtags.`;
   }
 
   if (outputFormat === "thread") {
@@ -338,7 +342,7 @@ function getDerivativePrompt(outputFormat: string, platform?: string): string {
   }
 
   if (outputFormat === "video") {
-    return `${base}\n\nDistill this blog into a short-form video production package (15-30s): VIDEO CONCEPT, DURATION & FORMAT, SCENE-BY-SCENE BREAKDOWN (3-6 scenes with visuals/text/audio/transitions), VOICEOVER SCRIPT, MUSIC & SOUND, ON-SCREEN TEXT with timing, AI VIDEO GENERATION PROMPT, CAPTION & HASHTAGS, PRODUCTION NOTES.`;
+    return `${base}\n\nDistill this blog into an AI-optimized image or video prompt. Check the user input for metadata (Media type, AI Platform, Aspect Ratios). If present, generate a platform-specific prompt optimized for that tool. If no metadata, create a general video production prompt with scene breakdown and voiceover script.`;
   }
 
   return base;
@@ -549,7 +553,8 @@ Deno.serve(async (req) => {
     // Determine generation mode
     const isCascadeDerivative = !!cascade_source;
     const isBlogWithSearch = output_format === "blog" && !isCascadeDerivative;
-    const needsHashtags = (output_format === "social" || output_format === "thread" || output_format === "video") && !isCascadeDerivative;
+    const needsHashtags = (output_format === "social" || output_format === "thread") && !isCascadeDerivative;
+    const isVideoPrompt = output_format === "video" && !isCascadeDerivative;
 
     // Hashtag data from Perplexity (passed from client-side, already researched)
     const hashtagData: string | null = real_time_hashtags || null;
@@ -587,6 +592,12 @@ Deno.serve(async (req) => {
       userMessage = hashtagData
         ? `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nTransform this into the requested format. Use the real-time hashtag data provided in the system prompt — select the most relevant hashtags from that researched list.`
         : `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nTransform this into the requested format. IMPORTANT: Before generating hashtags, use web search to find currently trending and high-performing hashtags for this topic on ${platform || 'social media'}. Search for recent hashtag trends and engagement data.`;
+    } else if (isVideoPrompt) {
+      // Image & Video Prompt mode: no hashtags, no web search
+      model = MODELS.standard;
+      maxTokens = MAX_TOKENS_STANDARD;
+      systemPrompt = getSystemPrompt(output_format, platform);
+      userMessage = `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nGenerate a platform-optimized prompt based on the metadata provided.`;
     } else {
       // Standard mode: direct generation without web search
       model = MODELS.standard;

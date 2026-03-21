@@ -13,13 +13,61 @@ interface ContentSection {
 interface GeneratedContentTabsProps {
   rawContent: string
   onContentChange: (content: string) => void
+  onClear?: () => void
   onPublishBlog?: (content: string) => void
+}
+
+const platformNames: Record<string, string> = {
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+  pinterest: 'Pinterest',
+  linkedin: 'LinkedIn',
+  youtube: 'YouTube',
+}
+
+// Try to split video/image prompt content into per-platform sections
+function splitVideoByPlatform(content: string): ContentSection[] | null {
+  // Match headers like "🎬 VIDEO PROMPT FOR TIKTOK", "🎬 IMAGE PROMPT FOR TIKTOK",
+  // "📋 TIKTOK:", "## TIKTOK", "TIKTOK PROMPT", etc.
+  const platformKeys = Object.keys(platformNames)
+  const platformPattern = platformKeys.join('|')
+  const headerRegex = new RegExp(
+    `(?:^|\\n)(?:#{1,3}\\s*)?(?:🎬|📋|🖼️)?\\s*(?:VIDEO|IMAGE)?\\s*(?:PROMPT(?:\\s+FOR)?)?\\s*(${platformPattern})(?:\\s*(?:PROMPT|:))?\\s*\\n`,
+    'gi'
+  )
+
+  const matches: { platform: string; index: number; fullMatchEnd: number }[] = []
+  let m: RegExpExecArray | null
+  while ((m = headerRegex.exec(content)) !== null) {
+    const platform = m[1].toLowerCase()
+    if (platformKeys.includes(platform)) {
+      matches.push({ platform, index: m.index, fullMatchEnd: m.index + m[0].length })
+    }
+  }
+
+  if (matches.length < 2) return null // Not enough platform sections to split
+
+  const sections: ContentSection[] = []
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].fullMatchEnd
+    const end = i + 1 < matches.length ? matches[i + 1].index : content.length
+    const sectionContent = content.slice(start, end).replace(/^[\s-]+/, '').replace(/[\s-]+$/, '').trim()
+    const pName = platformNames[matches[i].platform] || matches[i].platform
+    sections.push({
+      label: `🎬 ${pName}`,
+      format: 'video',
+      platform: matches[i].platform,
+      content: sectionContent,
+    })
+  }
+
+  return sections.length > 0 ? sections : null
 }
 
 // Parse combined multi-format output into sections
 function parseSections(raw: string): ContentSection[] {
   // Check for section headers like "## 📝 Blog Article" or "## 📱 Tiktok"
-  const sectionRegex = /^## (📝 Blog Article|📱 (\w+)|🎬 Video Prompt|🧵 X Thread)$/gm
+  const sectionRegex = /^## (📝 Blog Article|📱 (\w+)|🎬 (?:Video Prompt|Image & Video Prompt)|🧵 X Thread)$/gm
   const matches: { label: string; index: number }[] = []
   let m: RegExpExecArray | null
   while ((m = sectionRegex.exec(raw)) !== null) {
@@ -27,7 +75,11 @@ function parseSections(raw: string): ContentSection[] {
   }
 
   if (matches.length === 0) {
-    // Single format — guess from content
+    // Single format — try to split video content by platform
+    const videoSplit = splitVideoByPlatform(raw)
+    if (videoSplit) return videoSplit
+
+    // Fallback: single section
     return [{ label: 'Content', format: 'social', content: raw.trim() }]
   }
 
@@ -45,7 +97,14 @@ function parseSections(raw: string): ContentSection[] {
     let format: ContentSection['format'] = 'social'
     let platform: string | undefined
     if (label.includes('Blog')) format = 'blog'
-    else if (label.includes('Video')) format = 'video'
+    else if (label.includes('Video') || label.includes('Image')) {
+      format = 'video'
+      // If single video section, try to split by platform
+      if (matches.length === 1) {
+        const videoSplit = splitVideoByPlatform(content)
+        if (videoSplit) return videoSplit
+      }
+    }
     else if (label.includes('Thread')) format = 'thread'
     else if (label.includes('📱')) {
       format = 'social'
@@ -287,40 +346,14 @@ function ThreadView({ content }: { content: string }) {
   )
 }
 
-function VideoView({ content }: { content: string }) {
-  return (
-    <div className="bg-bg-card border border-border rounded-lg px-4 py-3 overflow-y-auto" style={{ maxHeight: '600px' }}>
-      {content.split('\n\n').map((block, i) => {
-        // Detect section headers (bold text with emoji)
-        const isHeader = /^\*\*.+\*\*$/.test(block.trim())
-        if (isHeader) {
-          return (
-            <h3 key={i} className="text-sm font-semibold text-primary mt-4 mb-2 first:mt-0">
-              {block.replace(/\*\*/g, '')}
-            </h3>
-          )
-        }
-        return (
-          <div key={i} className="mb-3 last:mb-0">
-            {block.split('\n').map((line, j) => (
-              <p key={j} className="text-sm text-text-primary leading-relaxed">
-                {line}
-              </p>
-            ))}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-export function GeneratedContentTabs({ rawContent, onContentChange, onPublishBlog }: GeneratedContentTabsProps) {
+export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onPublishBlog }: GeneratedContentTabsProps) {
   const { t } = useLanguage()
   const sections = useMemo(() => parseSections(rawContent), [rawContent])
   const [activeTab, setActiveTab] = useState(0)
   const [editing, setEditing] = useState(false)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
   const contentContainerRef = useRef<HTMLDivElement>(null)
 
   const currentSection = sections[activeTab] || sections[0]
@@ -354,56 +387,96 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onPublishBlo
     setEditing(false)
   }
 
+  const handleClearAll = () => {
+    if (!confirmClear) {
+      setConfirmClear(true)
+      setTimeout(() => setConfirmClear(false), 3000)
+      return
+    }
+    setConfirmClear(false)
+    onClear?.()
+  }
+
+  const handleDeleteTab = (index: number) => {
+    if (sections.length <= 1) {
+      onClear?.()
+      return
+    }
+    const remaining = sections.filter((_, i) => i !== index)
+    const rebuilt = remaining
+      .map(s => `## ${s.label}\n\n${s.content}`)
+      .join('\n\n---\n\n')
+    onContentChange(rebuilt)
+    if (activeTab >= remaining.length) setActiveTab(remaining.length - 1)
+  }
+
   // Tab display names — exact labels
   const tabName = (s: ContentSection) => {
     if (s.format === 'blog') return 'Blog'
     if (s.format === 'thread') return 'X Thread'
-    if (s.format === 'video') return 'Video Prompt'
-    if (s.platform) {
-      const names: Record<string, string> = {
-        tiktok: 'TikTok',
-        instagram: 'Instagram',
-        pinterest: 'Pinterest',
-        linkedin: 'LinkedIn',
-        youtube: 'YouTube',
-      }
-      return names[s.platform] || s.platform.charAt(0).toUpperCase() + s.platform.slice(1)
+    // Video sections with platform names get the platform label
+    if (s.format === 'video' && s.platform) {
+      return platformNames[s.platform] || s.platform.charAt(0).toUpperCase() + s.platform.slice(1)
     }
-    return 'Social Post'
+    if (s.format === 'video') return 'Prompt'
+    if (s.platform) {
+      return platformNames[s.platform] || s.platform.charAt(0).toUpperCase() + s.platform.slice(1)
+    }
+    return 'Content'
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-text-primary">{t('gen.title')}</h2>
-        {editing && (
-          <span className="text-[10px] font-mono text-primary">{t('gen.editing')}</span>
-        )}
+        <h2 className="text-[15px] font-bold text-white">{t('gen.title')}</h2>
+        <div className="flex items-center gap-3">
+          {editing && (
+            <span className="text-[10px] font-mono text-primary">{t('gen.editing')}</span>
+          )}
+          {onClear && (
+            <button
+              onClick={handleClearAll}
+              className="px-3 py-1 text-[13px] font-mono font-semibold border border-border rounded-md text-text-secondary hover:text-red-400 hover:border-red-400/30 transition-colors"
+            >
+              {confirmClear ? 'Confirm Clear' : 'Clear All'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
       {sections.length > 1 && (
         <div className="flex gap-1 bg-bg border border-border rounded-lg p-1">
           {sections.map((section, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                setActiveTab(i)
-                setEditing(false)
-              }}
-              className={`flex-1 px-3 py-2.5 rounded-md text-xs font-mono font-medium transition-all text-center ${
-                activeTab === i
-                  ? 'bg-primary/15 text-primary border border-primary/30 shadow-sm shadow-primary/10'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-card border border-transparent'
-              }`}
-            >
-              {tabName(section)}
-            </button>
+            <div key={i} className="flex-1 relative">
+              <button
+                onClick={() => {
+                  setActiveTab(i)
+                  setEditing(false)
+                }}
+                className={`w-full px-3 py-2.5 rounded-md text-[15px] font-mono transition-all text-center ${
+                  activeTab === i
+                    ? 'bg-[#1e3a5f] text-white font-semibold border border-[#4a6fa5]/40 shadow-sm'
+                    : 'text-[#94a3b8] font-medium hover:text-white hover:bg-bg-card border border-transparent'
+                }`}
+              >
+                {tabName(section)}
+              </button>
+              {onClear && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDeleteTab(i) }}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-bg-card border border-border text-text-secondary hover:text-red-400 hover:border-red-400/30 flex items-center justify-center transition-colors text-[10px] leading-none"
+                  title="Remove this tab"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
 
-      {/* Content view */}
+      {/* Content view — video uses SocialView for identical rendering */}
       <div ref={contentContainerRef}>
         {currentSection && (
           <>
@@ -416,7 +489,7 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onPublishBlo
             )}
             {currentSection.format === 'social' && <SocialView content={currentSection.content} />}
             {currentSection.format === 'thread' && <ThreadView content={currentSection.content} />}
-            {currentSection.format === 'video' && <VideoView content={currentSection.content} />}
+            {currentSection.format === 'video' && <SocialView content={currentSection.content} />}
           </>
         )}
       </div>
@@ -460,11 +533,11 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onPublishBlo
           </>
         )}
 
-        {/* Social posts (TikTok, Instagram, LinkedIn, etc.): Edit + Copy */}
-        {currentSection?.format === 'social' && (
+        {/* Social posts & Video prompts: Edit + Copy (identical layout) */}
+        {(currentSection?.format === 'social' || currentSection?.format === 'video') && (
           <>
             <button
-              onClick={() => {/* TODO: inline edit for social */}}
+              onClick={() => {/* TODO: inline edit */}}
               className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
             >
               {t('gen.edit')}
@@ -492,24 +565,6 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onPublishBlo
               className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-[#1d9bf0]/30 bg-[#1d9bf0]/10 text-[#1d9bf0] hover:bg-[#1d9bf0]/20 transition-colors"
             >
               {t('gen.postx')}
-            </button>
-          </>
-        )}
-
-        {/* Video Prompt: Edit + Copy */}
-        {currentSection?.format === 'video' && (
-          <>
-            <button
-              onClick={() => {/* TODO: inline edit for video */}}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
-            >
-              {t('gen.edit')}
-            </button>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
-            >
-              {copied ? t('gen.copied') : t('gen.copy')}
             </button>
           </>
         )}

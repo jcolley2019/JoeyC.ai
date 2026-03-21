@@ -46,7 +46,7 @@ export function PlatformPicker({ value, onChange, cascade, onCascadeChange, show
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono text-text-secondary uppercase tracking-wide">{t('platform.label')}</span>
+        <span className="text-[13px] font-mono text-white font-bold uppercase tracking-[0.1em]">{t('platform.label')}</span>
         <div className="flex items-center gap-2">
           <button
             onClick={toggleAll}

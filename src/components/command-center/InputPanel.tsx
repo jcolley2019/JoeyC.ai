@@ -290,7 +290,7 @@ export function InputPanel({ inputText, onInputTextChange, onInputTypeChange, ex
 
           {/* Stats + controls — all on one line */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-xs font-mono text-text-secondary px-1">
+            <div className="flex items-center gap-3 text-[13px] font-mono text-[#94a3b8] px-1">
               <span>{inputText.length} {t('input.chars')}</span>
               <span className="text-border">·</span>
               <span>{wordCount} {t('input.words')}</span>

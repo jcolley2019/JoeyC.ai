@@ -94,6 +94,7 @@ export function AdminDashboard() {
       setInviteSuccess(`Invitation sent to ${inviteEmail}`)
       setInviteEmail('')
       fetchData()
+      setTimeout(() => setInviteSuccess(''), 3000)
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : 'Failed to send invitation')
     } finally {
@@ -170,14 +171,14 @@ export function AdminDashboard() {
         {/* Invite Section */}
         <div className="mb-8 p-6 rounded-xl border border-border bg-bg-card">
           <h2 className="font-semibold text-text-primary mb-1">Invite User</h2>
-          <p className="text-xs text-text-secondary mb-4">Send an email invitation to give someone access to the command center.</p>
+          <p className="text-[14px] text-[#94a3b8] mb-4">Send an email invitation to give someone access to the command center.</p>
           <div className="flex gap-3">
             <input
               type="email"
               value={inviteEmail}
               onChange={e => setInviteEmail(e.target.value)}
               placeholder="user@example.com"
-              className="flex-1 bg-bg border border-border rounded-lg px-4 py-2.5 text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors text-sm"
+              className="flex-1 bg-bg border border-border rounded-lg px-4 py-2.5 text-text-primary placeholder:text-[#64748b] focus:outline-none focus:border-primary transition-colors text-[14px]"
               onKeyDown={e => e.key === 'Enter' && handleInvite()}
             />
             <button
@@ -188,7 +189,7 @@ export function AdminDashboard() {
               {inviting ? 'Sending...' : 'Send Invite'}
             </button>
           </div>
-          {inviteSuccess && <p className="text-green-400 text-xs font-mono mt-2">{inviteSuccess}</p>}
+          {inviteSuccess && <p className="text-green-400 text-[14px] font-semibold font-mono mt-2">{inviteSuccess}</p>}
           {inviteError && <p className="text-red-400 text-xs font-mono mt-2">{inviteError}</p>}
         </div>
 
@@ -198,10 +199,10 @@ export function AdminDashboard() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all capitalize ${
+              className={`flex-1 px-3 py-2 rounded-md text-[15px] font-medium transition-all capitalize ${
                 activeTab === tab
                   ? 'border-primary bg-primary/10 text-white'
-                  : 'text-text-secondary hover:text-text-primary border border-transparent'
+                  : 'text-[#94a3b8] hover:text-text-primary border border-transparent'
               }`}
             >
               {tab} {tab === 'users' && users.length > 0 && `(${users.length})`}
@@ -223,27 +224,27 @@ export function AdminDashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-bg-card border-b border-border">
-                      <th className="text-left px-4 py-3 font-mono text-xs text-text-secondary uppercase tracking-wide">Email</th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-text-secondary uppercase tracking-wide">Role</th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-text-secondary uppercase tracking-wide">Joined</th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-text-secondary uppercase tracking-wide">Last Login</th>
+                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Email</th>
+                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Role</th>
+                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Joined</th>
+                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Last Login</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map(user => (
                       <tr key={user.id} className="border-b border-border/50 hover:bg-bg-card/50 transition-colors">
-                        <td className="px-4 py-3 text-text-primary">{user.email}</td>
+                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{user.email}</td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-mono ${
+                          <span className={`px-2 py-0.5 rounded text-[12px] font-mono ${
                             user.role === 'master_admin'
-                              ? 'bg-primary/20 text-primary border border-primary/30'
-                              : 'bg-accent/15 text-accent border border-accent/30'
+                              ? 'bg-[#1e4d2b] text-white border border-green-600/40'
+                              : 'bg-[#1e3a5f] text-white border border-blue-500/40'
                           }`}>
                             {user.role || 'user'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-text-secondary text-xs">{formatDate(user.created_at)}</td>
-                        <td className="px-4 py-3 text-text-secondary text-xs">{formatDate(user.last_sign_in_at)}</td>
+                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(user.created_at)}</td>
+                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(user.last_sign_in_at)}</td>
                       </tr>
                     ))}
                     {users.length === 0 && (
@@ -287,10 +288,10 @@ export function AdminDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-text-primary font-medium truncate">{entry.user_email || 'Unknown user'}</span>
-                        <span className="text-xs text-text-secondary">{formatDate(entry.created_at)}</span>
+                        <span className="text-[14px] text-[#e2e8f0] font-medium truncate">{entry.user_email || 'Unknown user'}</span>
+                        <span className="text-[13px] text-[#94a3b8]">{formatDate(entry.created_at)}</span>
                       </div>
-                      <p className="text-xs text-text-secondary mt-0.5">{formatAction(entry)}</p>
+                      <p className="text-[13px] text-[#94a3b8] mt-0.5">{formatAction(entry)}</p>
                     </div>
                   </div>
                 ))}
@@ -308,29 +309,29 @@ export function AdminDashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-bg-card border-b border-border">
-                      <th className="text-left px-4 py-3 font-mono text-xs text-text-secondary uppercase tracking-wide">Email</th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-text-secondary uppercase tracking-wide">Status</th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-text-secondary uppercase tracking-wide">Sent</th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-text-secondary uppercase tracking-wide">Accepted</th>
+                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Email</th>
+                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Status</th>
+                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Sent</th>
+                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Accepted</th>
                     </tr>
                   </thead>
                   <tbody>
                     {invitations.map(inv => (
                       <tr key={inv.id} className="border-b border-border/50 hover:bg-bg-card/50 transition-colors">
-                        <td className="px-4 py-3 text-text-primary">{inv.email}</td>
+                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{inv.email}</td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-mono ${
+                          <span className={`px-2 py-0.5 rounded text-[12px] font-mono ${
                             inv.status === 'accepted'
                               ? 'bg-green-500/15 text-green-400 border border-green-500/30'
                               : inv.status === 'expired'
                               ? 'bg-red-500/15 text-red-400 border border-red-500/30'
-                              : 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30'
+                              : 'bg-yellow-400/80 text-yellow-900 border border-yellow-500/30'
                           }`}>
                             {inv.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-text-secondary text-xs">{formatDate(inv.created_at)}</td>
-                        <td className="px-4 py-3 text-text-secondary text-xs">{formatDate(inv.accepted_at)}</td>
+                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(inv.created_at)}</td>
+                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(inv.accepted_at)}</td>
                       </tr>
                     ))}
                     {invitations.length === 0 && (

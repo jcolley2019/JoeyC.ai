@@ -12,9 +12,10 @@ export interface BlogClarifyData {
 
 interface BlogClarifyFormProps {
   onDataChange: (data: BlogClarifyData) => void
+  onSkip?: () => void
 }
 
-export function BlogClarifyForm({ onDataChange }: BlogClarifyFormProps) {
+export function BlogClarifyForm({ onDataChange, onSkip }: BlogClarifyFormProps) {
   const { t } = useLanguage()
   const [tools, setTools] = useState('')
   const [details, setDetails] = useState('')
@@ -46,8 +47,18 @@ export function BlogClarifyForm({ onDataChange }: BlogClarifyFormProps) {
   }
 
   return (
-    <div className="space-y-4 p-4 rounded-lg border border-primary/30 bg-primary/5">
-      <p className="font-mono text-xs text-primary uppercase tracking-wider">{t('clarify.title')}</p>
+    <div className="space-y-4 p-4 rounded-lg border border-primary/30 bg-primary/5 relative">
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-xs text-primary uppercase tracking-wider">{t('clarify.title')}</p>
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            className="text-xs font-mono text-text-secondary hover:text-primary transition-colors"
+          >
+            Skip →
+          </button>
+        )}
+      </div>
 
       {/* Tools/gear */}
       <div>

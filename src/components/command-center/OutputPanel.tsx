@@ -30,15 +30,17 @@ export function OutputPanel({
 }: OutputPanelProps) {
   const { t } = useLanguage()
   const hasSocial = formats.includes('social')
+  const hasVideo = formats.includes('video')
   const hasBlog = formats.includes('blog')
   const hasOtherFormats = formats.some(f => f !== 'blog')
   const showCascadeToggle = hasBlog && hasOtherFormats
+  const showPlatforms = hasSocial || hasVideo
 
   return (
     <div className="flex flex-col gap-4 h-full">
       <FormatSelector value={formats} onChange={onFormatsChange} />
 
-      {hasSocial && (
+      {showPlatforms && (
         <PlatformPicker
           value={platforms}
           onChange={onPlatformsChange}
@@ -57,7 +59,7 @@ export function OutputPanel({
         id="tour-generate"
         onClick={onGenerate}
         disabled={generating || !inputReady}
-        className="w-full generate-btn font-semibold py-3 rounded-lg relative z-10 disabled:opacity-50 transition-all"
+        className="w-full generate-btn font-semibold py-3 rounded-lg relative z-10 disabled:opacity-70 transition-all text-white"
       >
         <span className="relative z-10">
           {generating ? (

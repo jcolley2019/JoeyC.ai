@@ -136,7 +136,7 @@ export function useContentGeneration() {
         }
       }
 
-      setGeneratingStatus('Generating content...')
+      setGeneratingStatus('Generating Content...')
 
       if (useCascade) {
         // === CASCADE FLOW ===
@@ -169,7 +169,7 @@ export function useContentGeneration() {
               })
             }
           } else {
-            const formatLabel = format === 'video' ? '🎬 Video Prompt' : '🧵 X Thread'
+            const formatLabel = format === 'video' ? '🎬 Image & Video Prompt' : '🧵 X Thread'
             derivativeCalls.push({
               label: formatLabel,
               params: {
@@ -221,7 +221,7 @@ export function useContentGeneration() {
               })
             }
           } else {
-            const formatLabel = format === 'blog' ? '📝 Blog Article' : format === 'video' ? '🎬 Video Prompt' : '🧵 X Thread'
+            const formatLabel = format === 'blog' ? '📝 Blog Article' : format === 'video' ? '🎬 Image & Video Prompt' : '🧵 X Thread'
             calls.push({
               label: formatLabel,
               params: {

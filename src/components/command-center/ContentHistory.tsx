@@ -107,10 +107,10 @@ export function ContentHistory() {
         <button
           onClick={handleCopySelected}
           disabled={selected.size === 0}
-          className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all border ${
+          className={`px-3 py-1.5 rounded-md text-[13px] font-mono transition-all border ${
             selected.size > 0
-              ? 'border-border text-text-secondary hover:border-primary hover:text-primary'
-              : 'border-border text-text-secondary opacity-40 cursor-not-allowed'
+              ? 'border-[#2a3d6a] text-[#e2e8f0] hover:border-primary hover:text-primary'
+              : 'border-[#2a3d6a] text-[#e2e8f0] opacity-40 cursor-not-allowed'
           }`}
         >
           {copiedId === 'toolbar' ? t('history.copied') : t('history.copy')}
@@ -118,10 +118,10 @@ export function ContentHistory() {
 
         <button
           onClick={toggleSelectAll}
-          className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all border ${
+          className={`px-3 py-1.5 rounded-md text-[13px] font-mono transition-all border ${
             selected.size === generations.length
               ? 'border-primary/30 bg-primary/10 text-primary'
-              : 'border-border text-text-secondary hover:border-border-hover'
+              : 'border-[#2a3d6a] text-[#e2e8f0] hover:border-border-hover'
           }`}
         >
           {selected.size === generations.length ? t('history.deselectall') : t('history.selectall')}
@@ -178,17 +178,17 @@ export function ContentHistory() {
                 onClick={() => setExpanded(expanded === gen.id ? null : gen.id)}
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-primary">
+                  <span className="font-mono text-[14px] text-[#e2e8f0]">
                     {gen.input_type}
                   </span>
-                  <span className="text-text-secondary text-xs">&rarr;</span>
-                  <span className="font-mono text-xs text-accent">
+                  <span className="text-[#94a3b8] text-[14px]">&rarr;</span>
+                  <span className="font-mono text-[13px] text-white bg-[#1e3a5f] px-1.5 py-0.5 rounded">
                     {gen.output_format}
                     {gen.platform ? ` (${gen.platform})` : ''}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-secondary font-mono">
+                  <span className="text-[13px] text-[#94a3b8] font-mono">
                     {new Date(gen.created_at).toLocaleDateString()}
                   </span>
                   <svg

@@ -53,7 +53,7 @@ const translations: Record<string, Record<Lang, string>> = {
   // === OutputPanel ===
   'output.generate': { en: 'Generate Content', es: 'Generar Contenido' },
   'output.generating': { en: 'Generating...', es: 'Generando...' },
-  'output.cascade.generating': { en: 'Researching & generating...', es: 'Investigando y generando...' },
+  'output.cascade.generating': { en: 'Researching & Generating...', es: 'Investigando y Generando...' },
 
   // === FormatSelector ===
   'format.label': { en: 'Format', es: 'Formato' },
@@ -64,8 +64,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'format.blog.desc': { en: 'Full markdown article', es: 'Artículo completo en markdown' },
   'format.thread': { en: 'X Thread', es: 'Hilo de X' },
   'format.thread.desc': { en: 'Numbered tweet thread', es: 'Hilo de tweets numerado' },
-  'format.video': { en: 'Video Prompt', es: 'Prompt de Video' },
-  'format.video.desc': { en: 'AI video production script', es: 'Guión de producción de video AI' },
+  'format.video': { en: 'Image & Video Prompts', es: 'Prompts de Imagen y Video' },
+  'format.video.desc': { en: 'AI-optimized prompts for any platform', es: 'Prompts optimizados para cualquier plataforma' },
 
   // === PlatformPicker ===
   'platform.label': { en: 'Platforms', es: 'Plataformas' },
