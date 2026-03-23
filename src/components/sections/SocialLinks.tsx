@@ -59,7 +59,7 @@ export function SocialLinks() {
 
     // Social cards — stagger up from below
     if (gridRef.current) {
-      const cards = gridRef.current.querySelectorAll('.social-card')
+      const cards = Array.from(gridRef.current.querySelectorAll('.social-card'))
       gsap.set(cards, { opacity: 0, y: 80 })
 
       const obs = new IntersectionObserver(

@@ -94,7 +94,7 @@ export function Blog() {
 
     // Social cards — stagger up
     if (socialGridRef.current) {
-      const cards = socialGridRef.current.querySelectorAll('.social-card')
+      const cards = Array.from(socialGridRef.current.querySelectorAll('.social-card'))
       gsap.set(cards, { opacity: 0, y: 80 })
       const obs = new IntersectionObserver(
         ([e]) => {

@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import gsap from 'gsap'
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
+
+gsap.registerPlugin(ScrollToPlugin)
 
 const links = [
   { label: 'About', href: '#about' },
@@ -68,10 +71,9 @@ export function Navbar() {
       return
     }
     close()
-    // Wait for overlay to fade out, then scroll
+    // Wait for overlay to fade out, then scroll via GSAP
     setTimeout(() => {
-      const el = document.querySelector(href)
-      el?.scrollIntoView({ behavior: 'smooth' })
+      gsap.to(window, { scrollTo: { y: href, offsetY: 0 }, duration: 1, ease: 'power2.inOut' })
     }, 350)
   }, [close])
 

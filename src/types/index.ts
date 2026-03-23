@@ -5,6 +5,8 @@ export interface Project {
   description: string
   tech: string[]
   link: string
+  initials: string
+  gradient: [string, string]
 }
 
 export interface SocialLink {

@@ -51,7 +51,7 @@ export function useGsapStagger<T extends HTMLElement = HTMLDivElement>(
     const container = ref.current
     if (!container) return
 
-    const children = container.querySelectorAll(selector)
+    const children = Array.from(container.querySelectorAll(selector))
     if (!children.length) return
 
     gsap.set(children, from)

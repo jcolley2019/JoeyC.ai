@@ -23,7 +23,8 @@ html, body {
 }
 
 html {
-  scroll-behavior: smooth;
+  /* scroll-behavior removed — GSAP ScrollToPlugin handles smooth nav scrolling
+     to avoid conflicts with ScrollTrigger pinning */
 }
 
 /* ==============================================
@@ -536,7 +537,7 @@ body {
   gap: 6px;
 }
 
-@media (max-width: 1150px) {
+@media (max-width: 820px) {
   .hero-card { display: none !important; }
   .hero-fallback-subtitle { display: flex; }
 }
@@ -547,7 +548,7 @@ body {
 }
 
 /* Hero tablet overrides */
-@media (max-width: 1150px) {
+@media (max-width: 820px) {
   .hero-fallback-subtitle .joeyc-title {
     font-size: clamp(28px, 5vw, 42px) !important;
   }
@@ -610,6 +611,136 @@ body {
     margin-top: 3vw !important;
     transform: scaleY(1.4) !important;
     transform-origin: top center !important;
+  }
+}
+
+/* ===== PROJECTS SECTION — ScrollTrigger pinned animation ===== */
+
+.projects-pin-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--color-bg-section);
+}
+
+/* Visual box — starts snug around PROJECTS text, expands via GSAP scaleX/scaleY */
+.projects-box-visual {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Natural size: fits snugly around the PROJECTS text */
+  padding: 24px 48px;
+  background: #000000;
+  border: 1px solid rgba(26, 143, 255, 0.8);
+  border-radius: 12px;
+  z-index: 5;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Dot grid inside visual box */
+.projects-box-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background-image: radial-gradient(circle, rgba(26, 143, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+/* Letters wrapper — positioned like box, scales together with it */
+.projects-letters-wrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.projects-title-letter {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* Cards grid — sibling of box, centered in pin container */
+.projects-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1.5rem;
+  align-content: center;
+  z-index: 20;
+}
+
+.project-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  will-change: transform;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.project-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.cards-interactive .project-card:hover,
+.cards-interactive .project-card:focus-visible {
+  border-color: rgba(26, 143, 255, 0.4);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(26, 143, 255, 0.15),
+    0 0 80px rgba(26, 143, 255, 0.05);
+}
+
+/* Mobile: single column, static layout */
+@media (max-width: 767px) {
+  .projects-grid {
+    position: relative;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1rem;
+  }
+}
+
+/* Reduced motion: no GSAP animations, static grid */
+@media (prefers-reduced-motion: reduce) {
+  .projects-pin-container {
+    height: auto !important;
+  }
+
+  .projects-title-card {
+    position: relative;
+    margin-bottom: 2rem;
+  }
+
+  .projects-grid {
+    position: relative;
+  }
+
+  .project-card {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .projects-title-letter {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

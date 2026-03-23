@@ -50,7 +50,7 @@ export function BlogPreview() {
     }
 
     if (gridRef.current) {
-      const cards = gridRef.current.querySelectorAll('.blog-preview-card')
+      const cards = Array.from(gridRef.current.querySelectorAll('.blog-preview-card'))
       gsap.set(cards, { opacity: 0, x: 200 })
 
       const obs = new IntersectionObserver(
