@@ -11,9 +11,12 @@ const BLUE_INDICES = new Set([2, 5]) // O and C get accent color
 
 // ── ProjectCard ──────────────────────────────────────────────
 
+const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window
+
 const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
   ({ project }, ref) => {
     const [hovered, setHovered] = useState(false)
+    const lastTapRef = useRef(0)
 
     const openLink = useCallback(() => {
       if (project.link.startsWith('/')) {
@@ -30,6 +33,27 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
       }
     }, [openLink])
 
+    const handleClick = useCallback(() => {
+      if (!isTouchDevice) {
+        // Desktop: click always opens link
+        openLink()
+        return
+      }
+      // Touch: single tap shows overlay, double tap opens link
+      const now = Date.now()
+      if (hovered && now - lastTapRef.current < 300) {
+        openLink()
+      } else {
+        setHovered(true)
+        lastTapRef.current = now
+      }
+    }, [openLink, hovered])
+
+    const dismissOverlay = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation()
+      setHovered(false)
+    }, [])
+
     return (
       <div
         ref={ref}
@@ -38,9 +62,9 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
         tabIndex={0}
         role="link"
         aria-label={`${project.title} — ${project.description}`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={openLink}
+        onMouseEnter={isTouchDevice ? undefined : () => setHovered(true)}
+        onMouseLeave={isTouchDevice ? undefined : () => setHovered(false)}
+        onClick={handleClick}
         onKeyDown={handleKeyDown}
       >
         {/* Layer 1: Gradient background */}
@@ -63,7 +87,7 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
           </span>
         </div>
 
-        {/* Layer 3: Video overlay (hover) */}
+        {/* Layer 3: Video overlay (hover/tap) */}
         {hovered && (
           <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10 transition-opacity">
             {/* TODO: Add video src when ready */}
@@ -78,8 +102,18 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
               className="font-display text-text-secondary text-xs tracking-[0.2em] uppercase"
               style={{ textShadow: '0 0 10px rgba(0,0,0,0.5)' }}
             >
-              Preview coming soon
+              {isTouchDevice ? 'Tap again to visit →' : 'Preview coming soon'}
             </span>
+            {/* Close button on mobile */}
+            {isTouchDevice && (
+              <button
+                onClick={dismissOverlay}
+                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
+                aria-label="Close preview"
+              >
+                ×
+              </button>
+            )}
           </div>
         )}
 
@@ -141,11 +175,13 @@ export function Portfolio() {
     const isMobile = window.matchMedia('(max-width: 767px)').matches
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    if (isMobile || prefersReducedMotion) {
+    // ── Reduced motion: simple static fallback ──
+    if (prefersReducedMotion) {
       section.style.height = 'auto'
       pin.style.height = 'auto'
       box.style.display = 'none'
       if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'block'
+      lettersWrap.style.display = 'none'
 
       const mobileGrid = gridRef.current
       if (mobileGrid) {
@@ -155,10 +191,6 @@ export function Portfolio() {
         mobileGrid.style.transform = 'none'
         mobileGrid.style.width = '100%'
       }
-
-      // Hide desktop letters
-      const lettersContainer = pin.querySelector('.projects-letters-wrap') as HTMLElement
-      if (lettersContainer) lettersContainer.style.display = 'none'
 
       const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
       const obs = new IntersectionObserver(
@@ -177,6 +209,192 @@ export function Portfolio() {
         obs.observe(card)
       })
       return () => obs.disconnect()
+    }
+
+    // ── Mobile: Full ScrollTrigger animation with vertical letters ──
+    if (isMobile) {
+      if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'none'
+
+      const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
+      const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
+      if (!letters.length || !cards.length) return
+
+      section.style.height = '600vh'
+
+      // Force column layout before measuring so we get stacked height
+      lettersWrap.style.flexDirection = 'column'
+
+      // Measure vertical letters at scale 1
+      gsap.set(box, { scale: 1, xPercent: -50, yPercent: -50 })
+      gsap.set(lettersWrap, { scale: 1, xPercent: -50, yPercent: -50 })
+
+      const mWrapRect = lettersWrap.getBoundingClientRect()
+      const mNaturalWidth = mWrapRect.width + 80
+      const mNaturalHeight = mWrapRect.height + 48
+
+      box.style.width = mNaturalWidth + 'px'
+      box.style.height = mNaturalHeight + 'px'
+
+      const mEntryScale = 0.4
+      gsap.set(box, { xPercent: -50, yPercent: -50, scale: mEntryScale })
+      gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: mEntryScale })
+
+      const mFullWidth = window.innerWidth * 0.90 - 40
+      const mFullHeight = window.innerHeight - 80  // viewport minus navbar
+
+      // Position grid to align with expanded box on mobile
+      const grid = gridRef.current
+      if (grid) {
+        grid.style.width = mFullWidth + 'px'
+        grid.style.left = '50%'
+        grid.style.top = '80px'  // below navbar
+        grid.style.bottom = '20px'
+        grid.style.transform = 'translateX(-50%)'
+        grid.style.height = 'calc(100vh - 100px)'  // fill from 80px top to bottom with margin
+      }
+
+      // Pre-compute mobile scatter: P flies UP, S flies DOWN, middle scatter left/right
+      const mLetterTargets = letters.map((_, i) => {
+        if (i === 0) return { x: 0, y: '-120vh', rotation: -15 }
+        if (i === 7) return { x: 0, y: '120vh', rotation: 15 }
+        const xDir = i % 2 === 0 ? -1 : 1
+        return {
+          x: xDir * gsap.utils.random(200, 400),
+          y: gsap.utils.random(-100, 100),
+          rotation: gsap.utils.random(-20, 20),
+        }
+      })
+
+      // Cards alternate entry: odd from left, even from right
+      const mCardEntryX = cards.map((_, i) => i % 2 === 0 ? '-110vw' : '110vw')
+      const mCardEntryRot = cards.map(() => gsap.utils.random(-3, 3))
+      const mCardExitX = cards.map((_, i) => i % 2 === 0 ? '-110vw' : '110vw')
+
+      gsap.set(cards, {
+        x: (i: number) => mCardEntryX[i],
+        opacity: 0,
+        scale: 0.8,
+        rotation: (i: number) => mCardEntryRot[i],
+      })
+
+      // Double-tap detection for mobile
+      let lastTapTime = 0
+      const handleCardTap = (card: HTMLDivElement, index: number) => {
+        const now = Date.now()
+        if (now - lastTapTime < 300) {
+          // Double tap — open link
+          const project = projects[index]
+          if (project.link.startsWith('/')) {
+            window.location.href = project.link
+          } else {
+            window.open(project.link, '_blank', 'noopener,noreferrer')
+          }
+        }
+        lastTapTime = now
+      }
+
+      // Attach tap listeners
+      cards.forEach((card, i) => {
+        const handler = () => handleCardTap(card, i)
+        card.addEventListener('touchend', handler, { passive: true })
+        ;(card as any)._tapHandler = handler
+      })
+
+      const mTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: 'top top',
+          end: 'bottom bottom',
+          pin: pin,
+          scrub: 1,
+          anticipatePin: 1,
+          onUpdate: (self) => {
+            const p = self.progress
+            gridRef.current?.classList.toggle('cards-interactive', p > 0.45 && p < 0.80)
+          },
+        },
+      })
+
+      // Phase 1: Box + text zoom in (0 → 0.08)
+      mTl.to(box, { scale: 1, duration: 0.08, ease: 'power2.out' }, 0)
+      mTl.to(lettersWrap, { scale: 1, duration: 0.08, ease: 'power2.out' }, 0)
+
+      // Phase 2: Box widens (0.08 → 0.18)
+      mTl.to(box, { width: mFullWidth, duration: 0.10, ease: 'power2.inOut' }, 0.08)
+      mTl.to(box, { height: mFullHeight, duration: 0.07, ease: 'power2.inOut' }, 0.18)
+
+      // Phase 3: Letters scatter (0.25 → 0.35)
+      mTl.to(letters, {
+        x: (i: number) => mLetterTargets[i].x,
+        y: (i: number) => mLetterTargets[i].y,
+        rotation: (i: number) => mLetterTargets[i].rotation,
+        opacity: 0,
+        duration: 0.10,
+        stagger: 0.008,
+        ease: 'power2.inOut',
+      }, 0.25)
+
+      // Phase 4: Cards fly in alternating left/right (0.35 → 0.50)
+      mTl.to(cards, {
+        x: 0,
+        opacity: 1,
+        scale: 1,
+        rotation: 0,
+        duration: 0.15,
+        stagger: 0.012,
+        ease: 'power2.out',
+      }, 0.35)
+
+      // Phase 5: Pinned idle (0.50 → 0.68)
+
+      // Phase 6: Cards exit alternating (0.68 → 0.78)
+      mTl.to(cards, {
+        x: (i: number) => mCardExitX[i],
+        opacity: 0,
+        scale: 0.6,
+        rotation: (i: number) => gsap.utils.random(-5, 5),
+        duration: 0.10,
+        stagger: 0.008,
+        ease: 'power3.in',
+      }, 0.68)
+
+      // Phase 7: Letters reassemble (0.78 → 0.86)
+      mTl.to(letters, {
+        x: 0,
+        y: 0,
+        rotation: 0,
+        opacity: 1,
+        scale: 1,
+        duration: 0.08,
+        stagger: 0.008,
+        ease: 'power2.out',
+      }, 0.78)
+
+      // Phase 8: Box shrinks back + fades (0.86 → 1.0)
+      mTl.to(box, { height: mNaturalHeight, duration: 0.04, ease: 'power1.inOut' }, 0.86)
+      mTl.to(box, { width: mNaturalWidth, duration: 0.04, ease: 'power1.inOut' }, 0.90)
+      mTl.to(box, { scale: mEntryScale, duration: 0.04, ease: 'power2.in' }, 0.94)
+      mTl.to(lettersWrap, { scale: mEntryScale, duration: 0.04, ease: 'power2.in' }, 0.94)
+      mTl.to(box, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
+      mTl.to(lettersWrap, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
+
+      // Debounced resize
+      let mResizeTimer: number
+      const mDebouncedResize = () => {
+        clearTimeout(mResizeTimer)
+        mResizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200)
+      }
+      window.addEventListener('resize', mDebouncedResize)
+
+      return () => {
+        mTl.kill()
+        window.removeEventListener('resize', mDebouncedResize)
+        clearTimeout(mResizeTimer)
+        cards.forEach((card) => {
+          const handler = (card as any)._tapHandler
+          if (handler) card.removeEventListener('touchend', handler)
+        })
+      }
     }
 
     // ── Desktop: Full ScrollTrigger 8-phase animation ──
@@ -414,7 +632,7 @@ export function Portfolio() {
               aria-hidden="true"
               className="projects-title-letter font-display font-bold select-none"
               style={{
-                fontSize: 'clamp(2rem, 8vw, 9rem)',
+                fontSize: 'clamp(3rem, 12vw, 9rem)',
                 color: BLUE_INDICES.has(i) ? '#1a8fff' : '#ffffff',
                 textShadow: BLUE_INDICES.has(i)
                   ? '0 0 20px rgba(26, 143, 255, 0.4)'
