@@ -95,10 +95,13 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
     <div className="min-h-screen bg-bg flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <p className="font-mono text-xs tracking-[0.2em] uppercase text-primary mb-3">
-            {'// content studio'}
+          <p className="font-mono text-xl tracking-[0.25em] uppercase font-semibold text-primary mb-0">
+            // COMMAND CENTER
           </p>
-          <h1 className="text-2xl font-bold">{mode === 'login' ? t('auth.title') : 'Create Account'}</h1>
+          <p className="font-mono text-lg tracking-[0.15em] text-white font-semibold mb-1">
+            Content Studio
+          </p>
+          <h1 className="text-2xl font-bold mt-3">{mode === 'login' ? t('auth.title') : 'Create Account'}</h1>
           <p className="text-text-secondary text-sm mt-2">
             {mode === 'login' ? t('auth.desc') : 'Sign up to access the content studio'}
           </p>
@@ -185,6 +188,15 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
             </>
           )}
         </p>
+
+        <div className="text-center mt-6 pt-6 border-t border-border">
+          <a
+            href="/"
+            className="text-sm text-text-secondary hover:text-primary transition-colors"
+          >
+            ← Back to JoeyC.ai
+          </a>
+        </div>
       </div>
     </div>
   )

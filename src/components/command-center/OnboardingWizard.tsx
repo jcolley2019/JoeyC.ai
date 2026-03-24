@@ -558,15 +558,16 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
         {/* Footer */}
         <div className="px-6 pb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {step > 0 ? (
-              <button
-                onClick={handleBack}
-                className="px-4 py-2 text-sm font-mono transition-colors"
-                style={{ color: t.textSecondary }}
-              >
-                Back
-              </button>
-            ) : (
+            <div className="flex items-center gap-2">
+              {step > 0 && (
+                <button
+                  onClick={handleBack}
+                  className="px-4 py-2 text-sm font-mono transition-colors"
+                  style={{ color: t.textSecondary }}
+                >
+                  Back
+                </button>
+              )}
               <button
                 onClick={onSkip}
                 className="px-4 py-2 text-sm font-mono transition-colors"
@@ -574,7 +575,7 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
               >
                 Skip for now
               </button>
-            )}
+            </div>
           </div>
 
           {/* Step dots */}

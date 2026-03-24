@@ -301,29 +301,31 @@ export function CommandCenter() {
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
               </button>
-              <div id="tour-settings" ref={settingsRef} className="relative">
-                <button
-                  onClick={() => setSettingsOpen(!settingsOpen)}
-                  className={`p-2 rounded-md border transition-all ${
-                    settingsOpen
-                      ? 'border-primary/50 text-primary bg-primary/10'
-                      : 'border-border text-text-secondary hover:text-primary hover:border-primary/30'
-                  }`}
-                  title="Site Controls"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-                  </svg>
-                </button>
-                {settingsOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-72 z-50 rounded-xl border border-border bg-bg-card shadow-xl shadow-black/30">
-                    <div className="p-4">
-                      <SiteSettings extraPlatform={extraPlatform} />
+              {isMasterAdmin && (
+                <div id="tour-settings" ref={settingsRef} className="relative">
+                  <button
+                    onClick={() => setSettingsOpen(!settingsOpen)}
+                    className={`p-2 rounded-md border transition-all ${
+                      settingsOpen
+                        ? 'border-primary/50 text-primary bg-primary/10'
+                        : 'border-border text-text-secondary hover:text-primary hover:border-primary/30'
+                    }`}
+                    title="Site Controls"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                    </svg>
+                  </button>
+                  {settingsOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-72 z-50 rounded-xl border border-border bg-bg-card shadow-xl shadow-black/30">
+                      <div className="p-4">
+                        <SiteSettings extraPlatform={extraPlatform} />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
               <button
                 onClick={() => { setSettingsOpen(false); setShowBrandSettings(true) }}
                 className="p-2 rounded-md border border-border text-text-secondary hover:text-primary hover:border-primary/30 transition-all"

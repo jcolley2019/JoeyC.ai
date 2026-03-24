@@ -53,28 +53,55 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
       setHovered(false)
     }, [])
 
-    // Start/stop video on hover
-    useEffect(() => {
-      const vid = videoRef.current
-      if (!vid) return
+    const startTime = project.videoStart ?? 0
 
-      if (hovered && project.video) {
-        vid.currentTime = 0
-        vid.play().catch(() => {})
-      } else if (vid) {
-        vid.pause()
-        vid.currentTime = 0
-      }
-    }, [hovered, project.video])
-
-    // 8-second loop clamp
+    // 8-second loop clamp (only for single-video cards)
     const handleTimeUpdate = useCallback(() => {
       const vid = videoRef.current
-      if (vid && vid.currentTime >= 8) {
+      if (!vid) return
+      // Skip 8s clamp if this card has a video2 (let it play through to onEnded)
+      if (project.video2) return
+      if (vid.currentTime >= startTime + 8) {
+        vid.currentTime = startTime
+        vid.play().catch(() => {})
+      }
+    }, [project.video2, startTime])
+
+    // When video1 ends, switch to video2 if available
+    const handleVideoEnded = useCallback(() => {
+      const vid = videoRef.current
+      if (vid && project.video2) {
+        vid.src = project.video2
         vid.currentTime = 0
         vid.play().catch(() => {})
       }
-    }, [])
+    }, [project.video2])
+
+    const handleMouseEnter = useCallback(() => {
+      setHovered(true)
+      const vid = videoRef.current
+      if (vid && project.video) {
+        // Always start from video1
+        if (vid.src !== window.location.origin + project.video) {
+          vid.src = project.video
+        }
+        vid.currentTime = startTime
+        vid.play().catch(() => {})
+      }
+    }, [project.video, startTime])
+
+    const handleMouseLeave = useCallback(() => {
+      setHovered(false)
+      const vid = videoRef.current
+      if (vid) {
+        vid.pause()
+        // Reset src back to video1 for next hover
+        if (project.video && vid.src !== window.location.origin + project.video) {
+          vid.src = project.video
+        }
+        vid.currentTime = startTime
+      }
+    }, [project.video])
 
     return (
       <div
@@ -84,8 +111,8 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
         tabIndex={0}
         role="link"
         aria-label={`${project.title} — ${project.description}`}
-        onMouseEnter={isTouchDevice ? undefined : () => setHovered(true)}
-        onMouseLeave={isTouchDevice ? undefined : () => setHovered(false)}
+        onMouseEnter={isTouchDevice ? undefined : handleMouseEnter}
+        onMouseLeave={isTouchDevice ? undefined : handleMouseLeave}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
       >
@@ -120,44 +147,62 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
             </div>
           )}
 
-          {/* Video overlay (hover/tap) */}
-          {hovered && (
-            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10 transition-opacity">
-              {project.video ? (
-                <video
-                  ref={videoRef}
-                  src={project.video}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  muted
-                  playsInline
-                  onTimeUpdate={handleTimeUpdate}
-                  aria-hidden="true"
-                />
-              ) : (
-                <span
-                  className="font-display text-text-secondary text-xs tracking-[0.2em] uppercase"
-                  style={{ textShadow: '0 0 10px rgba(0,0,0,0.5)' }}
-                >
-                  Preview coming soon
-                </span>
-              )}
-              {isTouchDevice && (
-                <>
-                  <span
-                    className="relative z-20 font-display text-text-secondary text-xs tracking-[0.2em] uppercase mt-2"
-                    style={{ textShadow: '0 0 10px rgba(0,0,0,0.5)' }}
-                  >
-                    Tap again to visit →
-                  </span>
-                  <button
-                    onClick={dismissOverlay}
-                    className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors z-20"
-                    aria-label="Close preview"
-                  >
-                    ×
-                  </button>
-                </>
-              )}
+          {/* Video — always in DOM for preloading, toggled with opacity */}
+          {project.video && (
+            <video
+              ref={videoRef}
+              src={project.video}
+              preload="auto"
+              className={project.portraitVideo
+                ? 'absolute z-10'
+                : 'absolute inset-0 w-full h-full object-cover z-10'
+              }
+              style={{
+                opacity: hovered ? 1 : 0,
+                transition: 'opacity 0.2s ease',
+                ...(project.portraitVideo ? {
+                  width: 'auto',
+                  height: '140%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                } : {}),
+              }}
+              muted
+              playsInline
+              loop
+              onTimeUpdate={handleTimeUpdate}
+              onEnded={handleVideoEnded}
+              onError={(e) => console.log('Video error:', project.title, project.video, e)}
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Hover overlay — "Preview coming soon" or mobile tap hint */}
+          {hovered && !project.video && (
+            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10">
+              <span
+                className="font-display text-text-secondary text-xs tracking-[0.2em] uppercase"
+                style={{ textShadow: '0 0 10px rgba(0,0,0,0.5)' }}
+              >
+                Preview coming soon
+              </span>
+            </div>
+          )}
+          {hovered && isTouchDevice && (
+            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center z-20">
+              <span
+                className="font-display text-text-secondary text-xs tracking-[0.2em] uppercase"
+                style={{ textShadow: '0 0 10px rgba(0,0,0,0.5)' }}
+              >
+                Tap again to visit →
+              </span>
+              <button
+                onClick={dismissOverlay}
+                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
+                aria-label="Close preview"
+              >
+                ×
+              </button>
             </div>
           )}
         </div>
@@ -467,8 +512,7 @@ export function Portfolio() {
 
     // Calculate expansion targets — clamped to avoid exceeding viewport on smaller screens
     const fullWidth = Math.min(window.innerWidth * 0.95, window.innerWidth - 40)
-    const maxHeight = (window.innerHeight / 2 - 60) * 2
-    const fullHeight = Math.max(552, Math.min(window.innerHeight - 120, maxHeight))
+    const fullHeight = window.innerHeight - 100
 
     // ── Pre-compute random scatter values ──
     const letterTargets = letters.map((_, i) => {

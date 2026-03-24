@@ -627,7 +627,7 @@ body {
 /* Visual box — starts snug around PROJECTS text, expands via GSAP scaleX/scaleY */
 .projects-box-visual {
   position: absolute;
-  top: 50%;
+  top: calc(50% + 30px);
   left: 50%;
   /* Natural size: fits snugly around the PROJECTS text */
   padding: 24px 48px;
@@ -653,7 +653,7 @@ body {
 /* Letters wrapper — positioned like box, scales together with it */
 .projects-letters-wrap {
   position: absolute;
-  top: 50%;
+  top: calc(50% + 30px);
   left: 50%;
   display: flex;
   align-items: center;
@@ -671,11 +671,11 @@ body {
 /* Cards grid — sibling of box, centered in pin container */
 .projects-grid {
   position: absolute;
-  top: 50%;
+  top: calc(50% + 30px);
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 90vw;
-  max-width: 1200px;
+  width: 95vw;
+  max-width: 1440px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
@@ -698,9 +698,9 @@ body {
 .project-card-image {
   position: relative;
   width: 100%;
-  height: 150px !important;
-  overflow: hidden !important;
-  flex-shrink: 0 !important;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .project-card-info {

@@ -9,6 +9,9 @@ export interface Project {
   gradient: [string, string]
   image?: string
   video?: string
+  video2?: string
+  videoStart?: number
+  portraitVideo?: boolean
 }
 
 export interface SocialLink {

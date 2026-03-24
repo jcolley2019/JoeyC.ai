@@ -11,6 +11,7 @@ export const projects: Project[] = [
     gradient: ['#0a1628', '#1a3a5c'],
     image: '/photos/LUXVIBE-SCREENSHOT.png',
     video: '/videos/luxvibe-travel-website.mp4',
+    videoStart: 5,
   },
   {
     title: 'Content Studio',
@@ -21,6 +22,7 @@ export const projects: Project[] = [
     initials: 'CS',
     gradient: ['#0f2040', '#1e4080'],
     image: `/photos/${encodeURIComponent('CONTENT STUDIO1.png')}`,
+    video: '/videos/CONTENT-STUDIO.mp4',
   },
   {
     title: 'TitiActriz.com',
@@ -32,6 +34,7 @@ export const projects: Project[] = [
     gradient: ['#1a0a0a', '#3a1a1a'],
     image: '/photos/TITIACRIZ-SCREENSHOT.png',
     video: '/videos/titiactriz-website.mp4',
+    videoStart: 9,
   },
   {
     title: 'TitiLINKS',
@@ -43,6 +46,8 @@ export const projects: Project[] = [
     gradient: ['#1a0a2e', '#2d1a4a'],
     image: '/photos/TITILINKS1.png',
     video: '/videos/titiLINKS-biolink-site.mp4',
+    videoStart: 2,
+    portraitVideo: true,
   },
   {
     title: 'Field Report AI',
@@ -53,7 +58,10 @@ export const projects: Project[] = [
     initials: 'FR',
     gradient: ['#0a1a0a', '#1a3a1a'],
     image: '/photos/FIELDREPORTAI-1.png',
-    video: '/videos/fieldreportai-2.mp4',
+    video: '/videos/fieldreportai-1.mp4',
+    video2: '/videos/fieldreportai-2.mp4',
+    videoStart: 3,
+    portraitVideo: true,
   },
   {
     title: 'Spanish Chat App',
@@ -65,5 +73,7 @@ export const projects: Project[] = [
     gradient: ['#1a1000', '#3a2800'],
     image: '/photos/SPANISH-APP1.png',
     video: '/videos/spanish-app2.mp4',
+    videoStart: 2,
+    portraitVideo: true,
   },
 ]
