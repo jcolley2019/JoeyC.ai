@@ -678,20 +678,69 @@ body {
   max-width: 1200px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  padding: 1.5rem;
+  gap: 24px;
+  padding: 24px;
   align-content: center;
   z-index: 20;
 }
 
 .project-card {
-  position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 0.75rem;
   border: 1px solid var(--color-border);
   cursor: pointer;
   will-change: transform;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.project-card-image {
+  position: relative;
+  width: 100%;
+  height: 150px !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+}
+
+.project-card-info {
+  height: 90px !important;
+  overflow: hidden !important;
+  padding: 8px 12px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.project-card-info h3 {
+  font-size: 0.80rem !important;
+  margin-bottom: 2px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-card-info p {
+  font-size: 0.68rem !important;
+  -webkit-line-clamp: 1 !important;
+  margin-bottom: 3px !important;
+}
+
+.project-card-info .flex-wrap {
+  gap: 3px !important;
+  margin-bottom: 3px !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+}
+
+.project-card-info .tag-mono {
+  font-size: 0.58rem !important;
+  padding: 1px 5px !important;
+}
+
+.project-card-info .font-display.text-primary.text-sm {
+  font-size: 0.68rem !important;
+  margin-top: auto !important;
 }
 
 .project-card:focus-visible {
@@ -735,13 +784,11 @@ body {
     height: calc((100vh - 120px) / 4) !important;
   }
 
-  /* Content at top of card, not bottom */
-  .project-card > .relative.z-\[5\] {
-    justify-content: flex-start !important;
-    min-height: 0 !important;
+  .project-card-image {
+    aspect-ratio: 16 / 8;
   }
-  .project-card .p-5 {
-    padding: 12px !important;
+  .project-card-info {
+    padding: 8px 12px 10px !important;
   }
   .project-card h3 {
     font-size: 0.95rem !important;

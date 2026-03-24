@@ -7,6 +7,8 @@ export interface Project {
   link: string
   initials: string
   gradient: [string, string]
+  image?: string
+  video?: string
 }
 
 export interface SocialLink {
