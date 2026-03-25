@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { MASTER_EMAILS } from '../lib/constants'
 import type { BrandProfile } from '../types'
 
 const CACHE_PREFIX = 'brand-profile-'
@@ -120,8 +121,8 @@ export function useBrandProfile() {
     return publicUrl
   }, [userId, saveProfile])
 
-  // Master admin (joey@joeyc.ai) always counts as onboarded
-  const isOnboarded = userEmail === 'joey@joeyc.ai' || profile?.onboarding_completed === true
+  // Master admins always count as onboarded
+  const isOnboarded = (userEmail !== null && MASTER_EMAILS.includes(userEmail)) || profile?.onboarding_completed === true
 
   return { profile, loading, saveProfile, uploadLogo, isOnboarded }
 }

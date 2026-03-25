@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useAdmin } from '../hooks/useAdmin'
 import { supabase } from '../lib/supabase'
+import { MASTER_EMAILS } from '../lib/constants'
 import { brand, emailTemplates } from '../lib/brand'
 import type { Invitation, ActivityLogEntry } from '../types'
 
@@ -13,6 +14,8 @@ interface AdminUser {
   last_sign_in_at: string | null
   role: string | null
 }
+
+const isProtected = (email: string) => MASTER_EMAILS.includes(email)
 
 export function AdminDashboard() {
   const { session, loading: authLoading, logout } = useAuth()
@@ -36,12 +39,25 @@ export function AdminDashboard() {
   const [emailPreview, setEmailPreview] = useState<'invitation' | 'confirmation' | 'resetPassword' | 'magicLink'>('invitation')
   const emailPreviewRef = useRef<HTMLIFrameElement>(null)
 
+  // Selection state
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
+  const [selectedActivity, setSelectedActivity] = useState<Set<string>>(new Set())
+  const [selectedInvites, setSelectedInvites] = useState<Set<string>>(new Set())
+
+  // Confirmation + toast
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleteSuccess, setDeleteSuccess] = useState('')
+
+  const showToast = (msg: string) => {
+    setDeleteSuccess(msg)
+    setTimeout(() => setDeleteSuccess(''), 3000)
+  }
+
   const fetchData = useCallback(async () => {
     if (!session) return
     setLoadingData(true)
 
     try {
-      // Fetch users + activity via edge function (needs service role for auth.users)
       const { data: adminData, error: adminErr } = await supabase.functions.invoke('admin-users', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
@@ -51,7 +67,6 @@ export function AdminDashboard() {
       if (adminData?.users) setUsers(adminData.users)
       if (adminData?.activity) setActivity(adminData.activity)
 
-      // Fetch invitations directly (RLS allows master_admin)
       const { data: invData } = await supabase
         .from('invitations')
         .select('*')
@@ -71,7 +86,6 @@ export function AdminDashboard() {
     }
   }, [authLoading, adminLoading, isMasterAdmin, fetchData])
 
-  // Redirect non-admins
   useEffect(() => {
     if (!authLoading && !adminLoading) {
       if (!session || !isMasterAdmin) {
@@ -80,16 +94,113 @@ export function AdminDashboard() {
     }
   }, [authLoading, adminLoading, session, isMasterAdmin, navigate])
 
-  const handleDeleteInvite = async (id: string) => {
-    if (!session) return
-    await supabase.from('invitations').delete().eq('id', id)
-    setInvitations(prev => prev.filter(inv => inv.id !== id))
+  // ── Selection helpers ──────────────────────────────────────
+  const toggleUser = (id: string) => {
+    setSelectedUsers(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
   }
 
-  const handleClearAllInvites = async () => {
-    if (!session || invitations.length === 0) return
-    await supabase.from('invitations').delete().in('id', invitations.map(inv => inv.id))
-    setInvitations([])
+  const toggleAllUsers = () => {
+    const selectable = users.filter(u => !isProtected(u.email))
+    if (selectedUsers.size === selectable.length) {
+      setSelectedUsers(new Set())
+    } else {
+      setSelectedUsers(new Set(selectable.map(u => u.id)))
+    }
+  }
+
+  const toggleActivity = (id: string) => {
+    setSelectedActivity(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleAllActivity = () => {
+    if (selectedActivity.size === activity.length) {
+      setSelectedActivity(new Set())
+    } else {
+      setSelectedActivity(new Set(activity.map(e => e.id)))
+    }
+  }
+
+  const toggleInvite = (id: string) => {
+    setSelectedInvites(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleAllInvites = () => {
+    if (selectedInvites.size === invitations.length) {
+      setSelectedInvites(new Set())
+    } else {
+      setSelectedInvites(new Set(invitations.map(i => i.id)))
+    }
+  }
+
+  // ── Delete handlers ────────────────────────────────────────
+  const handleDeleteSelectedUsers = async () => {
+    if (!session || selectedUsers.size === 0) return
+    const ids = Array.from(selectedUsers)
+    const count = ids.length
+
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        method: 'POST',
+        body: { action: 'delete_users', user_ids: ids },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+
+      setUsers(prev => prev.filter(u => !selectedUsers.has(u.id)))
+      setSelectedUsers(new Set())
+      setDeleteConfirm(null)
+      showToast(`${data?.deleted ?? count} user${count > 1 ? 's' : ''} removed`)
+    } catch (err) {
+      console.error('Delete users failed:', err)
+    }
+  }
+
+  const handleDeleteSelectedActivity = async () => {
+    if (!session || selectedActivity.size === 0) return
+    const ids = Array.from(selectedActivity)
+    const count = ids.length
+
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        method: 'POST',
+        body: { action: 'delete_activities', activity_ids: ids },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+
+      setActivity(prev => prev.filter(e => !selectedActivity.has(e.id)))
+      setSelectedActivity(new Set())
+      setDeleteConfirm(null)
+      showToast(`${count} activit${count > 1 ? 'ies' : 'y'} removed`)
+    } catch (err) {
+      console.error('Delete activity failed:', err)
+    }
+  }
+
+  const handleDeleteSelectedInvites = async () => {
+    if (!session || selectedInvites.size === 0) return
+    const ids = Array.from(selectedInvites)
+    const count = ids.length
+
+    await supabase.from('invitations').delete().in('id', ids)
+    setInvitations(prev => prev.filter(inv => !selectedInvites.has(inv.id)))
+    setSelectedInvites(new Set())
+    setDeleteConfirm(null)
+    showToast(`${count} invitation${count > 1 ? 's' : ''} cancelled`)
   }
 
   const handleInvite = async () => {
@@ -154,6 +265,59 @@ export function AdminDashboard() {
     }
     return entry.action
   }
+
+  // Checkbox component for consistent styling
+  const Checkbox = ({ checked, onChange, disabled }: { checked: boolean; onChange: () => void; disabled?: boolean }) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+      className="w-4 h-4 rounded border-border bg-bg text-primary focus:ring-primary/30 focus:ring-offset-0 cursor-pointer disabled:opacity-0 disabled:cursor-default accent-primary"
+    />
+  )
+
+  // Confirmation bar component
+  const ConfirmBar = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
+    <div className="flex items-center justify-between mb-3 px-4 py-3 rounded-lg border border-red-500/30 bg-red-500/10">
+      <p className="text-[14px] text-red-400 font-medium">{message}</p>
+      <div className="flex gap-2">
+        <button onClick={onCancel} className="px-3 py-1.5 text-xs font-mono border border-border text-text-secondary rounded-md hover:text-text-primary transition-colors">
+          Cancel
+        </button>
+        <button onClick={onConfirm} className="px-3 py-1.5 text-xs font-mono bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors font-semibold">
+          Yes, Delete
+        </button>
+      </div>
+    </div>
+  )
+
+  // Success toast component
+  const Toast = () => deleteSuccess ? (
+    <div className="mt-3 px-4 py-2.5 rounded-lg border border-green-500/30 bg-green-500/10 flex items-center gap-2">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-400 shrink-0">
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+      <p className="text-[14px] text-green-400 font-mono font-semibold">{deleteSuccess}</p>
+    </div>
+  ) : null
+
+  // Delete Selected button — always visible, disabled when nothing selected
+  const DeleteSelectedBtn = ({ count, onClick }: { count: number; onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      disabled={count === 0}
+      className={`px-3 py-1.5 text-xs font-mono border rounded-md transition-colors ${
+        count > 0
+          ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+          : 'border-border text-text-secondary/40 cursor-not-allowed'
+      }`}
+    >
+      Delete Selected{count > 0 ? ` (${count})` : ''}
+    </button>
+  )
+
+  const selectableUsers = users.filter(u => !isProtected(u.email))
 
   return (
     <div className="min-h-screen bg-bg">
@@ -234,92 +398,164 @@ export function AdminDashboard() {
           </div>
         ) : (
           <>
-            {/* Users Tab */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* Users Tab                                          */}
+            {/* ═══════════════════════════════════════════════════ */}
             {activeTab === 'users' && (
-              <div className="rounded-xl border border-border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-bg-card border-b border-border">
-                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Email</th>
-                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Role</th>
-                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Joined</th>
-                      <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Last Login</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map(user => (
-                      <tr key={user.id} className="border-b border-border/50 hover:bg-bg-card/50 transition-colors">
-                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{user.email}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-[12px] font-mono ${
-                            user.role === 'master_admin'
-                              ? 'bg-[#1e4d2b] text-white border border-green-600/40'
-                              : 'bg-[#1e3a5f] text-white border border-blue-500/40'
-                          }`}>
-                            {user.role || 'user'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(user.created_at)}</td>
-                        <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(user.last_sign_in_at)}</td>
-                      </tr>
-                    ))}
-                    {users.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-text-secondary text-sm">No users yet</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Activity Tab */}
-            {activeTab === 'activity' && (
-              <div className="space-y-2">
-                {activity.map(entry => (
-                  <div key={entry.id} className="flex items-start gap-4 p-4 rounded-lg border border-border bg-bg-card hover:border-border-hover transition-colors">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                      entry.action === 'login' ? 'bg-green-500/15 text-green-400' :
-                      entry.action === 'signup' ? 'bg-blue-500/15 text-blue-400' :
-                      'bg-primary/15 text-primary'
-                    }`}>
-                      {entry.action === 'login' && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
-                        </svg>
-                      )}
-                      {entry.action === 'signup' && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                          <circle cx="8.5" cy="7" r="4" />
-                          <line x1="20" y1="8" x2="20" y2="14" />
-                          <line x1="23" y1="11" x2="17" y2="11" />
-                        </svg>
-                      )}
-                      {entry.action === 'content_generation' && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[14px] text-[#e2e8f0] font-medium truncate">{entry.user_email || 'Unknown user'}</span>
-                        <span className="text-[13px] text-[#94a3b8]">{formatDate(entry.created_at)}</span>
-                      </div>
-                      <p className="text-[13px] text-[#94a3b8] mt-0.5">{formatAction(entry)}</p>
-                    </div>
-                  </div>
-                ))}
-                {activity.length === 0 && (
-                  <div className="text-center py-12 border border-dashed border-border rounded-lg">
-                    <p className="text-text-secondary text-sm">No activity recorded yet</p>
+              <div>
+                {/* Confirmation bar */}
+                {deleteConfirm === 'users' ? (
+                  <ConfirmBar
+                    message={`Delete ${selectedUsers.size} selected user${selectedUsers.size > 1 ? 's' : ''}? This cannot be undone.`}
+                    onConfirm={handleDeleteSelectedUsers}
+                    onCancel={() => setDeleteConfirm(null)}
+                  />
+                ) : (
+                  <div className="flex justify-start mb-3">
+                    <DeleteSelectedBtn count={selectedUsers.size} onClick={() => setDeleteConfirm('users')} />
                   </div>
                 )}
+
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-bg-card border-b border-border">
+                        <th className="px-4 py-3 w-10">
+                          {selectableUsers.length > 0 && (
+                            <Checkbox
+                              checked={selectedUsers.size === selectableUsers.length && selectableUsers.length > 0}
+                              onChange={toggleAllUsers}
+                            />
+                          )}
+                        </th>
+                        <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Email</th>
+                        <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Role</th>
+                        <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Joined</th>
+                        <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Last Login</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(u => (
+                        <tr key={u.id} className={`border-b border-border/50 hover:bg-bg-card/50 transition-colors ${selectedUsers.has(u.id) ? 'bg-primary/5' : ''}`}>
+                          <td className="px-4 py-3">
+                            <Checkbox
+                              checked={selectedUsers.has(u.id)}
+                              onChange={() => toggleUser(u.id)}
+                              disabled={isProtected(u.email)}
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{u.email}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded text-[12px] font-mono ${
+                              u.role === 'master_admin'
+                                ? 'bg-[#1e4d2b] text-white border border-green-600/40'
+                                : 'bg-[#1e3a5f] text-white border border-blue-500/40'
+                            }`}>
+                              {u.role || 'user'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(u.created_at)}</td>
+                          <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(u.last_sign_in_at)}</td>
+                        </tr>
+                      ))}
+                      {users.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-text-secondary text-sm">No users yet</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <Toast />
               </div>
             )}
 
-            {/* Brand Kit Tab */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* Activity Tab                                       */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {activeTab === 'activity' && (
+              <div>
+                {/* Confirmation bar */}
+                {deleteConfirm === 'activity' ? (
+                  <ConfirmBar
+                    message={`Delete ${selectedActivity.size} selected activit${selectedActivity.size > 1 ? 'ies' : 'y'}?`}
+                    onConfirm={handleDeleteSelectedActivity}
+                    onCancel={() => setDeleteConfirm(null)}
+                  />
+                ) : (
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <DeleteSelectedBtn count={selectedActivity.size} onClick={() => setDeleteConfirm('activity')} />
+                      {activity.length > 0 && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={selectedActivity.size === activity.length && activity.length > 0}
+                            onChange={toggleAllActivity}
+                          />
+                          <span className="text-xs font-mono text-text-secondary">Select All</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {activity.map(entry => (
+                    <div key={entry.id} className={`flex items-start gap-4 p-4 rounded-lg border bg-bg-card transition-colors ${
+                      selectedActivity.has(entry.id) ? 'border-primary/30 bg-primary/5' : 'border-border hover:border-border-hover'
+                    }`}>
+                      <div className="flex items-center shrink-0 pt-0.5">
+                        <Checkbox
+                          checked={selectedActivity.has(entry.id)}
+                          onChange={() => toggleActivity(entry.id)}
+                        />
+                      </div>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                        entry.action === 'login' ? 'bg-green-500/15 text-green-400' :
+                        entry.action === 'signup' ? 'bg-blue-500/15 text-blue-400' :
+                        'bg-primary/15 text-primary'
+                      }`}>
+                        {entry.action === 'login' && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
+                          </svg>
+                        )}
+                        {entry.action === 'signup' && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                            <circle cx="8.5" cy="7" r="4" />
+                            <line x1="20" y1="8" x2="20" y2="14" />
+                            <line x1="23" y1="11" x2="17" y2="11" />
+                          </svg>
+                        )}
+                        {entry.action === 'content_generation' && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[14px] text-[#e2e8f0] font-medium truncate">{entry.user_email || 'Unknown user'}</span>
+                          <span className="text-[13px] text-[#94a3b8]">{formatDate(entry.created_at)}</span>
+                        </div>
+                        <p className="text-[13px] text-[#94a3b8] mt-0.5">{formatAction(entry)}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {activity.length === 0 && (
+                    <div className="text-center py-12 border border-dashed border-border rounded-lg">
+                      <p className="text-text-secondary text-sm">No activity recorded yet</p>
+                    </div>
+                  )}
+                </div>
+                <Toast />
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* Brand Kit Tab                                      */}
+            {/* ═══════════════════════════════════════════════════ */}
             {activeTab === 'brand' && (
               <div className="space-y-8">
 
@@ -459,33 +695,51 @@ export function AdminDashboard() {
               </div>
             )}
 
-            {/* Invitations Tab */}
+            {/* ═══════════════════════════════════════════════════ */}
+            {/* Invitations Tab                                    */}
+            {/* ═══════════════════════════════════════════════════ */}
             {activeTab === 'invitations' && (
               <div>
-                {invitations.length > 0 && (
-                  <div className="flex justify-end mb-3">
-                    <button
-                      onClick={handleClearAllInvites}
-                      className="px-3 py-1.5 text-xs font-mono border border-red-500/30 text-red-400 rounded-md hover:bg-red-500/10 transition-colors"
-                    >
-                      Clear All Invitations
-                    </button>
+                {/* Confirmation bar */}
+                {deleteConfirm === 'invitations' ? (
+                  <ConfirmBar
+                    message={`Cancel ${selectedInvites.size} selected invitation${selectedInvites.size > 1 ? 's' : ''}?`}
+                    onConfirm={handleDeleteSelectedInvites}
+                    onCancel={() => setDeleteConfirm(null)}
+                  />
+                ) : (
+                  <div className="flex justify-start mb-3">
+                    <DeleteSelectedBtn count={selectedInvites.size} onClick={() => setDeleteConfirm('invitations')} />
                   </div>
                 )}
+
                 <div className="rounded-xl border border-border overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-bg-card border-b border-border">
+                        <th className="px-4 py-3 w-10">
+                          {invitations.length > 0 && (
+                            <Checkbox
+                              checked={selectedInvites.size === invitations.length && invitations.length > 0}
+                              onChange={toggleAllInvites}
+                            />
+                          )}
+                        </th>
                         <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Email</th>
                         <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Status</th>
                         <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Sent</th>
                         <th className="text-left px-4 py-3 font-mono text-[13px] font-bold text-white uppercase tracking-[0.08em]">Accepted</th>
-                        <th className="px-4 py-3 w-10"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {invitations.map(inv => (
-                        <tr key={inv.id} className="border-b border-border/50 hover:bg-bg-card/50 transition-colors">
+                        <tr key={inv.id} className={`border-b border-border/50 hover:bg-bg-card/50 transition-colors ${selectedInvites.has(inv.id) ? 'bg-primary/5' : ''}`}>
+                          <td className="px-4 py-3">
+                            <Checkbox
+                              checked={selectedInvites.has(inv.id)}
+                              onChange={() => toggleInvite(inv.id)}
+                            />
+                          </td>
                           <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{inv.email}</td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-0.5 rounded text-[12px] font-mono ${
@@ -500,17 +754,6 @@ export function AdminDashboard() {
                           </td>
                           <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(inv.created_at)}</td>
                           <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{formatDate(inv.accepted_at)}</td>
-                          <td className="px-4 py-3">
-                            <button
-                              onClick={() => handleDeleteInvite(inv.id)}
-                              className="text-text-secondary hover:text-red-400 transition-colors"
-                              title="Delete invitation"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M18 6L6 18M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </td>
                         </tr>
                       ))}
                       {invitations.length === 0 && (
@@ -521,6 +764,7 @@ export function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
+                <Toast />
               </div>
             )}
           </>
