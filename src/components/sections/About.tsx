@@ -74,11 +74,45 @@ export function About() {
                 </a>
                 , because I realized most people didn't know this was possible.
               </p>
-              <p className="text-text-primary font-medium border-l-2 border-primary/40 pl-4">
-                Now I build in public every day. The wins, the fails, everything in between.
-                My goal: show everyday people what's possible with AI and help them start
-                building too.
+              <p>
+                Throughout my career I've been driven by one thing — solving problems. Whether
+                designing sound systems for NFL stadiums or helping a company communicate better
+                in their boardroom, I've always found my greatest satisfaction in finding the
+                right solution for the right challenge. That same passion led me to AI. When I
+                discovered what was possible with today's AI tools, I realized I could take
+                everything I'd learned across 30+ years of systems thinking and apply it in an
+                entirely new direction — building real products that help people. If I can do
+                this without a computer science degree, so can you.
               </p>
+              <p>
+                By day I'm a Senior AV/UC Design Engineer with over 30 years of experience
+                designing complex audio-visual systems for some of the world's most recognizable
+                venues — including American Airlines Arena (Miami Heat), Comerica Park (Detroit
+                Tigers), PNC Park (Pittsburgh Pirates), Caesar's Palace, KPMG, and GM Financial.
+                That same systems-thinking mindset is what drives how I build with AI.
+              </p>
+            </div>
+
+            {/* Tools & Stack */}
+            <div className="mt-8">
+              <p className="section-label mb-4">
+                {'// BUILT WITH'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  'Claude Code', 'Lovable', 'Replit', 'Base44',
+                  'Supabase', 'GitHub', 'Resend',
+                  'Canva', 'Figma', 'Gamma',
+                  'Claude.ai', 'ChatGPT', 'Gemini',
+                ].map((tool) => (
+                  <span
+                    key={tool}
+                    className="tag-mono px-2.5 py-1 rounded bg-primary/10 text-primary/80 border border-primary/10 text-xs"
+                  >
+                    {tool}
+                  </span>
+                ))}
+              </div>
             </div>
 
             <div className="mt-10 space-y-3">

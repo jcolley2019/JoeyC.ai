@@ -1,40 +1,16 @@
 import { useEffect, useRef } from 'react'
-import { FaTiktok, FaInstagram } from 'react-icons/fa6'
 import gsap from 'gsap'
 import { socials } from '../../data/socials'
 import { useSocialBurst } from '../../hooks/useSocialBurst'
 
-const content = [
-  {
-    platform: 'TikTok',
-    icon: FaTiktok,
-    handle: '@buildaiwithjoey',
-    url: 'https://www.tiktok.com/@buildaiwithjoey',
-    description: 'Quick AI build tutorials, tool reviews, and "watch me build this" sessions.',
-    accent: 'primary',
-  },
-  {
-    platform: 'Instagram',
-    icon: FaInstagram,
-    handle: '@gobuildai',
-    url: 'https://www.instagram.com/gobuildai',
-    description: 'Behind-the-scenes of my AI projects, tips, and the journey of building in public.',
-    accent: 'primary',
-  },
-]
-
 export function Blog() {
   const headerRef = useRef<HTMLDivElement>(null)
-  const tiktokRef = useRef<HTMLAnchorElement>(null)
-  const instaRef = useRef<HTMLAnchorElement>(null)
   const connectHeaderRef = useRef<HTMLDivElement>(null)
   const socialGridRef = useRef<HTMLDivElement>(null)
   const { onMouseEnter } = useSocialBurst()
 
   useEffect(() => {
     const header = headerRef.current
-    const tiktok = tiktokRef.current
-    const insta = instaRef.current
     const connectHeader = connectHeaderRef.current
     const socialGrid = socialGridRef.current
     const observers: IntersectionObserver[] = []
@@ -47,28 +23,6 @@ export function Blog() {
         { threshold: 0.1 }
       )
       obs.observe(header)
-      observers.push(obs)
-    }
-
-    // TikTok card — slide from left
-    if (tiktok) {
-      gsap.set(tiktok, { opacity: 0, x: -150 })
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { gsap.to(tiktok, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
-        { threshold: 0.1 }
-      )
-      obs.observe(tiktok)
-      observers.push(obs)
-    }
-
-    // Instagram card — slide from right
-    if (insta) {
-      gsap.set(insta, { opacity: 0, x: 150 })
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { gsap.to(insta, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
-        { threshold: 0.1 }
-      )
-      obs.observe(insta)
       observers.push(obs)
     }
 
@@ -116,49 +70,6 @@ export function Blog() {
             I share everything I'm learning and building. Quick tips, full build
             sessions, wins, and fails.
           </p>
-        </div>
-
-        {/* === FEATURED PLATFORMS: TikTok & Instagram === */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {content.map((item, i) => (
-            <a
-              key={item.platform}
-              ref={i === 0 ? tiktokRef : instaRef}
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block rounded-xl border border-border bg-bg-card p-6 md:p-8 transition-all duration-300 hover:-translate-y-2 hover:border-[#4a6fa5]/50 hover:shadow-[0_0_30px_rgba(74,111,165,0.12)]"
-            >
-              <div className="flex items-center gap-4 mb-5">
-                <div
-                  className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    item.accent === 'primary'
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-accent/10 text-accent'
-                  }`}
-                >
-                  <item.icon className="text-xl" />
-                </div>
-                <div>
-                  <p className="font-semibold text-text-primary">{item.platform}</p>
-                  <p className="font-mono text-xs text-text-secondary">{item.handle}</p>
-                </div>
-              </div>
-              <p className="text-text-secondary text-sm leading-relaxed mb-6">
-                {item.description}
-              </p>
-              <span
-                className={`inline-flex items-center gap-2 text-sm font-medium ${
-                  item.accent === 'primary' ? 'text-primary' : 'text-accent'
-                } group-hover:gap-3 transition-all`}
-              >
-                Follow along
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M3 8h10m-4-4l4 4-4 4" />
-                </svg>
-              </span>
-            </a>
-          ))}
         </div>
 
         {/* === ALL SOCIAL LINKS === */}
