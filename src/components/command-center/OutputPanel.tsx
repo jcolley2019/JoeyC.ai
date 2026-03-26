@@ -14,6 +14,11 @@ interface OutputPanelProps {
   onGenerate: () => void
   inputReady: boolean
   enabledPlatforms?: Platform[]
+  xConnected?: boolean
+  isMasterAdmin?: boolean
+  onXConnect?: () => void
+  onXDisconnect?: () => void
+  xConnecting?: boolean
 }
 
 export function OutputPanel({
@@ -27,6 +32,11 @@ export function OutputPanel({
   onGenerate,
   inputReady,
   enabledPlatforms,
+  xConnected,
+  isMasterAdmin,
+  onXConnect,
+  onXDisconnect,
+  xConnecting,
 }: OutputPanelProps) {
   const { t } = useLanguage()
   const hasSocial = formats.includes('social')
@@ -38,7 +48,15 @@ export function OutputPanel({
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      <FormatSelector value={formats} onChange={onFormatsChange} />
+      <FormatSelector
+        value={formats}
+        onChange={onFormatsChange}
+        xConnected={xConnected}
+        isMasterAdmin={isMasterAdmin}
+        onXConnect={onXConnect}
+        onXDisconnect={onXDisconnect}
+        xConnecting={xConnecting}
+      />
 
       {showPlatforms && (
         <PlatformPicker

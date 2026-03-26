@@ -1,13 +1,31 @@
 import { useState } from 'react'
 import { useXAccount } from '../../hooks/useXAccount'
 
+interface XAccountConnectProps {
+  isMasterAdmin?: boolean
+}
+
 /**
  * X Account connection widget.
- * Shows "Connect X Account" or connected status with disconnect option.
+ * Master admins use pre-configured API keys — no OAuth needed.
+ * Other users must connect their own X account via OAuth 2.0.
  */
-export function XAccountConnect() {
+export function XAccountConnect({ isMasterAdmin }: XAccountConnectProps) {
   const { status, loading, connecting, error, connect, disconnect } = useXAccount()
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
+
+  // Master admin uses pre-configured API keys — always connected
+  if (isMasterAdmin) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#1d9bf0]/20 bg-[#1d9bf0]/5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-[#1d9bf0]">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+        <span className="text-xs font-mono text-[#1d9bf0]">X Connected</span>
+        <span className="text-xs font-mono text-text-secondary">(Master Account)</span>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

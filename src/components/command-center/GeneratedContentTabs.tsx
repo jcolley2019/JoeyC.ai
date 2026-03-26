@@ -5,6 +5,8 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } fro
 import { saveAs } from 'file-saver'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useXPosting, parseThreadToTweets, isThreadContent } from '../../hooks/useXPosting'
+import { useBlogConnection } from '../../hooks/useBlogConnection'
+import { BlogConnectionModal } from './BlogConnectionModal'
 import type { BrandProfile } from '../../types'
 
 interface ContentSection {
@@ -19,7 +21,11 @@ interface GeneratedContentTabsProps {
   onContentChange: (content: string) => void
   onClear?: () => void
   onPublishBlog?: (content: string) => void
+  publishStatus?: 'idle' | 'publishing' | 'success' | 'error'
+  publishError?: string | null
   brandProfile?: BrandProfile | null
+  onEditBrand?: () => void
+  isMasterAdmin?: boolean
 }
 
 const PRESET_FONTS: Record<string, string> = {
@@ -88,6 +94,18 @@ function splitVideoByPlatform(content: string): ContentSection[] | null {
 }
 
 // Parse combined multi-format output into sections
+// Strip Claude's internal thinking text that appears before the actual article
+// e.g. "Now I have everything I need. Let me write the full blog article."
+function stripThinkingText(content: string): string {
+  const lines = content.split('\n')
+  // Find the first line that starts with a markdown heading (# or ##)
+  const firstHeadingIdx = lines.findIndex(l => /^#{1,3}\s+\S/.test(l))
+  if (firstHeadingIdx > 0) {
+    return lines.slice(firstHeadingIdx).join('\n').trim()
+  }
+  return content.trim()
+}
+
 function parseSections(raw: string): ContentSection[] {
   // Check for section headers like "## 📝 Blog Article" or "## 📱 Tiktok"
   const sectionRegex = /^## (📝 Blog Article|📱 (\w+)|🎬 (?:Video Prompt|Image & Video Prompt)|🧵 X Thread)$/gm
@@ -102,8 +120,10 @@ function parseSections(raw: string): ContentSection[] {
     const videoSplit = splitVideoByPlatform(raw)
     if (videoSplit) return videoSplit
 
-    // Fallback: single section
-    return [{ label: 'Content', format: 'social', content: raw.trim() }]
+    // Fallback: single section — detect blog by presence of markdown heading
+    const cleaned = stripThinkingText(raw)
+    const isBlog = /^#\s+\S/.test(cleaned)
+    return [{ label: isBlog ? 'Blog Article' : 'Content', format: isBlog ? 'blog' : 'social', content: cleaned }]
   }
 
   const sections: ContentSection[] = []
@@ -134,7 +154,7 @@ function parseSections(raw: string): ContentSection[] {
       platform = label.replace('📱 ', '')
     }
 
-    sections.push({ label, format, platform, content })
+    sections.push({ label, format, platform, content: format === 'blog' ? stripThinkingText(content) : content })
   }
 
   return sections
@@ -369,7 +389,7 @@ function ThreadView({ content }: { content: string }) {
   )
 }
 
-export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onPublishBlog, brandProfile }: GeneratedContentTabsProps) {
+export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onPublishBlog, publishStatus, publishError, brandProfile, onEditBrand, isMasterAdmin }: GeneratedContentTabsProps) {
   const { t } = useLanguage()
   const sections = useMemo(() => parseSections(rawContent), [rawContent])
   const [activeTab, setActiveTab] = useState(0)
@@ -381,6 +401,9 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onP
   const [confirmPostX, setConfirmPostX] = useState(false)
   const contentContainerRef = useRef<HTMLDivElement>(null)
   const { posting: postingToX, postResult: xPostResult, postToX, clearResult: clearXResult } = useXPosting()
+  const blog = useBlogConnection()
+  const [showBlogConnect, setShowBlogConnect] = useState(false)
+  const [blogPublishResult, setBlogPublishResult] = useState<{ success: boolean; url?: string; error?: string } | null>(null)
 
   const currentSection = sections[activeTab] || sections[0]
 
@@ -666,11 +689,26 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
         {currentSection && (
           <>
             {currentSection.format === 'blog' && (
-              <BlogView
-                content={currentSection.content}
-                editing={editing}
-                onSave={() => {}}
-              />
+              <div className="relative">
+                {/* Brand badge — top-right of blog card */}
+                {brandProfile?.display_name && (
+                  <div className="absolute top-3 right-3 z-10 flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-bg/80 backdrop-blur-sm border border-border/50">
+                    {brandProfile.logo_url && (
+                      <img src={brandProfile.logo_url} alt="" className="w-5 h-5 rounded object-contain" />
+                    )}
+                    <span className="text-[10px] font-mono text-[#8892a4] capitalize">{brandProfile.style_preset}</span>
+                    <div className="w-2.5 h-2.5 rounded-full border border-white/20" style={{ backgroundColor: brandProfile.accent_color }} />
+                    {onEditBrand && (
+                      <button onClick={onEditBrand} className="text-[10px] font-mono text-[#4a6fa5] hover:text-white transition-colors">Edit</button>
+                    )}
+                  </div>
+                )}
+                <BlogView
+                  content={currentSection.content}
+                  editing={editing}
+                  onSave={() => {}}
+                />
+              </div>
             )}
             {currentSection.format === 'social' && <SocialView content={currentSection.content} />}
             {currentSection.format === 'thread' && <ThreadView content={currentSection.content} />}
@@ -681,7 +719,7 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
 
       {/* Bottom toolbar — format-specific actions */}
       <div className="flex items-center gap-2">
-        {/* Blog: Edit + Save/Cancel + Publish */}
+        {/* Blog: Edit + Save/Cancel + Publish (admin) or Save Draft + Downloads (users) */}
         {currentSection?.format === 'blog' && (
           <>
             {!editing ? (
@@ -692,12 +730,71 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
                 >
                   {saved ? t('gen.saved') : t('gen.edit')}
                 </button>
-                <button
-                  onClick={() => onPublishBlog?.(currentSection.content)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                >
-                  {t('gen.publish')}
-                </button>
+
+                {/* Master admin: Publish to site */}
+                {isMasterAdmin && (
+                  <button
+                    onClick={() => onPublishBlog?.(currentSection.content)}
+                    disabled={publishStatus === 'publishing'}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border transition-colors ${
+                      publishStatus === 'success'
+                        ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                        : publishStatus === 'error'
+                          ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                          : 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/20'
+                    } disabled:opacity-50`}
+                  >
+                    {publishStatus === 'publishing' ? 'Publishing...' : publishStatus === 'success' ? 'Published!' : publishStatus === 'error' ? (publishError || 'Failed') : t('gen.publish')}
+                  </button>
+                )}
+
+                {/* Non-admin: Save Draft + Connect/Publish to Blog */}
+                {!isMasterAdmin && (
+                  <>
+                    <button
+                      onClick={handleCopy}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      {copied ? 'Saved!' : 'Save Draft'}
+                    </button>
+                    {blog.connections.length > 0 ? (
+                      <button
+                        onClick={async () => {
+                          const conn = blog.connections[0]
+                          const title = currentSection.content.match(/^#\s+(.+)/m)?.[1] || 'Untitled Post'
+                          const result = await blog.publish(conn.platform, title, currentSection.content)
+                          setBlogPublishResult(result)
+                          if (result.success) setTimeout(() => setBlogPublishResult(null), 5000)
+                        }}
+                        disabled={blog.publishing}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border transition-colors ${
+                          blogPublishResult?.success
+                            ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                            : blogPublishResult?.error
+                              ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                              : 'border-[#7c3aed]/30 bg-[#7c3aed]/10 text-[#a78bfa] hover:bg-[#7c3aed]/20'
+                        } disabled:opacity-50`}
+                      >
+                        {blog.publishing
+                          ? 'Publishing...'
+                          : blogPublishResult?.success
+                            ? 'Sent as Draft!'
+                            : blogPublishResult?.error
+                              ? 'Failed'
+                              : `Publish to ${blog.connections[0].platform === 'wordpress' ? 'WordPress' : 'Ghost'}`
+                        }
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowBlogConnect(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-[#7c3aed]/30 bg-[#7c3aed]/10 text-[#a78bfa] hover:bg-[#7c3aed]/20 transition-colors"
+                      >
+                        Connect Your Blog
+                      </button>
+                    )}
+                  </>
+                )}
+
                 <button
                   onClick={handleCopyMarkdown}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
@@ -715,6 +812,20 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
                   className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
                 >
                   📑 PDF
+                </button>
+                <button
+                  onClick={() => {
+                    const blob = new Blob([currentSection.content], { type: 'text/markdown' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = (currentSection.content.match(/^#\s+(.+)/m)?.[1] || 'blog-post').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.md'
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
+                >
+                  📝 .md
                 </button>
               </>
             ) : (
@@ -812,6 +923,61 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
           </>
         )}
       </div>
+
+      {/* Non-admin info box for blog content */}
+      {!isMasterAdmin && currentSection?.format === 'blog' && !editing && (
+        <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg border border-border/50 bg-bg-card/30 text-[12px] font-mono text-[#8892a4] leading-relaxed">
+          <span className="text-[#4a9eff] mt-0.5">ℹ</span>
+          {blog.connections.length > 0 ? (
+            <div className="flex items-center justify-between flex-1">
+              <span>
+                Connected to <strong className="text-white">{blog.connections[0].platform === 'wordpress' ? 'WordPress' : 'Ghost'}</strong> — {blog.connections[0].site_url}
+              </span>
+              <button
+                onClick={() => blog.disconnect(blog.connections[0].platform)}
+                className="text-[10px] text-red-400 hover:text-red-300 transition-colors ml-2 whitespace-nowrap"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <span>Your content is saved privately. To publish on your own site, connect your blog or download in your preferred format. Works with WordPress, Ghost, Webflow, Substack, and any email platform.</span>
+          )}
+        </div>
+      )}
+
+      {/* Blog publish result banner */}
+      {blogPublishResult && (
+        <div className={`flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-mono ${
+          blogPublishResult.success
+            ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+            : 'bg-red-500/10 border border-red-500/30 text-red-400'
+        }`}>
+          <span>
+            {blogPublishResult.success
+              ? 'Blog post sent as draft to your site'
+              : `Failed: ${blogPublishResult.error}`
+            }
+          </span>
+          <div className="flex items-center gap-2">
+            {blogPublishResult.success && blogPublishResult.url && (
+              <a href={blogPublishResult.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-green-300 transition-colors">
+                View
+              </a>
+            )}
+            <button onClick={() => setBlogPublishResult(null)} className="hover:opacity-70 transition-opacity">Dismiss</button>
+          </div>
+        </div>
+      )}
+
+      {/* Blog Connection Modal */}
+      <BlogConnectionModal
+        open={showBlogConnect}
+        onClose={() => { setShowBlogConnect(false); blog.clearError() }}
+        onConnect={blog.connect}
+        connecting={blog.connecting}
+        error={blog.error}
+      />
 
       {/* X Post Result Banner */}
       {xPostResult && (

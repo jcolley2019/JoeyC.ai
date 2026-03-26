@@ -1,0 +1,19 @@
+# JoeyC.ai
+
+## Joey Colley
+
+AI builder and content creator documenting the journey of building real apps with AI tools. Self-taught, not a traditional developer. Uses Claude, Lovable, and Replit to ship real products.
+
+## Projects
+
+- Luxvibe.io: Luxury hotel booking platform
+- TitiLINKS: Bio link SaaS platform
+- JoeyC.ai: Personal brand and AI education hub
+
+## Content Focus
+
+AI tools for beginners, building in public, app development tutorials.
+
+## Social
+
+TikTok: @buildaiwithjoey | Instagram: @gobuildai

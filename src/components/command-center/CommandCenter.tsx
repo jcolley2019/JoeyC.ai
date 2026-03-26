@@ -11,7 +11,7 @@ import { OutputPanel } from './OutputPanel'
 import { GeneratedContentTabs } from './GeneratedContentTabs'
 import { ContentHistory } from './ContentHistory'
 import { GuidedTour } from './GuidedTour'
-import { BlogPostEditor } from './BlogPostEditor'
+import { supabase } from '../../lib/supabase'
 import { BlogClarifyForm } from './BlogClarifyForm'
 import { MediaPromptWizard } from './MediaPromptWizard'
 import { SiteSettings } from './SiteSettings'
@@ -19,6 +19,7 @@ import { OnboardingWizard } from './OnboardingWizard'
 import { BrandSettingsPanel } from './BrandSettingsPanel'
 import { XAccountConnect } from './XAccountConnect'
 import { useBrandProfile } from '../../hooks/useBrandProfile'
+import { useXAccount } from '../../hooks/useXAccount'
 import type { BlogClarifyData } from './BlogClarifyForm'
 import type { OutputFormat, Platform } from '../../types'
 
@@ -62,6 +63,7 @@ export function CommandCenter() {
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)
   const { t } = useLanguage()
   const { profile: brandProfile, loading: brandLoading, saveProfile, uploadLogo, isOnboarded } = useBrandProfile()
+  const { status: xStatus, connecting: xConnecting, connect: xConnect, disconnect: xDisconnect } = useXAccount()
   const [skippedOnboarding, setSkippedOnboarding] = useState(false)
   const [showBrandSettings, setShowBrandSettings] = useState(false)
 
@@ -120,8 +122,8 @@ export function CommandCenter() {
     })
   }, [extraIsYoutube])
   const [cascade, setCascade] = useState(true)
-  const [showBlogEditor, setShowBlogEditor] = useState(false)
-  const [blogEditorContent, setBlogEditorContent] = useState('')
+  const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'success' | 'error'>('idle')
+  const [publishError, setPublishError] = useState<string | null>(null)
   const [historyKey, setHistoryKey] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [tourActive, setTourActive] = useState(false)
@@ -414,6 +416,11 @@ export function CommandCenter() {
                   onGenerate={handleGenerate}
                   inputReady={inputText.trim().length > 0}
                   enabledPlatforms={enabledPlatforms}
+                  xConnected={isMasterAdmin || !!xStatus?.connected}
+                  isMasterAdmin={isMasterAdmin}
+                  onXConnect={xConnect}
+                  onXDisconnect={xDisconnect}
+                  xConnecting={xConnecting}
                 />
               </div>
             </div>
@@ -421,7 +428,7 @@ export function CommandCenter() {
 
           {/* Full-width: Quick Context + Status */}
           {(showBlogClarify || generating || error || usageSummary) && (
-            <div className="mt-8 pt-8 border-t border-border space-y-6">
+            <div className="mt-3 space-y-4">
               {showBlogClarify && (
                 <BlogClarifyForm
                   onDataChange={handleBlogClarifyDataChange}
@@ -478,34 +485,8 @@ export function CommandCenter() {
             </div>
           )}
 
-          {/* Brand badge — shown when blog format selected */}
-          {hasBlog && brandProfile && isOnboarded && (
-            <div className="mt-8 flex items-center gap-3 px-4 py-2.5 rounded-lg border border-border/50 bg-bg-card/30">
-              {brandProfile.logo_url && (
-                <img src={brandProfile.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
-              )}
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold text-white">{brandProfile.display_name}</span>
-                {brandProfile.title && <span className="text-[12px] text-[#8892a4] ml-2">{brandProfile.title}</span>}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-[#8892a4] capitalize">{brandProfile.style_preset}</span>
-                <div className="w-3 h-3 rounded-full border border-white/20" style={{ backgroundColor: brandProfile.accent_color }} />
-                <button onClick={() => setShowBrandSettings(true)} className="text-[11px] font-mono text-[#4a6fa5] hover:text-white transition-colors">Edit</button>
-              </div>
-            </div>
-          )}
-          {hasBlog && (!brandProfile || !isOnboarded) && (
-            <button
-              onClick={() => setShowBrandSettings(true)}
-              className="mt-8 w-full flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border/50 text-[#8892a4] hover:text-primary hover:border-primary/30 transition-colors text-left"
-            >
-              <span className="text-sm">✍️ Add your brand to personalize this blog →</span>
-            </button>
-          )}
-
           {/* Drafts / Prompts output */}
-          <div id="tour-drafts" className="mt-12 pt-8 border-t border-border">
+          <div id="tour-drafts" className="mt-8">
             {outputFormats.length === 1 && outputFormats[0] === 'video' ? (
               <>
                 <h2 className="text-[20px] font-bold text-white mb-1">Image & Video Prompts</h2>
@@ -525,21 +506,51 @@ export function CommandCenter() {
                 </p>
               </>
             )}
-            {/* X Account Connection */}
-            <div className="mb-4">
-              <XAccountConnect />
-            </div>
-
             {generatedContent ? (
               <GeneratedContentTabs
                 rawContent={generatedContent}
                 onContentChange={setGeneratedContent}
                 onClear={() => setGeneratedContent(null)}
-                onPublishBlog={(content) => {
-                  setBlogEditorContent(content)
-                  setShowBlogEditor(true)
+                onPublishBlog={async (content) => {
+                  setPublishStatus('publishing')
+                  setPublishError(null)
+                  try {
+                    const lines = content.split('\n')
+                    const titleLine = lines.find(l => l.startsWith('# '))
+                    const title = titleLine?.replace(/^#\s*/, '').trim() || 'Untitled Post'
+                    const body = lines.filter(l => l !== titleLine).join('\n').trim()
+                    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                    const excerpt = body.replace(/[#*_`>\[\]()!]/g, '').replace(/\n+/g, ' ').slice(0, 200).trim()
+
+                    // Auto-detect tags from content
+                    const tagPatterns = [/AI/i, /Claude/i, /GPT/i, /automation/i, /TikTok/i, /Instagram/i, /social media/i, /React/i, /Supabase/i, /n8n/i]
+                    const tagLabels = ['AI', 'Claude', 'GPT', 'Automation', 'TikTok', 'Instagram', 'Social Media', 'React', 'Supabase', 'n8n']
+                    const tags = tagPatterns.reduce<string[]>((acc, p, i) => p.test(content) && acc.length < 5 ? [...acc, tagLabels[i]] : acc, [])
+
+                    const { error: dbError } = await supabase.from('blog_posts').insert({
+                      title,
+                      slug,
+                      content: body,
+                      excerpt,
+                      tags: tags.length > 0 ? tags : ['AI', 'Building in Public'],
+                      status: 'published',
+                      published_at: new Date().toISOString(),
+                    })
+
+                    if (dbError) throw new Error(dbError.message)
+                    setPublishStatus('success')
+                    setTimeout(() => setPublishStatus('idle'), 3000)
+                  } catch (err) {
+                    setPublishError(err instanceof Error ? err.message : 'Publish failed')
+                    setPublishStatus('error')
+                    setTimeout(() => setPublishStatus('idle'), 5000)
+                  }
                 }}
+                publishStatus={publishStatus}
+                publishError={publishError}
                 brandProfile={brandProfile}
+                onEditBrand={() => setShowBrandSettings(true)}
+                isMasterAdmin={isMasterAdmin}
               />
             ) : (
               <div className="text-center py-8 border border-dashed border-border rounded-lg">
@@ -555,18 +566,6 @@ export function CommandCenter() {
             <ContentHistory key={historyKey} />
           </div>
         </div>
-
-        {/* Blog Editor Modal */}
-        {showBlogEditor && blogEditorContent && (
-          <BlogPostEditor
-            initialContent={blogEditorContent}
-            onClose={() => setShowBlogEditor(false)}
-            onPublished={() => {
-              setShowBlogEditor(false)
-              setBlogEditorContent('')
-            }}
-          />
-        )}
 
         {/* Instagram Format Picker */}
         {showInstagramPicker && (
