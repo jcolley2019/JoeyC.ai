@@ -37,14 +37,16 @@ export default function App() {
         <meta property="og:title" content="JoeyC.ai — Practical AI for Everyone" />
         <meta property="og:description" content="Joey Colley — I build apps, websites & automations with AI and show you how. No CS degree required." />
         <meta property="og:url" content="https://joeyc.ai" />
-        <meta property="og:image" content="https://joeyc.ai/photos/joey-headshot2.png" />
+        <meta property="og:image" content="https://joeyc.ai/photos/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:site_name" content="JoeyC.ai" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="JoeyC.ai — Practical AI for Everyone" />
         <meta name="twitter:description" content="Joey Colley — I build apps, websites & automations with AI and show you how." />
-        <meta name="twitter:image" content="https://joeyc.ai/photos/joey-headshot2.png" />
+        <meta name="twitter:image" content="https://joeyc.ai/photos/og-image.png" />
 
         {/* JSON-LD Person Schema */}
         <script type="application/ld+json">{JSON.stringify(personSchema)}</script>
