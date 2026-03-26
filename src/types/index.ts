@@ -47,7 +47,7 @@ export interface ContentGeneration {
 }
 
 export type OutputFormat = 'social' | 'blog' | 'thread' | 'video'
-export type Platform = 'tiktok' | 'instagram' | 'pinterest' | 'linkedin' | 'youtube'
+export type Platform = 'tiktok' | 'instagram' | 'pinterest' | 'linkedin' | 'youtube' | 'x'
 
 export interface GenerationUsage {
   input_tokens: number
@@ -115,6 +115,7 @@ export interface BrandProfile {
   pinterest_handle: string | null
   youtube_handle: string | null
   linkedin_handle: string | null
+  x_handle: string | null
   style_preset: StylePreset
   accent_color: string
   logo_url: string | null

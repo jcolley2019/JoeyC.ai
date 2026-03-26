@@ -10,8 +10,11 @@ export function useSiteSetting(key: string, defaultValue = true) {
       .from('site_settings')
       .select('value')
       .eq('key', key)
-      .single()
-      .then(({ data }) => {
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn(`site_settings: "${key}" fetch failed`, error.message)
+        }
         setValue(data?.value ?? defaultValue)
         setLoading(false)
       })

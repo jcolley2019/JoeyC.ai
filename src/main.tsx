@@ -8,6 +8,8 @@ import { LanguageProvider } from './hooks/useLanguage'
 import { BlogList } from './pages/BlogList'
 import { BlogPostPage } from './pages/BlogPost'
 import { AuthCallback } from './pages/AuthCallback'
+import { XCallback } from './pages/XCallback'
+import { ProtectedRoute } from './components/ProtectedRoute'
 
 const CommandCenter = lazy(() =>
   import('./components/command-center/CommandCenter').then(m => ({
@@ -34,6 +36,7 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/x-callback" element={<XCallback />} />
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route
@@ -49,9 +52,11 @@ createRoot(document.getElementById('root')!).render(
         <Route
           path="/admin"
           element={
-            <Suspense fallback={<Loading />}>
-              <AdminDashboard />
-            </Suspense>
+            <ProtectedRoute requireAdmin>
+              <Suspense fallback={<Loading />}>
+                <AdminDashboard />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
       </Routes>

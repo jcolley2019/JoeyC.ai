@@ -4,6 +4,7 @@ import TurndownService from 'turndown'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
 import { saveAs } from 'file-saver'
 import { useLanguage } from '../../hooks/useLanguage'
+import { useXPosting, parseThreadToTweets, isThreadContent } from '../../hooks/useXPosting'
 import type { BrandProfile } from '../../types'
 
 interface ContentSection {
@@ -377,7 +378,9 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onP
   const [copiedMd, setCopiedMd] = useState(false)
   const [saved, setSaved] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
+  const [confirmPostX, setConfirmPostX] = useState(false)
   const contentContainerRef = useRef<HTMLDivElement>(null)
+  const { posting: postingToX, postResult: xPostResult, postToX, clearResult: clearXResult } = useXPosting()
 
   const currentSection = sections[activeTab] || sections[0]
 
@@ -755,20 +758,91 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
         {currentSection?.format === 'thread' && (
           <>
             <button
-              onClick={() => {/* TODO: inline edit for thread */}}
+              onClick={() => setEditing(!editing)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
             >
-              {t('gen.edit')}
+              {editing ? 'Done' : t('gen.edit')}
             </button>
             <button
-              onClick={() => {/* TODO: X API integration */}}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-[#1d9bf0]/30 bg-[#1d9bf0]/10 text-[#1d9bf0] hover:bg-[#1d9bf0]/20 transition-colors"
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border text-text-secondary hover:border-primary hover:text-primary transition-colors"
             >
-              {t('gen.postx')}
+              {copied ? t('gen.copied') : t('gen.copy')}
             </button>
+
+            {/* Post to X with confirmation */}
+            {!confirmPostX ? (
+              <button
+                onClick={() => { clearXResult(); setConfirmPostX(true) }}
+                disabled={postingToX}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-[#1d9bf0]/30 bg-[#1d9bf0]/10 text-[#1d9bf0] hover:bg-[#1d9bf0]/20 transition-colors disabled:opacity-50"
+              >
+                {postingToX ? (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Posting...
+                  </span>
+                ) : t('gen.postx')}
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-text-secondary font-mono">
+                  Post {isThreadContent(currentSection.content) ? `${parseThreadToTweets(currentSection.content).length} tweets` : '1 tweet'} to X?
+                </span>
+                <button
+                  onClick={async () => {
+                    setConfirmPostX(false)
+                    await postToX(currentSection.content)
+                  }}
+                  className="px-2 py-1 text-xs font-mono bg-[#1d9bf0] text-white rounded hover:bg-[#1a8cd8] transition-colors"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => setConfirmPostX(false)}
+                  className="px-2 py-1 text-xs font-mono border border-border rounded hover:border-red-400 hover:text-red-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
+
+      {/* X Post Result Banner */}
+      {xPostResult && (
+        <div className={`flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-mono ${
+          xPostResult.success
+            ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+            : 'bg-red-500/10 border border-red-500/30 text-red-400'
+        }`}>
+          <span>
+            {xPostResult.success
+              ? `Posted ${xPostResult.count === 1 ? '1 tweet' : `${xPostResult.count} tweets`} to X`
+              : `Failed: ${xPostResult.error}`
+            }
+          </span>
+          <div className="flex items-center gap-2">
+            {xPostResult.success && xPostResult.url && (
+              <a
+                href={xPostResult.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-green-300 transition-colors"
+              >
+                View on X
+              </a>
+            )}
+            <button onClick={clearXResult} className="hover:opacity-70 transition-opacity">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

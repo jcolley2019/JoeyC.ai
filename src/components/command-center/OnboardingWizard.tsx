@@ -6,7 +6,7 @@ type AssetChoice = 'full-kit' | 'logo-only' | 'none'
 
 interface OnboardingWizardProps {
   open: boolean
-  onComplete: (data: OnboardingData) => void
+  onComplete: (data: OnboardingData) => Promise<void> | void
   onSkip: () => void
   onThemeChange?: (theme: 'dark' | 'luxe') => void
 }
@@ -68,6 +68,7 @@ const LUXE_THEME = {
 export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: OnboardingWizardProps) {
   const [visible, setVisible] = useState(false)
   const [step, setStep] = useState(0)
+  const [saving, setSaving] = useState(false)
   const [themeChoice, setThemeChoice] = useState<'dark' | 'luxe'>('dark')
 
   // Theme-driven colors
@@ -170,28 +171,33 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
     return true
   }, [step, displayName, assetChoice, steps, stylePreset])
 
-  const handleNext = () => {
-    if (!canAdvance()) return
+  const handleNext = async () => {
+    if (!canAdvance() || saving) return
     if (step < totalSteps - 1) {
       setStep(step + 1)
     } else {
-      // Complete
-      onComplete({
-        display_name: displayName.trim(),
-        title: titleField.trim(),
-        bio: bio.trim(),
-        website_url: websiteUrl.trim(),
-        tiktok_handle: tiktok.trim(),
-        instagram_handle: instagram.trim(),
-        pinterest_handle: pinterest.trim(),
-        youtube_handle: youtube.trim(),
-        linkedin_handle: linkedin.trim(),
-        style_preset: stylePreset,
-        accent_color: accentColor,
-        has_branding_kit: assetChoice === 'full-kit',
-        brand_kit_notes: brandKitNotes.trim(),
-        logoFile,
-      })
+      // Complete — show loading state
+      setSaving(true)
+      try {
+        await onComplete({
+          display_name: displayName.trim(),
+          title: titleField.trim(),
+          bio: bio.trim(),
+          website_url: websiteUrl.trim(),
+          tiktok_handle: tiktok.trim(),
+          instagram_handle: instagram.trim(),
+          pinterest_handle: pinterest.trim(),
+          youtube_handle: youtube.trim(),
+          linkedin_handle: linkedin.trim(),
+          style_preset: stylePreset,
+          accent_color: accentColor,
+          has_branding_kit: assetChoice === 'full-kit',
+          brand_kit_notes: brandKitNotes.trim(),
+          logoFile,
+        })
+      } finally {
+        setSaving(false)
+      }
     }
   }
 
@@ -569,8 +575,8 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
                 </button>
               )}
               <button
-                onClick={onSkip}
-                className="px-4 py-2 text-sm font-mono transition-colors"
+                onClick={() => onSkip && onSkip()}
+                className="px-4 py-2 text-sm font-mono transition-colors hover:opacity-80"
                 style={{ color: t.textSecondary }}
               >
                 Skip for now
@@ -594,16 +600,16 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
 
           <button
             onClick={handleNext}
-            disabled={!canAdvance()}
+            disabled={!canAdvance() || saving}
             className="px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200"
             style={{
-              backgroundColor: canAdvance() ? t.button : t.progressBg,
-              color: canAdvance() ? '#ffffff' : t.textSecondary,
-              cursor: canAdvance() ? 'pointer' : 'not-allowed',
-              opacity: canAdvance() ? 1 : 0.6,
+              backgroundColor: canAdvance() && !saving ? t.button : t.progressBg,
+              color: canAdvance() && !saving ? '#ffffff' : t.textSecondary,
+              cursor: canAdvance() && !saving ? 'pointer' : 'not-allowed',
+              opacity: canAdvance() && !saving ? 1 : 0.6,
             }}
           >
-            {isLastStep ? 'Save & Continue' : 'Next'}
+            {saving ? 'Saving...' : isLastStep ? 'Save & Continue' : 'Next'}
           </button>
         </div>
       </div>

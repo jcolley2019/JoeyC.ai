@@ -17,6 +17,7 @@ import { MediaPromptWizard } from './MediaPromptWizard'
 import { SiteSettings } from './SiteSettings'
 import { OnboardingWizard } from './OnboardingWizard'
 import { BrandSettingsPanel } from './BrandSettingsPanel'
+import { XAccountConnect } from './XAccountConnect'
 import { useBrandProfile } from '../../hooks/useBrandProfile'
 import type { BlogClarifyData } from './BlogClarifyForm'
 import type { OutputFormat, Platform } from '../../types'
@@ -61,7 +62,30 @@ export function CommandCenter() {
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)
   const { t } = useLanguage()
   const { profile: brandProfile, loading: brandLoading, saveProfile, uploadLogo, isOnboarded } = useBrandProfile()
+  const [skippedOnboarding, setSkippedOnboarding] = useState(false)
   const [showBrandSettings, setShowBrandSettings] = useState(false)
+
+  // Auto-logout when user closes/refreshes the tab
+  useEffect(() => {
+    if (!session) return
+
+    const handleBeforeUnload = () => {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      const accessToken = session.access_token
+      if (supabaseUrl && anonKey && accessToken) {
+        navigator.sendBeacon(
+          `${supabaseUrl}/auth/v1/logout?scope=local`,
+          new Blob([JSON.stringify({})], {
+            type: 'application/json',
+          })
+        )
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [session])
 
   // Build enabled platforms list — always TikTok/Instagram/Pinterest + YouTube or LinkedIn
   const extraIsYoutube = extraPlatform.value !== false // true or null (loading) = YouTube
@@ -501,6 +525,11 @@ export function CommandCenter() {
                 </p>
               </>
             )}
+            {/* X Account Connection */}
+            <div className="mb-4">
+              <XAccountConnect />
+            </div>
+
             {generatedContent ? (
               <GeneratedContentTabs
                 rawContent={generatedContent}
@@ -590,7 +619,7 @@ export function CommandCenter() {
       </div>
 
       {/* Onboarding Wizard — rendered OUTSIDE luxe-mode div to avoid theme inheritance */}
-      {!brandLoading && !isOnboarded && (
+      {!brandLoading && !isOnboarded && !skippedOnboarding && (
         <OnboardingWizard
           open={true}
           onThemeChange={(theme) => setLuxeMode(theme === 'luxe')}
@@ -617,8 +646,10 @@ export function CommandCenter() {
               onboarding_completed: true,
             })
           }}
-          onSkip={async () => {
-            await saveProfile({ onboarding_completed: true })
+          onSkip={() => {
+            setSkippedOnboarding(true)
+            // Persist to DB in background — don't block the UI
+            saveProfile({ onboarding_completed: true }).catch(() => {})
           }}
         />
       )}

@@ -40,10 +40,12 @@ export function useBrandProfile() {
         .from('brand_profiles')
         .select('*')
         .eq('user_id', uid)
-        .single()
-        .then(({ data }) => {
+        .maybeSingle()
+        .then(({ data, error }) => {
           if (cancelled) return
-          if (data) {
+          if (error) {
+            console.warn('brand_profiles fetch failed:', error.message)
+          } else if (data) {
             setProfile(data as BrandProfile)
             try { localStorage.setItem(CACHE_PREFIX + uid, JSON.stringify(data)) } catch {}
           } else {
@@ -80,15 +82,26 @@ export function useBrandProfile() {
       updated_at: now,
     }
 
-    const { data, error } = await supabase
+    // Upsert without chaining .select() to avoid 406 on new rows
+    const { error: upsertError } = await supabase
       .from('brand_profiles')
       .upsert(row, { onConflict: 'user_id' })
-      .select()
-      .single()
 
-    if (error) {
-      console.error('Failed to save brand profile:', error)
-      throw error
+    if (upsertError) {
+      console.warn('brand_profiles upsert failed:', upsertError.message)
+      return
+    }
+
+    // Fetch the saved row separately — always works
+    const { data, error: fetchError } = await supabase
+      .from('brand_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (fetchError) {
+      console.warn('brand_profiles fetch after save failed:', fetchError.message)
+      return
     }
 
     if (data) {
