@@ -413,16 +413,16 @@ export function Portfolio() {
       mTl.to(box, { width: mFullWidth, duration: 0.10, ease: 'power2.inOut' }, 0.08)
       mTl.to(box, { height: mFullHeight, duration: 0.07, ease: 'power2.inOut' }, 0.18)
 
-      // Phase 2b: Box scales beyond viewport and fades out (0.20 → 0.28)
-      mTl.to(box, { scale: 3, opacity: 0, duration: 0.08, ease: 'power2.in' }, 0.20)
-      mTl.to(lettersWrap, { opacity: 0, duration: 0.08, ease: 'power2.in' }, 0.20)
+      // Phase 2b: Box scales beyond viewport (0.20 → 0.28), fades after
+      mTl.to(box, { scale: 3, duration: 0.08, ease: 'power2.in' }, 0.20)
+      mTl.to(box, { opacity: 0, duration: 0.02 }, 0.27)
+      mTl.to(lettersWrap, { opacity: 0, duration: 0.02 }, 0.35)
 
-      // Phase 3: Letters scatter (0.25 → 0.35)
+      // Phase 3: Letters scatter (0.25 → 0.35), stay visible until off screen
       mTl.to(letters, {
         x: (i: number) => mLetterTargets[i].x as number,
         y: (i: number) => mLetterTargets[i].y as number,
         rotation: (i: number) => mLetterTargets[i].rotation,
-        opacity: 0,
         duration: 0.10,
         stagger: 0.008,
         ease: 'power2.inOut',
@@ -441,9 +441,8 @@ export function Portfolio() {
 
       // Phase 5: Grid shifts UP to reveal cards 5 and 6 (0.50 → 0.72)
       if (grid) {
-        // Measure total grid height vs visible area
-        // Cards are (100vh-120px)/4 each in CSS, 6 cards + 5 gaps of 12px
-        const mCardH = (window.innerHeight - 120) / 4
+        // Measure actual card height instead of guessing
+        const mCardH = cards[0]?.getBoundingClientRect().height || (window.innerHeight - 120) / 6
         const mTotalH = mCardH * cards.length + 12 * (cards.length - 1)
         const mVisibleH = window.innerHeight - 80 // viewport minus top offset
         const mOverflow = Math.max(0, mTotalH - mVisibleH) + 60
@@ -474,11 +473,11 @@ export function Portfolio() {
       mTl.to(lettersWrap, { opacity: 1, duration: 0.03, ease: 'power2.out' }, 0.90)
 
       // Phase 9: Letters reassemble (0.93 → 0.96)
+      mTl.set(letters, { opacity: 1 }, 0.93)
       mTl.to(letters, {
         x: 0,
         y: 0,
         rotation: 0,
-        opacity: 1,
         scale: 1,
         duration: 0.03,
         stagger: 0.004,
