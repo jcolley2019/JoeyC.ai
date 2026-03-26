@@ -334,10 +334,13 @@ export function Portfolio() {
       if (grid) {
         grid.style.width = mFullWidth + 'px'
         grid.style.left = '50%'
-        grid.style.top = '80px'  // below navbar
-        grid.style.bottom = '20px'
+        grid.style.top = '60px'
+        grid.style.bottom = 'auto'
         grid.style.transform = 'translateX(-50%)'
-        grid.style.height = 'calc(100vh - 100px)'  // fill from 80px top to bottom with margin
+        grid.style.paddingTop = '0px'
+        grid.style.height = 'auto'
+        // Ensure grid starts at y:0 — card 1 at top, no negative offset
+        gsap.set(grid, { y: 0, xPercent: -50, yPercent: 0 })
       }
 
       // Pre-compute mobile scatter: P flies UP, S flies DOWN, middle scatter left/right
@@ -393,11 +396,11 @@ export function Portfolio() {
           start: 'top top',
           end: 'bottom bottom',
           pin: pin,
-          scrub: 1,
+          scrub: 3,
           anticipatePin: 1,
           onUpdate: (self) => {
             const p = self.progress
-            gridRef.current?.classList.toggle('cards-interactive', p > 0.45 && p < 0.80)
+            gridRef.current?.classList.toggle('cards-interactive', p > 0.45 && p < 0.82)
           },
         },
       })
@@ -409,6 +412,10 @@ export function Portfolio() {
       // Phase 2: Box widens (0.08 → 0.18)
       mTl.to(box, { width: mFullWidth, duration: 0.10, ease: 'power2.inOut' }, 0.08)
       mTl.to(box, { height: mFullHeight, duration: 0.07, ease: 'power2.inOut' }, 0.18)
+
+      // Phase 2b: Box scales beyond viewport and fades out (0.20 → 0.28)
+      mTl.to(box, { scale: 3, opacity: 0, duration: 0.08, ease: 'power2.in' }, 0.20)
+      mTl.to(lettersWrap, { opacity: 0, duration: 0.08, ease: 'power2.in' }, 0.20)
 
       // Phase 3: Letters scatter (0.25 → 0.35)
       mTl.to(letters, {
@@ -432,36 +439,55 @@ export function Portfolio() {
         ease: 'power2.out',
       }, 0.35)
 
-      // Phase 5: Pinned idle (0.50 → 0.68)
+      // Phase 5: Grid shifts UP to reveal cards 5 and 6 (0.50 → 0.72)
+      if (grid) {
+        // Measure total grid height vs visible area
+        // Cards are (100vh-120px)/4 each in CSS, 6 cards + 5 gaps of 12px
+        const mCardH = (window.innerHeight - 120) / 4
+        const mTotalH = mCardH * cards.length + 12 * (cards.length - 1)
+        const mVisibleH = window.innerHeight - 80 // viewport minus top offset
+        const mOverflow = Math.max(0, mTotalH - mVisibleH) + 60
+        if (mOverflow > 0) {
+          mTl.to(grid, { y: -mOverflow, duration: 0.22, ease: 'none' }, 0.50)
+          // Reset grid y AFTER cards have exited (0.90)
+          mTl.set(grid, { y: 0 }, 0.90)
+        }
+      }
 
-      // Phase 6: Cards exit alternating (0.68 → 0.78)
+      // Phase 6: Pinned idle — all 6 cards visible (0.72 → 0.82)
+      mTl.to({}, { duration: 0.10 }, 0.72)
+
+      // Phase 7: Cards exit alternating (0.82 → 0.90)
       mTl.to(cards, {
         x: (i: number) => mCardExitX[i],
         opacity: 0,
         scale: 0.6,
         rotation: (_i: number) => gsap.utils.random(-5, 5),
-        duration: 0.10,
+        duration: 0.08,
         stagger: 0.008,
         ease: 'power3.in',
-      }, 0.68)
+      }, 0.82)
 
-      // Phase 7: Letters reassemble (0.78 → 0.86)
+      // Phase 8: Box returns — scale back to 1, opacity back to 1 (0.90 → 0.93)
+      mTl.set(box, { scale: 3 }, 0.90)
+      mTl.to(box, { scale: 1, opacity: 1, duration: 0.03, ease: 'power2.out' }, 0.90)
+      mTl.to(lettersWrap, { opacity: 1, duration: 0.03, ease: 'power2.out' }, 0.90)
+
+      // Phase 9: Letters reassemble (0.93 → 0.96)
       mTl.to(letters, {
         x: 0,
         y: 0,
         rotation: 0,
         opacity: 1,
         scale: 1,
-        duration: 0.08,
-        stagger: 0.008,
+        duration: 0.03,
+        stagger: 0.004,
         ease: 'power2.out',
-      }, 0.78)
+      }, 0.93)
 
-      // Phase 8: Box shrinks back + fades (0.86 → 1.0)
-      mTl.to(box, { height: mNaturalHeight, duration: 0.04, ease: 'power1.inOut' }, 0.86)
-      mTl.to(box, { width: mNaturalWidth, duration: 0.04, ease: 'power1.inOut' }, 0.90)
-      mTl.to(box, { scale: mEntryScale, duration: 0.04, ease: 'power2.in' }, 0.94)
-      mTl.to(lettersWrap, { scale: mEntryScale, duration: 0.04, ease: 'power2.in' }, 0.94)
+      // Phase 10: Box shrinks back + fades (0.96 → 1.0)
+      mTl.to(box, { height: mNaturalHeight, width: mNaturalWidth, scale: mEntryScale, duration: 0.02, ease: 'power1.inOut' }, 0.96)
+      mTl.to(lettersWrap, { scale: mEntryScale, duration: 0.02, ease: 'power2.in' }, 0.96)
       mTl.to(box, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
       mTl.to(lettersWrap, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
 

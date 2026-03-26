@@ -622,6 +622,7 @@ body {
   height: 100vh;
   overflow: hidden;
   background-color: var(--color-bg-section);
+  touch-action: pan-y;
 }
 
 /* Visual box — starts snug around PROJECTS text, expands via GSAP scaleX/scaleY */
@@ -682,6 +683,7 @@ body {
   padding: 24px;
   align-content: center;
   z-index: 20;
+  touch-action: pan-y;
 }
 
 .project-card {
@@ -693,6 +695,7 @@ body {
   cursor: pointer;
   will-change: transform;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  touch-action: pan-y;
 }
 
 .project-card-image {

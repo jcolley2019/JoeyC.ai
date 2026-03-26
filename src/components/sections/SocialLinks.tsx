@@ -14,25 +14,46 @@ export function SocialLinks() {
   const primedRef = useRef<Record<string, boolean>>({})
   const timerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
-  const handleCardClick = (e: React.MouseEvent | React.TouchEvent, social: typeof socials[number]) => {
+  // Track whether a touch just happened so we can ignore the duplicate onClick
+  const touchHandledRef = useRef(false)
+
+  const handleCardInteraction = (e: React.MouseEvent | React.TouchEvent, social: typeof socials[number]) => {
     if (social.comingSoon) return
     e.preventDefault()
+    e.stopPropagation()
+
+    const isTouchEvent = 'touches' in e || e.type === 'touchend'
+
+    // If this is a click event right after a touch, skip it — already handled
+    if (!isTouchEvent && touchHandledRef.current) {
+      touchHandledRef.current = false
+      return
+    }
+
+    if (isTouchEvent) {
+      touchHandledRef.current = true
+      // Reset flag after a short delay in case onClick doesn't fire
+      setTimeout(() => { touchHandledRef.current = false }, 400)
+    }
 
     // Trigger burst animation
-    const isTouchEvent = 'touches' in e
-    const clientX = isTouchEvent ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX
-    const clientY = isTouchEvent ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY
+    const clientX = isTouchEvent
+      ? (e.nativeEvent as TouchEvent).changedTouches?.[0]?.clientX ?? 0
+      : (e as React.MouseEvent).clientX
+    const clientY = isTouchEvent
+      ? (e.nativeEvent as TouchEvent).changedTouches?.[0]?.clientY ?? 0
+      : (e as React.MouseEvent).clientY
     const fakeEvent = { currentTarget: e.currentTarget, clientX, clientY } as any
     onMouseEnter(fakeEvent, social.platform)
 
     if (primedRef.current[social.platform]) {
-      // Second click — navigate
+      // Second tap — navigate
       clearTimeout(timerRef.current[social.platform])
       primedRef.current[social.platform] = false
       setTappedPlatform(null)
       window.open(social.url, '_blank', 'noopener,noreferrer')
     } else {
-      // First click — prime the card
+      // First tap — prime the card
       if (tappedTimeoutRef.current) clearTimeout(tappedTimeoutRef.current)
       // Clear any other primed cards
       Object.keys(primedRef.current).forEach(k => {
@@ -114,8 +135,8 @@ export function SocialLinks() {
                 key={social.platform}
                 href={social.comingSoon ? undefined : social.url}
                 rel="noopener noreferrer"
-                onClick={(e) => handleCardClick(e, social)}
-                onTouchStart={(e) => handleCardClick(e, social)}
+                onClick={(e) => handleCardInteraction(e, social)}
+                onTouchEnd={(e) => handleCardInteraction(e, social)}
                 onMouseEnter={(e) => !social.comingSoon && onMouseEnter(e, social.platform)}
                 className={`social-card group relative flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(26,143,255,0.1)] overflow-visible ${
                   social.comingSoon

@@ -10,6 +10,7 @@ import { BlogPostPage } from './pages/BlogPost'
 import { AuthCallback } from './pages/AuthCallback'
 import { XCallback } from './pages/XCallback'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { Sandbox } from './pages/Sandbox'
 
 const CommandCenter = lazy(() =>
   import('./components/command-center/CommandCenter').then(m => ({
@@ -39,6 +40,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/x-callback" element={<XCallback />} />
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
+        <Route path="/sandbox" element={<Sandbox />} />
         <Route
           path="/command-center"
           element={
