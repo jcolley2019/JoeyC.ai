@@ -22,7 +22,7 @@ export function BlogClarifyForm({ onDataChange, onSkip }: BlogClarifyFormProps) 
   const [affiliateLinks, setAffiliateLinks] = useState<{ name: string; url: string }[]>([])
   const [linkName, setLinkName] = useState('')
   const [linkUrl, setLinkUrl] = useState('')
-  const [mediaRefs, setMediaRefs] = useState('')
+  const [mediaRefs, _setMediaRefs] = useState('')
   const [mediaAttachments, setMediaAttachments] = useState<MediaAttachment[]>([])
 
   // Report data changes up

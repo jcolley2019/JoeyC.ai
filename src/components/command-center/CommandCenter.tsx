@@ -17,7 +17,7 @@ import { MediaPromptWizard } from './MediaPromptWizard'
 import { SiteSettings } from './SiteSettings'
 import { OnboardingWizard } from './OnboardingWizard'
 import { BrandSettingsPanel } from './BrandSettingsPanel'
-import { XAccountConnect } from './XAccountConnect'
+// XAccountConnect removed from layout — X connection now in FormatSelector
 import { useBrandProfile } from '../../hooks/useBrandProfile'
 import { useXAccount } from '../../hooks/useXAccount'
 import type { BlogClarifyData } from './BlogClarifyForm'
@@ -38,27 +38,10 @@ function detectAiPlatform(text: string): { mediaType: 'video' | 'image'; aiPlatf
   return null
 }
 
-function getAspectRatios(platforms: Platform[], instagramFormat?: string): string {
-  const ratios: string[] = []
-  for (const p of platforms) {
-    if (p === 'tiktok') ratios.push('9:16 (1080x1920) for TikTok')
-    if (p === 'youtube') ratios.push('16:9 (1920x1080) for YouTube')
-    if (p === 'pinterest') ratios.push('2:3 (1000x1500) for Pinterest')
-    if (p === 'linkedin') ratios.push('1.91:1 (1200x628) for LinkedIn')
-    if (p === 'instagram') {
-      if (instagramFormat === 'reel') ratios.push('9:16 (1080x1920) for Instagram Reel/Story')
-      else if (instagramFormat === 'square') ratios.push('1:1 (1080x1080) for Instagram Square Post')
-      else if (instagramFormat === 'landscape') ratios.push('1.91:1 (1080x566) for Instagram Landscape')
-      else ratios.push('Instagram (format TBD)')
-    }
-  }
-  return ratios.length > 0 ? ratios.join('\n') : '9:16 (1080x1920) default'
-}
-
 export function CommandCenter() {
   const { session, loading: authLoading, login, signUp, signInWithGoogle, logout } = useAuth()
   const { isMasterAdmin } = useAdmin()
-  const { generating, generatingStatus, result, error, usageSummary, generate, extractYouTubeTranscript, setResult, setError } = useContentGeneration()
+  const { generating, generatingStatus: _generatingStatus, result, error, usageSummary, generate, extractYouTubeTranscript, setResult: _setResult, setError: _setError } = useContentGeneration()
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)
   const { t } = useLanguage()

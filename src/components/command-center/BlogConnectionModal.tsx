@@ -31,7 +31,7 @@ export function BlogConnectionModal({ open, onClose, onConnect, connecting, erro
   const handleSubmit = async () => {
     if (!platform || !canSubmit) return
 
-    const credentials = platform === 'wordpress'
+    const credentials: Record<string, string> = platform === 'wordpress'
       ? { username: wpUsername.trim(), app_password: wpAppPassword.trim() }
       : { admin_api_key: ghostApiKey.trim() }
 

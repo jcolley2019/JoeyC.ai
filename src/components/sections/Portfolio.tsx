@@ -366,7 +366,7 @@ export function Portfolio() {
 
       // Double-tap detection for mobile
       let lastTapTime = 0
-      const handleCardTap = (card: HTMLDivElement, index: number) => {
+      const handleCardTap = (_card: HTMLDivElement, index: number) => {
         const now = Date.now()
         if (now - lastTapTime < 300) {
           // Double tap — open link
@@ -412,14 +412,14 @@ export function Portfolio() {
 
       // Phase 3: Letters scatter (0.25 → 0.35)
       mTl.to(letters, {
-        x: (i: number) => mLetterTargets[i].x,
-        y: (i: number) => mLetterTargets[i].y,
+        x: (i: number) => mLetterTargets[i].x as number,
+        y: (i: number) => mLetterTargets[i].y as number,
         rotation: (i: number) => mLetterTargets[i].rotation,
         opacity: 0,
         duration: 0.10,
         stagger: 0.008,
         ease: 'power2.inOut',
-      }, 0.25)
+      } as gsap.TweenVars, 0.25)
 
       // Phase 4: Cards fly in alternating left/right (0.35 → 0.50)
       mTl.to(cards, {
@@ -439,7 +439,7 @@ export function Portfolio() {
         x: (i: number) => mCardExitX[i],
         opacity: 0,
         scale: 0.6,
-        rotation: (i: number) => gsap.utils.random(-5, 5),
+        rotation: (_i: number) => gsap.utils.random(-5, 5),
         duration: 0.10,
         stagger: 0.008,
         ease: 'power3.in',
@@ -587,14 +587,14 @@ export function Portfolio() {
 
     // ── Phase 4: Letter scatter (0.28 → 0.40) ──
     tl.to(letters, {
-      x: (i: number) => letterTargets[i].x,
-      y: (i: number) => letterTargets[i].y,
+      x: (i: number) => letterTargets[i].x as number,
+      y: (i: number) => letterTargets[i].y as number,
       rotation: (i: number) => letterTargets[i].rotation,
       opacity: 0,
       duration: 0.12,
       stagger: 0.008,
       ease: 'power2.inOut',
-    }, 0.28)
+    } as gsap.TweenVars, 0.28)
 
     // ── Phase 5: Cards tumble in from right (0.40 → 0.55) ──
     tl.to(cards, {
