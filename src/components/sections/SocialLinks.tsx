@@ -10,27 +10,44 @@ export function SocialLinks() {
   const [tappedPlatform, setTappedPlatform] = useState<string | null>(null)
   const tappedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleTouchStart = (e: React.TouchEvent, social: typeof socials[number]) => {
+  // Per-card primed state and timers
+  const primedRef = useRef<Record<string, boolean>>({})
+  const timerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  const handleCardClick = (e: React.MouseEvent | React.TouchEvent, social: typeof socials[number]) => {
     if (social.comingSoon) return
     e.preventDefault()
 
-    const touch = e.touches[0]
-    const fakeEvent = {
-      currentTarget: e.currentTarget,
-      clientX: touch.clientX,
-      clientY: touch.clientY
-    } as any
+    // Trigger burst animation
+    const isTouchEvent = 'touches' in e
+    const clientX = isTouchEvent ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX
+    const clientY = isTouchEvent ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY
+    const fakeEvent = { currentTarget: e.currentTarget, clientX, clientY } as any
     onMouseEnter(fakeEvent, social.platform)
 
-    if (tappedPlatform === social.platform) {
-      clearTimeout(tappedTimeoutRef.current!)
+    if (primedRef.current[social.platform]) {
+      // Second click — navigate
+      clearTimeout(timerRef.current[social.platform])
+      primedRef.current[social.platform] = false
       setTappedPlatform(null)
-      window.open(social.url, '_blank')
+      window.open(social.url, '_blank', 'noopener,noreferrer')
     } else {
+      // First click — prime the card
       if (tappedTimeoutRef.current) clearTimeout(tappedTimeoutRef.current)
+      // Clear any other primed cards
+      Object.keys(primedRef.current).forEach(k => {
+        if (primedRef.current[k]) {
+          clearTimeout(timerRef.current[k])
+          primedRef.current[k] = false
+        }
+      })
+
+      primedRef.current[social.platform] = true
       setTappedPlatform(social.platform)
-      tappedTimeoutRef.current = setTimeout(() => {
-        setTappedPlatform(null)
+
+      timerRef.current[social.platform] = setTimeout(() => {
+        primedRef.current[social.platform] = false
+        setTappedPlatform((prev) => prev === social.platform ? null : prev)
       }, 3000)
     }
   }
@@ -38,6 +55,7 @@ export function SocialLinks() {
   useEffect(() => {
     return () => {
       if (tappedTimeoutRef.current) clearTimeout(tappedTimeoutRef.current)
+      Object.values(timerRef.current).forEach(t => clearTimeout(t))
     }
   }, [])
 
@@ -95,12 +113,16 @@ export function SocialLinks() {
               <a
                 key={social.platform}
                 href={social.comingSoon ? undefined : social.url}
-                target={social.comingSoon ? undefined : '_blank'}
                 rel="noopener noreferrer"
+                onClick={(e) => handleCardClick(e, social)}
+                onTouchStart={(e) => handleCardClick(e, social)}
                 onMouseEnter={(e) => !social.comingSoon && onMouseEnter(e, social.platform)}
-                onTouchStart={(e) => handleTouchStart(e, social)}
-                className={`social-card group relative flex items-center gap-4 p-4 rounded-xl border border-border bg-bg-card transition-all duration-300 hover:scale-105 hover:border-[#4a6fa5]/50 hover:shadow-[0_0_30px_rgba(26,143,255,0.1)] overflow-visible ${
-                  social.comingSoon ? 'opacity-40 cursor-default' : ''
+                className={`social-card group relative flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(26,143,255,0.1)] overflow-visible ${
+                  social.comingSoon
+                    ? 'opacity-40 cursor-default border-border bg-bg-card'
+                    : tappedPlatform === social.platform
+                      ? 'border-[#1a8fff]/50 bg-[#1a8fff]/5 scale-[1.02]'
+                      : 'border-border bg-bg-card hover:border-[#4a6fa5]/50'
                 }`}
               >
                 <div className="w-10 h-10 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:border-primary/30 transition-all">
@@ -112,7 +134,11 @@ export function SocialLinks() {
                     {social.comingSoon ? 'Coming soon' : social.url.replace('https://www.', '').replace('https://', '')}
                   </p>
                 </div>
-                {!social.comingSoon && (
+                {!social.comingSoon && tappedPlatform === social.platform ? (
+                  <span className="text-[10px] font-mono text-[#1a8fff] whitespace-nowrap animate-pulse shrink-0">
+                    tap again →
+                  </span>
+                ) : !social.comingSoon ? (
                   <svg
                     width="14"
                     height="14"
@@ -124,29 +150,7 @@ export function SocialLinks() {
                   >
                     <path d="M3 8h10m-4-4l4 4-4 4" />
                   </svg>
-                )}
-                {tappedPlatform === social.platform && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '-28px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    fontSize: '10px',
-                    color: '#1a8fff',
-                    whiteSpace: 'nowrap',
-                    fontFamily: "'Rajdhani', sans-serif",
-                    fontWeight: 700,
-                    letterSpacing: '1.5px',
-                    background: 'rgba(0,0,0,0.8)',
-                    padding: '3px 10px',
-                    borderRadius: '4px',
-                    border: '1px solid rgba(26,143,255,0.3)',
-                    zIndex: 50,
-                    animation: 'fadeIn 0.2s ease'
-                  }}>
-                    TAP AGAIN TO VISIT
-                  </div>
-                )}
+                ) : null}
               </a>
             )
           })}

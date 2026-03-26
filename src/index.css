@@ -594,12 +594,12 @@ body {
 
   .hero-fallback-subtitle .joeyc-title {
     font-size: 9.75vw !important;
-    margin-bottom: -3vw !important;
+    margin-bottom: -1vw !important;
   }
 
   .hero-fallback-subtitle .tagline-text {
     font-size: 3.2vw !important;
-    margin-top: -6vw !important;
+    margin-top: -3vw !important;
     letter-spacing: 0.06em !important;
     white-space: nowrap !important;
   }
