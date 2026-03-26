@@ -11,7 +11,7 @@ const MODELS = {
 
 // Cost controls
 const MAX_WEB_SEARCHES = 5;       // Max web search invocations per blog post
-const MAX_TOKENS_BLOG = 4096;     // Blog generation
+const MAX_TOKENS_BLOG = 8192;     // Blog generation (long-form, 2000+ words)
 const MAX_TOKENS_DERIVATIVE = 2048; // Social/thread derivatives (shorter output)
 const MAX_TOKENS_STANDARD = 4096;  // Non-cascade generation
 const DAILY_GENERATION_LIMIT = 50; // Per user per day
@@ -86,12 +86,14 @@ Write the post caption. Keep it punchy with line breaks. Conversational tone.
 What Joey tells viewers to do at the end of the video AND in the caption. Make it specific and actionable.
 
 **#️⃣ HASHTAGS**
-5-8 relevant hashtags. Mix trending and niche. IMPORTANT: Every single hashtag MUST include the # symbol (e.g. #AI #BuildInPublic). Never omit the # prefix.`,
+5-8 relevant hashtags. Mix trending and niche. IMPORTANT: Every single hashtag MUST include the # symbol (e.g. #AI #BuildInPublic). Never omit the # prefix.
+
+**⏰ BEST TIME TO POST:** Tuesday–Thursday, 10am–12pm or 7pm–9pm EST (highest TikTok engagement window for tech/education niche)`,
 
       instagram: `Create a complete Instagram content package. Format your output with these clearly labeled sections:
 
 **🎯 CONCEPT**
-One-line description of the post angle/idea.
+One-line description of the post angle/idea. Specify the best format: Carousel, Single Image, or Reel.
 
 **📸 CAROUSEL BREAKDOWN** (if the content suits a carousel)
 Slide-by-slide breakdown:
@@ -100,6 +102,14 @@ Slide-by-slide breakdown:
 - Final slide: CTA slide
 If it's better as a single image or reel, say so and adjust.
 
+**🎬 REEL VERSION** (always include this section)
+A short-form vertical video version of this content:
+- **Hook** (first 1-2 seconds): Text overlay or opening line that stops the scroll
+- **Script** (15-30 seconds): Quick talking-head or screen-share script. Punchy, fast-paced. No filler.
+- **Text overlays**: 2-3 key text overlays to add during editing
+- **Trending audio suggestion**: Suggest a style of trending audio (e.g. "use a trending motivational voiceover" or "trending lo-fi beat")
+- **Cover image text**: What text should appear on the Reel's cover/thumbnail in the grid
+
 **💬 CAPTION**
 Start with a strong hook line. Use line breaks for readability. Tell a mini-story or share a lesson. Use emojis sparingly — only where natural. End with a question or CTA to drive comments.
 
@@ -107,7 +117,9 @@ Start with a strong hook line. Use line breaks for readability. Tell a mini-stor
 Specific call-to-action for both the caption and the last slide/end of reel.
 
 **#️⃣ HASHTAGS**
-15-20 relevant hashtags in a separate block. Mix of large (1M+), medium (100K-1M), and niche (<100K) tags.`,
+15-20 relevant hashtags in a separate block. Mix of large (1M+), medium (100K-1M), and niche (<100K) tags.
+
+**⏰ BEST TIME TO POST:** Monday–Friday, 11am–1pm or 7pm–9pm EST (Instagram peak for Reels and carousels in tech/creator niche)`,
 
       pinterest: `Create a complete Pinterest content package. Format your output with these clearly labeled sections:
 
@@ -124,7 +136,9 @@ Which Pinterest board this should go on (suggest a board name and 2-3 related bo
 10-15 SEO keywords/phrases someone might search to find this pin. Format as a numbered list (1. keyword, 2. keyword, etc.).
 
 **💡 PIN DESIGN NOTES**
-Suggest what the pin image should include — text overlay, layout style, colors that would work.`,
+Suggest what the pin image should include — text overlay, layout style, colors that would work.
+
+**⏰ BEST TIME TO PIN:** Saturday–Sunday 8pm–11pm EST, or Friday 3pm–5pm EST (Pinterest peak discovery hours)`,
 
       linkedin: `Create a complete LinkedIn content package. Format your output with these clearly labeled sections:
 
@@ -144,7 +158,9 @@ Write the full LinkedIn post:
 Write a follow-up comment Joey should post immediately after publishing. This should add extra value, context, or a resource link. LinkedIn's algorithm boosts posts with early comments.
 
 **📣 ENGAGEMENT STRATEGY**
-2-3 specific actions to boost reach: who to tag, which posts to engage with before/after posting, best time to post.`,
+2-3 specific actions to boost reach: who to tag, which posts to engage with before/after posting, best time to post.
+
+**⏰ BEST TIME TO POST:** Tuesday–Thursday, 8am–10am or 12pm–1pm EST (LinkedIn peak for B2B/tech content)`,
       youtube: `Create a complete YouTube content idea package. Format your output with these clearly labeled sections:
 
 **🎬 VIDEO CONCEPT**
@@ -181,11 +197,21 @@ A structured outline for a 5-10 minute video:
 - **Results/Demo** (7:00-8:30): Show the outcome
 - **CTA** (8:30-9:00): Subscribe, comment prompt, next video tease
 
+**⚡ YOUTUBE SHORTS VERSION**
+A vertical short-form version (under 60 seconds) derived from the main video:
+- **Hook** (0-3s): One punchy line or visual that stops the scroll
+- **Script** (15-45s): The single most interesting takeaway from the full video, condensed into a fast-paced talking-head or screen-share clip
+- **Text overlays**: 2-3 bold text overlays for key moments
+- **Title**: Short-optimized title (different from the long-form title — more casual, curiosity-driven)
+- **#Shorts tag**: Always include #Shorts in the description
+
 **📣 ENGAGEMENT STRATEGY**
 - Best posting day/time for this niche
 - Community tab post to build anticipation
 - Suggested end screen and cards
-- Comment pinning strategy`,
+- Comment pinning strategy
+
+**⏰ BEST TIME TO POST:** Friday–Saturday 9am–11am EST, or Wednesday 3pm–5pm EST (YouTube peak for tech/tutorial content). For Shorts: post daily or every other day, any time (Shorts have a longer discovery tail).`,
     };
     return `${base}\n\n${platformGuides[platform || "linkedin"] || platformGuides.linkedin}`;
   }
@@ -202,13 +228,30 @@ You have access to web search — USE IT to research the topic, find current dat
 - Include 2-4 inline citations or references naturally in the text
 - Do NOT fabricate statistics or sources
 
+## SEO Requirements — MANDATORY
+Before writing, identify a **primary keyword** (the main search term someone would Google to find this article). Then:
+- Include the primary keyword in the H1 title (naturally, not forced)
+- Use it in the first paragraph
+- Work it into 2-3 H2/H3 headers
+- Sprinkle it naturally throughout the body (don't keyword-stuff)
+- Optimize the title for **search intent** — what would someone type into Google? Lead with that.
+
+**OUTPUT THE FOLLOWING AT THE VERY TOP, before the article:**
+
+\`\`\`meta
+Primary Keyword: [the keyword you chose]
+Meta Description: [150-160 character SEO description for search engines — compelling, includes the primary keyword, makes someone want to click]
+\`\`\`
+
+Then write the full article below.
+
 ## Structure & Formatting
 
-**Title** — H1 (#). Specific, compelling, not clickbait. Should make someone want to read.
+**Title** — H1 (#). Optimized for search intent AND compelling to read. Include the primary keyword naturally. Not clickbait, but specific enough that Google understands the topic.
 
 **Hero subtitle** — One italic line below the title that summarizes the article's promise.
 
-**Intro** — 2-3 punchy sentences that hook the reader. State exactly what they'll learn or gain.
+**Intro** — 2-3 punchy sentences that hook the reader. Include the primary keyword naturally. State exactly what they'll learn or gain.
 
 **Body** — Well-structured sections with H2 (##) and H3 (###) headers. Each section should:
 - Teach something specific with real examples
@@ -235,6 +278,10 @@ Include 3-5 illustration placeholders throughout the article at natural visual b
 
 **Key Takeaways** — A clean summary section with bullet points recapping the main lessons.
 
+**FAQ Section** — Add a "## Frequently Asked Questions" section with 3-5 Q&As in "People Also Ask" style. These should be real questions someone would search for related to this topic. Format each as:
+### Q: [Question]
+[2-3 sentence answer — direct, useful, includes relevant keywords naturally]
+
 **Conclusion** — Brief wrap-up with a specific CTA (follow on TikTok/Instagram, try it yourself, drop a comment).
 
 **Author bio line** — End with a short separator (---) and a one-line author note like: *Joey Colley builds apps with AI and shares the journey on [TikTok](https://www.tiktok.com/@buildaiwithjoey) and [Instagram](https://www.instagram.com/gobuildai).*
@@ -243,7 +290,7 @@ Include 3-5 illustration placeholders throughout the article at natural visual b
 - Conversational, practical, real — like explaining to a friend
 - Short sentences. Punch. No corporate jargon.
 - Joey's personal experience woven throughout
-- Aim for 1000-2000 words
+- Aim for 1500-2500 words
 - No fluff, no filler, every sentence earns its place`
 
     // Inject brand context if provided
@@ -347,7 +394,7 @@ Repeat for EVERY platform in the metadata. If no specific AI platform or media t
   if (outputFormat === "thread") {
     return `${base}\n\nWrite an X (Twitter) thread. Format it as:
 
-**1/** The hook tweet. This is EVERYTHING — it must create enough curiosity to make someone click "Show this thread." Use a bold claim, surprising stat, or contrarian take. Under 280 characters.
+**1/** The hook tweet. This is EVERYTHING — it must create enough curiosity to make someone click "Show this thread." Use a bold claim, surprising stat, or contrarian take. Under 280 characters. Include 1-2 relevant hashtags if they fit naturally (e.g. #AI #BuildInPublic).
 
 **2/-8/** The body tweets. Each one should:
 - Make a single clear point
@@ -356,14 +403,19 @@ Repeat for EVERY platform in the metadata. If no specific AI platform or media t
 - Flow naturally from the previous tweet
 - Use line breaks within tweets for readability
 
-**9/ or 10/** The closer. Summarize the key lesson, then add a clear CTA (follow for more, bookmark this, drop a comment).
+**9/ or 10/** The closer. Summarize the key lesson, then add a clear CTA (follow for more, bookmark this, drop a comment). Include 1-3 relevant hashtags in this final tweet for discoverability.
+
+**#️⃣ HASHTAG STRATEGY**
+If real-time hashtag data is provided, select the most relevant 2-3 from that list. Otherwise, pick 2-3 hashtags that are currently active on X for this topic. Place them in the hook tweet and/or closer tweet only — never mid-thread. Every hashtag MUST include the # symbol.
 
 After the thread, add:
 
 **📌 QUOTE TWEET**
 Write a short quote-tweet Joey can use to re-share the thread later for more reach.
 
-Aim for 8-12 tweets total. The thread should tell a complete story or teach something specific from start to finish.`;
+Aim for 8-12 tweets total. The thread should tell a complete story or teach something specific from start to finish.
+
+**⏰ BEST TIME TO POST:** Monday–Wednesday, 9am–11am or 12pm–1pm EST (X peak engagement for tech/AI content)`;
   }
 
   return base;
@@ -614,7 +666,8 @@ Deno.serve(async (req) => {
       : '';
 
     // Determine if Claude should also do its own web search
-    const useWebSearch = isBlogWithSearch || (needsHashtags && !hashtagData);
+    // Blog: always. Social/thread: always for content accuracy + hashtag fallback.
+    const useWebSearch = isBlogWithSearch || needsHashtags || isVideoPrompt;
 
     let model: string;
     let maxTokens: number;
@@ -634,19 +687,19 @@ Deno.serve(async (req) => {
       systemPrompt = getSystemPrompt(output_format, platform, brand_context);
       userMessage = `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nResearch this topic using web search, then write a comprehensive blog article with real data and citations.`;
     } else if (needsHashtags) {
-      // Social/thread/video mode
+      // Social/thread mode: web search for content accuracy AND hashtags
       model = MODELS.standard;
       maxTokens = MAX_TOKENS_STANDARD;
       systemPrompt = getSystemPrompt(output_format, platform) + hashtagInjection;
       userMessage = hashtagData
-        ? `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nTransform this into the requested format. Use the real-time hashtag data provided in the system prompt — select the most relevant hashtags from that researched list.`
-        : `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nTransform this into the requested format. IMPORTANT: Before generating hashtags, use web search to find currently trending and high-performing hashtags for this topic on ${platform || 'social media'}. Search for recent hashtag trends and engagement data.`;
+        ? `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nBefore generating content, use web search to verify any facts, tools, or trends mentioned in the input. Make sure all claims are current and accurate. Then transform this into the requested format. Use the real-time hashtag data provided in the system prompt — select the most relevant hashtags from that researched list.`
+        : `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nBefore generating content, use web search to: 1) Verify any facts, tools, or trends mentioned in the input — make sure everything is current and accurate. 2) Find currently trending and high-performing hashtags for this topic on ${platform || 'social media'}. Then transform this into the requested format.`;
     } else if (isVideoPrompt) {
-      // Image & Video Prompt mode: no hashtags, no web search
+      // Image & Video Prompt mode: web search for accuracy
       model = MODELS.standard;
       maxTokens = MAX_TOKENS_STANDARD;
       systemPrompt = getSystemPrompt(output_format, platform);
-      userMessage = `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nGenerate a platform-optimized prompt based on the metadata provided.`;
+      userMessage = `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nUse web search to verify any tools, platforms, or features mentioned. Then generate a platform-optimized prompt based on the metadata provided.`;
     } else {
       // Standard mode: direct generation without web search
       model = MODELS.standard;
