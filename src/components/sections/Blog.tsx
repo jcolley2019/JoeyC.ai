@@ -32,81 +32,72 @@ export function Blog() {
   const { onMouseEnter } = useSocialBurst()
 
   useEffect(() => {
+    const header = headerRef.current
+    const tiktok = tiktokRef.current
+    const insta = instaRef.current
+    const connectHeader = connectHeaderRef.current
+    const socialGrid = socialGridRef.current
+    const observers: IntersectionObserver[] = []
+
     // Header — slide from left
-    if (headerRef.current) {
-      gsap.set(headerRef.current, { opacity: 0, x: -150 })
+    if (header) {
+      gsap.set(header, { opacity: 0, x: -150 })
       const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(headerRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
-            obs.disconnect()
-          }
-        },
+        ([e]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
         { threshold: 0.1 }
       )
-      obs.observe(headerRef.current)
+      obs.observe(header)
+      observers.push(obs)
     }
 
     // TikTok card — slide from left
-    if (tiktokRef.current) {
-      gsap.set(tiktokRef.current, { opacity: 0, x: -150 })
+    if (tiktok) {
+      gsap.set(tiktok, { opacity: 0, x: -150 })
       const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(tiktokRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
-            obs.disconnect()
-          }
-        },
+        ([e]) => { if (e.isIntersecting) { gsap.to(tiktok, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
         { threshold: 0.1 }
       )
-      obs.observe(tiktokRef.current)
+      obs.observe(tiktok)
+      observers.push(obs)
     }
 
     // Instagram card — slide from right
-    if (instaRef.current) {
-      gsap.set(instaRef.current, { opacity: 0, x: 150 })
+    if (insta) {
+      gsap.set(insta, { opacity: 0, x: 150 })
       const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(instaRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
-            obs.disconnect()
-          }
-        },
+        ([e]) => { if (e.isIntersecting) { gsap.to(insta, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
         { threshold: 0.1 }
       )
-      obs.observe(instaRef.current)
+      obs.observe(insta)
+      observers.push(obs)
     }
 
     // Connect header
-    if (connectHeaderRef.current) {
-      gsap.set(connectHeaderRef.current, { opacity: 0, y: 60 })
+    if (connectHeader) {
+      gsap.set(connectHeader, { opacity: 0, y: 60 })
       const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(connectHeaderRef.current, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' })
-            obs.disconnect()
-          }
-        },
+        ([e]) => { if (e.isIntersecting) { gsap.to(connectHeader, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
         { threshold: 0.1 }
       )
-      obs.observe(connectHeaderRef.current)
+      obs.observe(connectHeader)
+      observers.push(obs)
     }
 
     // Social cards — stagger up
-    if (socialGridRef.current) {
-      const cards = Array.from(socialGridRef.current.querySelectorAll('.social-card'))
-      gsap.set(cards, { opacity: 0, y: 80 })
-      const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(cards, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out', stagger: 0.1 })
-            obs.disconnect()
-          }
-        },
-        { threshold: 0.1 }
-      )
-      obs.observe(socialGridRef.current)
+    if (socialGrid) {
+      const cards = Array.from(socialGrid.querySelectorAll('.social-card'))
+      if (cards.length > 0) {
+        gsap.set(cards, { opacity: 0, y: 80 })
+        const obs = new IntersectionObserver(
+          ([e]) => { if (e.isIntersecting) { gsap.to(cards, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out', stagger: 0.1 }); obs.disconnect() } },
+          { threshold: 0.1 }
+        )
+        obs.observe(socialGrid)
+        observers.push(obs)
+      }
     }
+
+    return () => observers.forEach(obs => obs.disconnect())
   }, [])
 
 

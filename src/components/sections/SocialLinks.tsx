@@ -42,37 +42,34 @@ export function SocialLinks() {
   }, [])
 
   useEffect(() => {
-    // Header
-    if (headerRef.current) {
-      gsap.set(headerRef.current, { opacity: 0, y: 60 })
+    const header = headerRef.current
+    const grid = gridRef.current
+    const observers: IntersectionObserver[] = []
+
+    if (header) {
+      gsap.set(header, { opacity: 0, y: 60 })
       const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(headerRef.current, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' })
-            obs.disconnect()
-          }
-        },
+        ([e]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
         { threshold: 0.1 }
       )
-      obs.observe(headerRef.current)
+      obs.observe(header)
+      observers.push(obs)
     }
 
-    // Social cards — stagger up from below
-    if (gridRef.current) {
-      const cards = Array.from(gridRef.current.querySelectorAll('.social-card'))
-      gsap.set(cards, { opacity: 0, y: 80 })
-
-      const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(cards, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out', stagger: 0.1 })
-            obs.disconnect()
-          }
-        },
-        { threshold: 0.1 }
-      )
-      obs.observe(gridRef.current)
+    if (grid) {
+      const cards = Array.from(grid.querySelectorAll('.social-card'))
+      if (cards.length > 0) {
+        gsap.set(cards, { opacity: 0, y: 80 })
+        const obs = new IntersectionObserver(
+          ([e]) => { if (e.isIntersecting) { gsap.to(cards, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out', stagger: 0.1 }); obs.disconnect() } },
+          { threshold: 0.1 }
+        )
+        obs.observe(grid)
+        observers.push(obs)
+      }
     }
+
+    return () => observers.forEach(obs => obs.disconnect())
   }, [])
 
   return (

@@ -35,41 +35,34 @@ export function BlogPreview() {
   }, [])
 
   useEffect(() => {
-    if (headerRef.current) {
-      gsap.set(headerRef.current, { opacity: 0, y: 60 })
+    const header = headerRef.current
+    const grid = gridRef.current
+    const observers: IntersectionObserver[] = []
+
+    if (header) {
+      gsap.set(header, { opacity: 0, y: 60 })
       const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(headerRef.current, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' })
-            obs.disconnect()
-          }
-        },
+        ([e]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
         { threshold: 0.1 }
       )
-      obs.observe(headerRef.current)
+      obs.observe(header)
+      observers.push(obs)
     }
 
-    if (gridRef.current) {
-      const cards = Array.from(gridRef.current.querySelectorAll('.blog-preview-card'))
-      gsap.set(cards, { opacity: 0, x: 200 })
-
-      const obs = new IntersectionObserver(
-        ([e]) => {
-          if (e.isIntersecting) {
-            gsap.to(cards, {
-              x: 0,
-              opacity: 1,
-              ease: 'power3.out',
-              duration: 0.8,
-              stagger: 0.15,
-            })
-            obs.disconnect()
-          }
-        },
-        { threshold: 0.2 }
-      )
-      obs.observe(gridRef.current)
+    if (grid) {
+      const cards = Array.from(grid.querySelectorAll('.blog-preview-card'))
+      if (cards.length > 0) {
+        gsap.set(cards, { opacity: 0, x: 200 })
+        const obs = new IntersectionObserver(
+          ([e]) => { if (e.isIntersecting) { gsap.to(cards, { x: 0, opacity: 1, ease: 'power3.out', duration: 0.8, stagger: 0.15 }); obs.disconnect() } },
+          { threshold: 0.2 }
+        )
+        obs.observe(grid)
+        observers.push(obs)
+      }
     }
+
+    return () => observers.forEach(obs => obs.disconnect())
   }, [posts])
 
   return (
