@@ -165,7 +165,7 @@ export function Hero() {
         style={{ paddingTop: '5vh' }}
       >
         <img
-          src="/photos/joey-headshot2.png"
+          src="/photos/joey-headshot2.webp"
           alt=""
           className="hero-photo pointer-events-none select-none"
           style={{

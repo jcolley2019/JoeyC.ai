@@ -544,7 +544,7 @@ body {
 
 @media (max-width: 1366px) {
   .hero-card { display: none !important; }
-  .hero-fallback-subtitle { display: flex; }
+  .hero-fallback-subtitle { display: flex !important; }
 }
 
 @keyframes fadeIn {
