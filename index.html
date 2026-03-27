@@ -14,5 +14,34 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Google Translate — auto-translates based on browser language -->
+    <div id="google_translate_element" style="display:none"></div>
+    <script>
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+          pageLanguage: 'en',
+          autoDisplay: false,
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+        }, 'google_translate_element');
+
+        // Auto-trigger translation based on browser language
+        var userLang = (navigator.language || navigator.userLanguage || 'en').split('-')[0];
+        if (userLang !== 'en') {
+          // Wait for Google Translate to initialize, then trigger
+          var attempts = 0;
+          var tryTranslate = setInterval(function() {
+            var select = document.querySelector('.goog-te-combo');
+            if (select) {
+              select.value = userLang;
+              select.dispatchEvent(new Event('change'));
+              clearInterval(tryTranslate);
+            }
+            if (++attempts > 50) clearInterval(tryTranslate);
+          }, 100);
+        }
+      }
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   </body>
 </html>

@@ -88,7 +88,7 @@ export function Navbar() {
       >
         <div className="w-full max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="#" className="flex items-center group">
-            <span className="font-display text-sm font-medium text-primary glow-text group-hover:text-primary-hover transition-colors tracking-wider">
+            <span className="notranslate font-display text-sm font-medium text-primary glow-text group-hover:text-primary-hover transition-colors tracking-wider" translate="no">
               JoeyC.ai
             </span>
           </a>
@@ -155,7 +155,7 @@ export function Navbar() {
           </nav>
 
           <div className="absolute bottom-12 text-center">
-            <span className="font-display text-xs text-text-secondary/40 tracking-wider">
+            <span className="notranslate font-display text-xs text-text-secondary/40 tracking-wider" translate="no">
               JoeyC.ai
             </span>
           </div>

@@ -194,7 +194,7 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
             href="/"
             className="text-sm text-text-secondary hover:text-primary transition-colors"
           >
-            ← Back to JoeyC.ai
+            ← Back to <span className="notranslate" translate="no">JoeyC.ai</span>
           </a>
         </div>
       </div>

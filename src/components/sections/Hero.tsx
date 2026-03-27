@@ -110,7 +110,8 @@ function HeroName() {
   return (
     <div ref={containerRef} className="w-full overflow-hidden leading-none">
       <h2
-        className="hero-bg-text font-black text-white text-center uppercase select-none pointer-events-none whitespace-nowrap"
+        className="notranslate hero-bg-text font-black text-white text-center uppercase select-none pointer-events-none whitespace-nowrap"
+        translate="no"
         style={{
           fontFamily: "'Rajdhani', sans-serif",
           fontSize: 'clamp(3rem, 16vw, 18rem)',
@@ -227,7 +228,8 @@ export function Hero() {
               {/* Row 1: JoeyC.ai */}
               <div className="flex items-center justify-center w-full mb-2">
                 <span
-                  className="font-display font-bold"
+                  className="notranslate font-display font-bold"
+                  translate="no"
                   style={{
                     fontSize: 'clamp(22px, 3vw, 42px)',
                     color: '#1a8fff',
@@ -287,7 +289,7 @@ export function Hero() {
         <div className="w-full">
           {/* Fallback subtitle — visible below 1200px when hero-card is hidden */}
           <div className="hero-fallback-subtitle">
-            <span className="joeyc-title" style={{
+            <span className="notranslate joeyc-title" translate="no" style={{
               fontFamily: "'Orbitron', sans-serif",
               fontSize: 'clamp(18px, 2.5vw, 28px)',
               color: '#1a8fff',

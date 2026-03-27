@@ -275,7 +275,7 @@ export function BlogPostPage() {
             <div className="flex items-center gap-3">
               <img src="/photos/joey-headshot1.png" alt="Joey Colley" className="w-10 h-10 rounded-full object-cover" />
               <div>
-                <p className="text-sm text-text-primary font-medium">Joey Colley</p>
+                <p className="notranslate text-sm text-text-primary font-medium" translate="no">Joey Colley</p>
                 <div className="flex items-center gap-2 text-xs font-mono text-text-secondary">
                   <time>
                     {new Date(post.published_at!).toLocaleDateString('en-US', {
@@ -319,7 +319,7 @@ export function BlogPostPage() {
           <div className="flex items-center gap-4 mb-6">
             <img src="/photos/joey-headshot1.png" alt="Joey Colley" className="w-12 h-12 rounded-full object-cover" />
             <div>
-              <p className="font-semibold text-text-primary">Joey Colley</p>
+              <p className="notranslate font-semibold text-text-primary" translate="no">Joey Colley</p>
               <p className="text-sm text-text-secondary">
                 Building apps with AI and sharing the journey on{' '}
                 <a href="https://www.tiktok.com/@buildaiwithjoey" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors">
