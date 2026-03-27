@@ -36,6 +36,7 @@ interface SiteSettingsProps {
 
 export function SiteSettings({ extraPlatform: extraPlatformProp }: SiteSettingsProps = {}) {
   const { lang, setLang, t } = useLanguage()
+  const openRegistration = useSiteSetting('open_registration', false)
   const contactForm = useSiteSetting('contact_form_enabled', true)
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatformLocal = useSiteSetting('extra_platform_youtube', true)
@@ -48,6 +49,11 @@ export function SiteSettings({ extraPlatform: extraPlatformProp }: SiteSettingsP
       </p>
 
       <div className="space-y-4">
+        <SettingToggle
+          label="Open Registration"
+          description={openRegistration.value ? 'Anyone can sign up freely' : 'Invite only — new users must be invited'}
+          setting={openRegistration}
+        />
         <SettingToggle
           label={t('settings.contact')}
           description={contactForm.value ? t('settings.contact.on') : t('settings.contact.off')}

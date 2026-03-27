@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
+import { useSiteSetting } from '../../hooks/useSiteSettings'
 import { supabase } from '../../lib/supabase'
 
 interface AuthGateProps {
@@ -13,6 +14,7 @@ interface AuthGateProps {
 
 export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthenticated }: AuthGateProps) {
   const { t } = useLanguage()
+  const { value: openRegistration } = useSiteSetting('open_registration', false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -27,7 +29,7 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
     setError('')
     setLoading(true)
     try {
-      if (mode === 'signup' && onSignUp) {
+      if (mode === 'signup' && onSignUp && openRegistration) {
         await onSignUp(email, password)
         // After sign up, assign 'user' role
         const { data: { session } } = await supabase.auth.getSession()
@@ -101,14 +103,14 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
           <p className="font-mono text-lg tracking-[0.15em] text-white font-semibold mb-1">
             Content Studio
           </p>
-          <h1 className="text-2xl font-bold mt-3">{mode === 'login' ? t('auth.title') : 'Create Account'}</h1>
+          <h1 className="text-2xl font-bold mt-3">{mode === 'login' || !openRegistration ? t('auth.title') : 'Create Account'}</h1>
           <p className="text-text-secondary text-sm mt-2">
-            {mode === 'login' ? t('auth.desc') : 'Sign up to access the content studio'}
+            {mode === 'login' || !openRegistration ? t('auth.desc') : 'Sign up to access the content studio'}
           </p>
         </div>
 
-        {/* Google OAuth */}
-        {onGoogleSignIn && (
+        {/* Google OAuth — only when registration is open */}
+        {onGoogleSignIn && openRegistration && (
           <>
             <button
               onClick={handleGoogle}
@@ -166,26 +168,30 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
             className="w-full btn-primary bg-primary text-bg font-semibold py-2.5 rounded-lg relative z-10 disabled:opacity-50"
           >
             <span className="relative z-10">
-              {loading ? t('auth.loading') : mode === 'login' ? t('auth.login') : 'Create Account'}
+              {loading ? t('auth.loading') : (mode === 'login' || !openRegistration) ? t('auth.login') : 'Create Account'}
             </span>
           </button>
         </form>
 
         <p className="text-center text-xs text-text-secondary mt-4">
-          {mode === 'login' ? (
-            <>
-              Don't have an account?{' '}
-              <button onClick={() => { setMode('signup'); setError('') }} className="text-primary hover:underline">
-                Sign up
-              </button>
-            </>
+          {openRegistration ? (
+            mode === 'login' ? (
+              <>
+                Don't have an account?{' '}
+                <button onClick={() => { setMode('signup'); setError('') }} className="text-primary hover:underline">
+                  Sign up
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <button onClick={() => { setMode('login'); setError('') }} className="text-primary hover:underline">
+                  Log in
+                </button>
+              </>
+            )
           ) : (
-            <>
-              Already have an account?{' '}
-              <button onClick={() => { setMode('login'); setError('') }} className="text-primary hover:underline">
-                Log in
-              </button>
-            </>
+            <span className="text-text-secondary/60">Invite only — request access from the admin</span>
           )}
         </p>
 
