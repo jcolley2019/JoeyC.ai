@@ -16,7 +16,6 @@ const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window
 const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
   ({ project }, ref) => {
     const [hovered, setHovered] = useState(false)
-    const lastTapRef = useRef(0)
     const videoRef = useRef<HTMLVideoElement>(null)
     const touchActivatedRef = useRef(false)
 
