@@ -834,6 +834,14 @@ body {
   }
 }
 
+/* Tablet: 2-column grid */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .projects-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-rows: repeat(3, 1fr) !important;
+  }
+}
+
 /* Reduced motion: no GSAP animations, static grid */
 @media (prefers-reduced-motion: reduce) {
   .projects-pin-container {

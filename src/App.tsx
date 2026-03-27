@@ -3,7 +3,7 @@ import { Navbar } from './components/layout/Navbar'
 import { Hero } from './components/sections/Hero'
 import { About } from './components/sections/About'
 import { Portfolio } from './components/sections/Portfolio'
-import { Blog } from './components/sections/Blog'
+import { Content } from './components/sections/Content'
 import { BlogPreview } from './components/sections/BlogPreview'
 import { Contact } from './components/sections/Contact'
 import { Footer } from './components/layout/Footer'
@@ -59,7 +59,7 @@ export default function App() {
       <div className="section-divider" />
       <Portfolio />
       <div className="section-divider" />
-      <Blog />
+      <Content />
       <div className="section-divider" />
       <BlogPreview />
       <div className="section-divider" />

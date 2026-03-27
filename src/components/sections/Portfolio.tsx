@@ -18,6 +18,7 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
     const [hovered, setHovered] = useState(false)
     const lastTapRef = useRef(0)
     const videoRef = useRef<HTMLVideoElement>(null)
+    const touchActivatedRef = useRef(false)
 
     const openLink = useCallback(() => {
       if (project.link.startsWith('/')) {
@@ -34,26 +35,29 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
       }
     }, [openLink])
 
+    const startTime = project.videoStart ?? 0
+
     const handleClick = useCallback(() => {
       if (!isTouchDevice) {
         openLink()
         return
       }
-      const now = Date.now()
-      if (hovered && now - lastTapRef.current < 300) {
+      if (hovered) {
+        // Second tap — navigate
+        touchActivatedRef.current = false
+        setHovered(false)
         openLink()
       } else {
+        // First tap — show video, let it play until natural end
+        touchActivatedRef.current = true
         setHovered(true)
-        lastTapRef.current = now
+        const vid = videoRef.current
+        if (vid && project.video) {
+          vid.currentTime = startTime
+          vid.play().catch(() => {})
+        }
       }
-    }, [openLink, hovered])
-
-    const dismissOverlay = useCallback((e: React.MouseEvent) => {
-      e.stopPropagation()
-      setHovered(false)
-    }, [])
-
-    const startTime = project.videoStart ?? 0
+    }, [openLink, hovered, project.video, startTime])
 
     // 8-second loop clamp (only for single-video cards)
     const handleTimeUpdate = useCallback(() => {
@@ -62,20 +66,39 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
       // Skip 8s clamp if this card has a video2 (let it play through to onEnded)
       if (project.video2) return
       if (vid.currentTime >= startTime + 8) {
+        // On touch: one full 8s loop = reset
+        if (isTouchDevice && touchActivatedRef.current) {
+          touchActivatedRef.current = false
+          vid.pause()
+          vid.currentTime = startTime
+          setHovered(false)
+          return
+        }
         vid.currentTime = startTime
         vid.play().catch(() => {})
       }
     }, [project.video2, startTime])
 
-    // When video1 ends, switch to video2 if available
+    // When video1 ends, switch to video2 if available; when video2 ends, reset on touch
     const handleVideoEnded = useCallback(() => {
       const vid = videoRef.current
-      if (vid && project.video2) {
-        vid.src = project.video2
-        vid.currentTime = 0
-        vid.play().catch(() => {})
+      if (!vid) return
+      if (project.video2) {
+        // If we're still on video1, switch to video2
+        if (!vid.src.includes(project.video2)) {
+          vid.src = project.video2
+          vid.currentTime = 0
+          vid.play().catch(() => {})
+        } else if (isTouchDevice && touchActivatedRef.current) {
+          // video2 just ended on touch — reset
+          touchActivatedRef.current = false
+          vid.pause()
+          vid.src = project.video!
+          vid.currentTime = startTime
+          setHovered(false)
+        }
       }
-    }, [project.video2])
+    }, [project.video, project.video2, startTime])
 
     const handleMouseEnter = useCallback(() => {
       setHovered(true)
@@ -169,7 +192,7 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
               }}
               muted
               playsInline
-              loop
+              loop={!project.video2}
               onTimeUpdate={handleTimeUpdate}
               onEnded={handleVideoEnded}
               onError={(e) => console.log('Video error:', project.title, project.video, e)}
@@ -189,20 +212,13 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
             </div>
           )}
           {hovered && isTouchDevice && (
-            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center z-20">
+            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center z-20 pointer-events-none">
               <span
                 className="font-display text-text-secondary text-xs tracking-[0.2em] uppercase"
                 style={{ textShadow: '0 0 10px rgba(0,0,0,0.5)' }}
               >
                 Tap again to visit →
               </span>
-              <button
-                onClick={dismissOverlay}
-                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
-                aria-label="Close preview"
-              >
-                ×
-              </button>
             </div>
           )}
         </div>
@@ -334,7 +350,7 @@ export function Portfolio() {
       if (grid) {
         grid.style.width = mFullWidth + 'px'
         grid.style.left = '50%'
-        grid.style.top = '60px'
+        grid.style.top = '80px'
         grid.style.bottom = 'auto'
         grid.style.transform = 'translateX(-50%)'
         grid.style.paddingTop = '0px'
@@ -445,7 +461,7 @@ export function Portfolio() {
         const mCardH = cards[0]?.getBoundingClientRect().height || (window.innerHeight - 120) / 6
         const mTotalH = mCardH * cards.length + 12 * (cards.length - 1)
         const mVisibleH = window.innerHeight - 80 // viewport minus top offset
-        const mOverflow = Math.max(0, mTotalH - mVisibleH) + 60
+        const mOverflow = Math.max(0, mTotalH - mVisibleH) + 200
         if (mOverflow > 0) {
           mTl.to(grid, { y: -mOverflow, duration: 0.22, ease: 'none' }, 0.50)
           // Reset grid y AFTER cards have exited (0.90)
