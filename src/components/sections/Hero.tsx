@@ -146,7 +146,7 @@ export function Hero() {
 
     // Animate the lower-third card in
     const card = contentRef.current.querySelector('.hero-card')
-    if (card && window.matchMedia('(min-width: 821px)').matches) {
+    if (card && window.matchMedia('(min-width: 1367px)').matches) {
       gsap.fromTo(card,
         { opacity: 0, x: 60 },
         { opacity: 1, x: 0, duration: 1, ease: 'power4.out', delay: 0.8 }
