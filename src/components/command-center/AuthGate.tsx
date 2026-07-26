@@ -3,6 +3,25 @@ import type { FormEvent } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useSiteSetting } from '../../hooks/useSiteSettings'
 import { supabase } from '../../lib/supabase'
+import { PasswordInput } from '../ui/PasswordInput'
+
+/** Where Supabase sends the user after they click the recovery email link. */
+export const RESET_REDIRECT_PATH = '/reset-password'
+
+/**
+ * The reset confirmation is deliberately identical whether or not the address is
+ * registered — this is invite-only admin access, so the form must not double as
+ * a way to probe which emails exist.
+ */
+const RESET_SENT_MESSAGE = 'If that email has an account, a reset link is on its way.'
+
+/** Only a genuinely failed request is worth surfacing; everything else stays neutral. */
+const isNetworkError = (err: { name?: string; message?: string; status?: number } | null) =>
+  !!err && (
+    err.name === 'AuthRetryableFetchError' ||
+    err.status === 0 ||
+    /failed to fetch|networkerror|load failed/i.test(err.message ?? '')
+  )
 
 interface AuthGateProps {
   onLogin: (email: string, password: string) => Promise<void>
@@ -19,7 +38,7 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'sent'>('login')
   const [signUpSuccess, setSignUpSuccess] = useState(false)
 
   if (isAuthenticated) return <>{children}</>
@@ -29,7 +48,16 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
     setError('')
     setLoading(true)
     try {
-      if (mode === 'signup' && onSignUp && openRegistration) {
+      if (mode === 'forgot') {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}${RESET_REDIRECT_PATH}`,
+        })
+        if (isNetworkError(resetError)) {
+          setError('Could not reach the server. Check your connection and try again.')
+          return
+        }
+        setMode('sent')
+      } else if (mode === 'signup' && onSignUp && openRegistration) {
         await onSignUp(email, password)
         // After sign up, assign 'user' role
         const { data: { session } } = await supabase.auth.getSession()
@@ -93,6 +121,20 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
     )
   }
 
+  const showSignup = mode === 'signup' && openRegistration
+
+  const heading = mode === 'forgot' ? 'Reset Password'
+    : mode === 'sent' ? 'Check your email'
+    : showSignup ? 'Create Account'
+    : t('auth.title')
+
+  const subheading = mode === 'forgot' ? 'Enter your email and we’ll send you a reset link.'
+    : mode === 'sent' ? RESET_SENT_MESSAGE
+    : showSignup ? 'Sign up to access the content studio'
+    : t('auth.desc')
+
+  const backToLogin = () => { setMode('login'); setError('') }
+
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
@@ -103,14 +145,12 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
           <p className="font-mono text-lg tracking-[0.15em] text-white font-semibold mb-1">
             Content Studio
           </p>
-          <h1 className="text-2xl font-bold mt-3">{mode === 'login' || !openRegistration ? t('auth.title') : 'Create Account'}</h1>
-          <p className="text-text-secondary text-sm mt-2">
-            {mode === 'login' || !openRegistration ? t('auth.desc') : 'Sign up to access the content studio'}
-          </p>
+          <h1 className="text-2xl font-bold mt-3">{heading}</h1>
+          <p className="text-text-secondary text-sm mt-2">{subheading}</p>
         </div>
 
         {/* Google OAuth — only when registration is open */}
-        {onGoogleSignIn && openRegistration && (
+        {onGoogleSignIn && openRegistration && mode !== 'forgot' && mode !== 'sent' && (
           <>
             <button
               onClick={handleGoogle}
@@ -133,6 +173,14 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
           </>
         )}
 
+        {mode === 'sent' ? (
+          <button
+            onClick={backToLogin}
+            className="w-full font-mono text-sm text-primary hover:underline"
+          >
+            ← Back to login
+          </button>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block font-mono text-xs text-text-secondary mb-1.5">{t('auth.email')}</label>
@@ -145,18 +193,28 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
               placeholder="you@example.com"
             />
           </div>
-          <div>
-            <label className="block font-mono text-xs text-text-secondary mb-1.5">{t('auth.password')}</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full bg-bg-card border border-border rounded-lg px-4 py-2.5 text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
+          {mode !== 'forgot' && (
+            <div>
+              <label className="block font-mono text-xs text-text-secondary mb-1.5">{t('auth.password')}</label>
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                minLength={6}
+                autoComplete={showSignup ? 'new-password' : 'current-password'}
+              />
+              {!showSignup && (
+                <div className="flex justify-end mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setMode('forgot'); setError('') }}
+                    className="font-mono text-xs text-text-secondary/70 hover:text-primary transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <p className="text-red-400 text-sm font-mono">{error}</p>
@@ -168,13 +226,28 @@ export function AuthGate({ onLogin, onSignUp, onGoogleSignIn, children, isAuthen
             className="w-full btn-primary bg-primary text-bg font-semibold py-2.5 rounded-lg relative z-10 disabled:opacity-50"
           >
             <span className="relative z-10">
-              {loading ? t('auth.loading') : (mode === 'login' || !openRegistration) ? t('auth.login') : 'Create Account'}
+              {loading
+                ? (mode === 'forgot' ? 'Sending...' : t('auth.loading'))
+                : mode === 'forgot' ? 'Send Reset Link'
+                : showSignup ? 'Create Account'
+                : t('auth.login')}
             </span>
           </button>
+
+          {mode === 'forgot' && (
+            <button
+              type="button"
+              onClick={backToLogin}
+              className="block w-full text-center font-mono text-xs text-text-secondary/70 hover:text-primary transition-colors"
+            >
+              ← Back to login
+            </button>
+          )}
         </form>
+        )}
 
         <p className="text-center text-xs text-text-secondary mt-4">
-          {openRegistration ? (
+          {mode === 'forgot' || mode === 'sent' ? null : openRegistration ? (
             mode === 'login' ? (
               <>
                 Don't have an account?{' '}

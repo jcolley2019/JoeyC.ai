@@ -9,6 +9,7 @@ import { BlogList } from './pages/BlogList'
 import { BlogPostPage } from './pages/BlogPost'
 import { AuthCallback } from './pages/AuthCallback'
 import { XCallback } from './pages/XCallback'
+import { ResetPassword } from './pages/ResetPassword'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Sandbox } from './pages/Sandbox'
 
@@ -38,6 +39,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<App />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/x-callback" element={<XCallback />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route path="/sandbox" element={<Sandbox />} />
