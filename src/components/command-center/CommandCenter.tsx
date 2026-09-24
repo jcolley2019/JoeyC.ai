@@ -41,7 +41,7 @@ function detectAiPlatform(text: string): { mediaType: 'video' | 'image'; aiPlatf
 export function CommandCenter() {
   const { session, loading: authLoading, login, logout } = useAuth()
   const { isMasterAdmin } = useAdmin()
-  const { generating, generatingStatus: _generatingStatus, result, error, usageSummary, generate, extractYouTubeTranscript, setResult: _setResult, setError: _setError } = useContentGeneration()
+  const { generating, result, error, usageSummary, generate, extractYouTubeTranscript } = useContentGeneration()
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)
   const { t } = useLanguage()
@@ -104,7 +104,7 @@ export function CommandCenter() {
       return prev
     })
   }, [extraIsYoutube])
-  const [cascade, setCascade] = useState(true)
+  const [cascade] = useState(true)
   const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'success' | 'error'>('idle')
   const [publishError, setPublishError] = useState<string | null>(null)
   const [historyKey, setHistoryKey] = useState(0)
@@ -394,7 +394,6 @@ export function CommandCenter() {
                   platforms={platforms}
                   onPlatformsChange={setPlatforms}
                   cascade={cascade}
-                  onCascadeChange={setCascade}
                   generating={generating}
                   onGenerate={handleGenerate}
                   inputReady={inputText.trim().length > 0}

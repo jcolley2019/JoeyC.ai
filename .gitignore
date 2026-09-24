@@ -28,3 +28,4 @@ dist-ssr
 titilinks/
 _archive/
 audit/screenshots/
+.claude/settings.local.json

@@ -24,7 +24,6 @@ html, body {
   --color-text-secondary: #8892a4;
   --color-border: #0f1a33;
   --color-border-hover: #1a3366;
-  --color-glow: #1a8fff;
 }
 
 html {
@@ -885,7 +884,6 @@ body {
   --color-text-secondary: #3d2b1f;
   --color-border: #d4c5a9;
   --color-border-hover: #b8a080;
-  --color-glow: #d4a017;
   font-family: "Cormorant Garamond", Georgia, serif !important;
   font-weight: 500 !important;
   background-image: none !important;

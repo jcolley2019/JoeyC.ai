@@ -54,7 +54,7 @@ export function isThreadContent(content: string): boolean {
  * Extracts a single tweetable message from non-thread content.
  * Takes the first 280 chars, breaking at a word boundary.
  */
-export function extractSingleTweet(content: string): string {
+function extractSingleTweet(content: string): string {
   // Strip markdown formatting
   const plain = content
     .replace(/^#+\s+.+$/gm, '') // Remove headers

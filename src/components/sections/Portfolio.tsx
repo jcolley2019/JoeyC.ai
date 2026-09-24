@@ -194,7 +194,7 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
               loop={!project.video2}
               onTimeUpdate={handleTimeUpdate}
               onEnded={handleVideoEnded}
-              onError={(e) => console.log('Video error:', project.title, project.video, e)}
+              onError={(e) => console.warn('Video error:', project.title, project.video, e)}
               aria-hidden="true"
             />
           )}

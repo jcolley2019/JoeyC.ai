@@ -61,12 +61,6 @@ export interface GenerationLimits {
   daily_limit: number
 }
 
-export interface GenerationResponse {
-  content: string
-  usage: GenerationUsage
-  limits: GenerationLimits
-}
-
 export interface UserRole {
   id: string
   user_id: string

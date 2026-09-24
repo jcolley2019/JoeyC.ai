@@ -9,7 +9,6 @@ interface OutputPanelProps {
   platforms: Platform[]
   onPlatformsChange: (platforms: Platform[]) => void
   cascade: boolean
-  onCascadeChange: (cascade: boolean) => void
   generating: boolean
   onGenerate: () => void
   inputReady: boolean
@@ -27,7 +26,6 @@ export function OutputPanel({
   platforms,
   onPlatformsChange,
   cascade,
-  onCascadeChange,
   generating,
   onGenerate,
   inputReady,
@@ -43,7 +41,6 @@ export function OutputPanel({
   const hasVideo = formats.includes('video')
   const hasBlog = formats.includes('blog')
   const hasOtherFormats = formats.some(f => f !== 'blog')
-  const showCascadeToggle = hasBlog && hasOtherFormats
   const showPlatforms = hasSocial || hasVideo
 
   return (
@@ -62,9 +59,6 @@ export function OutputPanel({
         <PlatformPicker
           value={platforms}
           onChange={onPlatformsChange}
-          cascade={cascade}
-          onCascadeChange={onCascadeChange}
-          showCascade={showCascadeToggle}
           enabledPlatforms={enabledPlatforms}
         />
       )}

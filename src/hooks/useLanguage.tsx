@@ -17,7 +17,6 @@ const translations: Record<string, Record<Lang, string>> = {
   'cc.output': { en: 'Output', es: 'Salida' },
   'cc.output.desc': { en: 'Choose formats, attach media, then generate.', es: 'Elige formatos, adjunta medios, luego genera.' },
   'cc.logout': { en: 'Logout', es: 'Cerrar sesión' },
-  'cc.generating': { en: 'Generating content...', es: 'Generando contenido...' },
   'cc.drafts': { en: 'Blog / Social Media Drafts', es: 'Borradores de Blog / Redes Sociales' },
   'cc.drafts.ready': { en: 'Your generated draft is below. Edit, copy, or publish.', es: 'Tu borrador generado está abajo. Edita, copia o publica.' },
   'cc.drafts.empty.desc': { en: 'Generated content will appear here as editable drafts.', es: 'El contenido generado aparecerá aquí como borradores editables.' },
@@ -57,7 +56,6 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // === FormatSelector ===
   'format.label': { en: 'Format', es: 'Formato' },
-  'format.all': { en: 'All', es: 'Todos' },
   'format.social': { en: 'Social Post', es: 'Post Social' },
   'format.social.desc': { en: 'Platform-ready caption', es: 'Caption listo para publicar' },
   'format.blog': { en: 'Blog Article', es: 'Artículo de Blog' },
@@ -75,8 +73,6 @@ const translations: Record<string, Record<Lang, string>> = {
   'platform.pinterest.desc': { en: 'Pins & SEO keywords', es: 'Pins y palabras clave SEO' },
   'platform.youtube.desc': { en: 'Ideas, scripts & thumbnails', es: 'Ideas, guiones y miniaturas' },
   'platform.linkedin.desc': { en: 'Professional posts', es: 'Posts profesionales' },
-  'platform.cascade': { en: 'Cascade', es: 'Cascada' },
-  'platform.cascade.tooltip': { en: 'Blog first with web research, then derive social posts from it. Uses cheaper model for derivatives — saves ~70% on API costs.', es: 'Blog primero con investigación web, luego deriva posts sociales. Usa modelo más económico para derivados — ahorra ~70% en costos de API.' },
 
   // === MediaInput ===
   'media.label': { en: 'Images & Media', es: 'Imágenes y Medios' },
@@ -127,13 +123,9 @@ const translations: Record<string, Record<Lang, string>> = {
   'settings.perplexity.off': { en: 'Claude generates hashtags on its own', es: 'Claude genera hashtags por su cuenta' },
   'settings.platforms': { en: 'Platforms', es: 'Plataformas' },
   'settings.youtube.on': { en: 'Content ideas & scripts', es: 'Ideas de contenido y guiones' },
-  'settings.youtube.off': { en: 'YouTube hidden from platforms', es: 'YouTube oculto de plataformas' },
   'settings.linkedin.on': { en: 'LinkedIn posts enabled', es: 'Posts de LinkedIn activado' },
-  'settings.linkedin.off': { en: 'LinkedIn hidden from platforms', es: 'LinkedIn oculto de plataformas' },
   'settings.language': { en: 'Language', es: 'Idioma' },
   'settings.lang.label': { en: 'Page Language', es: 'Idioma de Página' },
-  'settings.lang.en': { en: 'English', es: 'Inglés' },
-  'settings.lang.es': { en: 'Spanish', es: 'Español' },
 
   // === ContentHistory ===
   'history.empty': { en: 'No content generated yet. Create your first piece above.', es: 'Aún no se ha generado contenido. Crea tu primera pieza arriba.' },
@@ -144,10 +136,6 @@ const translations: Record<string, Record<Lang, string>> = {
   'history.selected': { en: 'selected', es: 'seleccionados' },
   'history.delete': { en: 'Delete', es: 'Eliminar' },
   'history.deleting': { en: 'Deleting...', es: 'Eliminando...' },
-
-  // === BlogPostEditor ===
-  'editor.title': { en: 'Publish Blog Post', es: 'Publicar Artículo de Blog' },
-  'editor.required': { en: 'Title and content are required', es: 'El título y el contenido son obligatorios' },
 
   // === Guided Tour ===
   'tour.skip': { en: 'Skip tour', es: 'Saltar tour' },
@@ -184,10 +172,6 @@ const translations: Record<string, Record<Lang, string>> = {
     en: 'Click the gear icon to access settings: toggle Perplexity for AI-powered hashtag research, switch between YouTube and LinkedIn as your 4th platform, and change the page language between English and Spanish.',
     es: 'Haz clic en el icono de engranaje para acceder a la configuración: activa Perplexity para investigación de hashtags con IA, cambia entre YouTube y LinkedIn como tu 4ta plataforma, y cambia el idioma de la página entre inglés y español.',
   },
-
-  // === Status messages ===
-  'status.hashtags': { en: 'Researching trending hashtags...', es: 'Investigando hashtags en tendencia...' },
-  'status.generating': { en: 'Generating content...', es: 'Generando contenido...' },
 }
 
 const LanguageContext = createContext<LanguageContextValue>({

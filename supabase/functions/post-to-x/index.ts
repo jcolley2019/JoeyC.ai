@@ -55,8 +55,7 @@ async function hmacSha1(key: string, data: string): Promise<string> {
 
 async function buildOAuthHeader(
   method: string,
-  url: string,
-  _bodyParams: Record<string, string> = {}
+  url: string
 ): Promise<string> {
   const oauthParams: Record<string, string> = {
     oauth_consumer_key: X_API_KEY,

@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { PasswordInput } from '../ui/PasswordInput'
 
 /** Where Supabase sends the user after they click the recovery email link. */
-export const RESET_REDIRECT_PATH = '/reset-password'
+const RESET_REDIRECT_PATH = '/reset-password'
 
 /**
  * The reset confirmation is deliberately identical whether or not the address is

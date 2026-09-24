@@ -11,7 +11,7 @@ interface OnboardingWizardProps {
   onThemeChange?: (theme: 'dark' | 'luxe') => void
 }
 
-export interface OnboardingData {
+interface OnboardingData {
   display_name: string
   title: string
   bio: string

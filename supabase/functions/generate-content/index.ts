@@ -635,8 +635,6 @@ Deno.serve(async (req) => {
       output_format,
       platform,
       cascade_source,  // If provided, this is blog content to derive from
-      use_perplexity,  // Whether to use Perplexity for hashtag research
-      all_platforms,   // All selected platforms (for Perplexity query)
       real_time_hashtags, // Pre-researched hashtags from Perplexity (passed from client)
       brand_context,      // Brand profile for content personalization
     } = await req.json();
