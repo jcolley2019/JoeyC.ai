@@ -36,7 +36,6 @@ interface SiteSettingsProps {
 
 export function SiteSettings({ extraPlatform: extraPlatformProp }: SiteSettingsProps = {}) {
   const { lang, setLang, t } = useLanguage()
-  const openRegistration = useSiteSetting('open_registration', false)
   const contactForm = useSiteSetting('contact_form_enabled', true)
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatformLocal = useSiteSetting('extra_platform_youtube', true)
@@ -49,11 +48,19 @@ export function SiteSettings({ extraPlatform: extraPlatformProp }: SiteSettingsP
       </p>
 
       <div className="space-y-4">
-        <SettingToggle
-          label="Open Registration"
-          description={openRegistration.value ? 'Anyone can sign up freely' : 'Invite only — new users must be invited'}
-          setting={openRegistration}
-        />
+        {/* Read-only: registration is closed at the Supabase Auth level
+            ("Allow new users to sign up" OFF) and the app has no signup path.
+            This is not a toggle on purpose — a site_settings row must never be
+            what stands between the internet and an account (L3-03). */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-text-primary">Registration</p>
+            <p className="text-xs text-text-secondary">Invite only — new users are added from the Admin dashboard</p>
+          </div>
+          <span className="shrink-0 font-mono text-xs text-text-secondary border border-border rounded-md px-2 py-1">
+            LOCKED
+          </span>
+        </div>
         <SettingToggle
           label={t('settings.contact')}
           description={contactForm.value ? t('settings.contact.on') : t('settings.contact.off')}

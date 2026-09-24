@@ -26,26 +26,14 @@ export function useAuth() {
     if (error) throw error
   }
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: window.location.origin + '/auth/callback' },
-    })
-    if (error) throw error
-  }
-
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth/callback' },
-    })
-    if (error) throw error
-  }
+  // Account creation is invite-only (L3-03): accounts are created server-side by
+  // the send-invite edge function (auth.admin.generateLink type "invite") and the
+  // invitee arrives already signed in via the emailed link. There is deliberately
+  // no sign-up or OAuth sign-in call here — both would create users from the browser.
 
   const logout = async () => {
     await supabase.auth.signOut()
   }
 
-  return { session, loading, login, signUp, signInWithGoogle, logout }
+  return { session, loading, login, logout }
 }

@@ -39,7 +39,7 @@ function detectAiPlatform(text: string): { mediaType: 'video' | 'image'; aiPlatf
 }
 
 export function CommandCenter() {
-  const { session, loading: authLoading, login, signUp, signInWithGoogle, logout } = useAuth()
+  const { session, loading: authLoading, login, logout } = useAuth()
   const { isMasterAdmin } = useAdmin()
   const { generating, generatingStatus: _generatingStatus, result, error, usageSummary, generate, extractYouTubeTranscript, setResult: _setResult, setError: _setError } = useContentGeneration()
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
@@ -276,7 +276,7 @@ export function CommandCenter() {
   }
 
   return (
-    <AuthGate onLogin={login} onSignUp={signUp} onGoogleSignIn={signInWithGoogle} isAuthenticated={!!session}>
+    <AuthGate onLogin={login} isAuthenticated={!!session}>
       <div className={`min-h-screen command-center-bright ${luxeMode ? 'luxe-mode' : ''}`}>
         {/* Header */}
         <div className="border-b border-border px-6 py-4">
