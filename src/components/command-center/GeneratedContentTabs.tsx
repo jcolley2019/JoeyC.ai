@@ -1,7 +1,8 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { marked } from 'marked'
 import TurndownService from 'turndown'
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
+// `docx` (~300 KB) is loaded on demand inside handleDownloadDocx (P3 / L2-03); type-only import here.
+import type { Paragraph as DocxParagraph, TextRun as DocxTextRun } from 'docx'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useXPosting, parseThreadToTweets, isThreadContent } from '../../hooks/useXPosting'
 import { useBlogConnection } from '../../hooks/useBlogConnection'
@@ -442,12 +443,13 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onP
 
   // Download blog as .docx
   const handleDownloadDocx = useCallback(async () => {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx')
     const content = currentSection?.content || ''
     const fontName = PRESET_FONTS[brandProfile?.style_preset || 'modern'] || 'Calibri'
     const accentHex = (brandProfile?.accent_color || '#2563eb').replace('#', '')
     const lines = content.split('\n')
 
-    const paragraphs: Paragraph[] = []
+    const paragraphs: DocxParagraph[] = []
     let inCodeBlock = false
 
     for (const line of lines) {
@@ -502,7 +504,7 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onP
         paragraphs.push(new Paragraph({ children: [], spacing: { after: 80 } }))
       } else {
         // Parse inline bold/italic
-        const runs: TextRun[] = []
+        const runs: DocxTextRun[] = []
         const parts = line.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/)
         for (const part of parts) {
           if (part.startsWith('**') && part.endsWith('**')) {
