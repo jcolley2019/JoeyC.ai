@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { useAdmin } from '../../hooks/useAdmin'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useContentGeneration } from '../../hooks/useContentGeneration'
 import { useSiteSetting } from '../../hooks/useSiteSettings'
 import { useLanguage } from '../../hooks/useLanguage'
@@ -41,8 +40,18 @@ function detectAiPlatform(text: string): { mediaType: 'video' | 'image'; aiPlatf
 }
 
 export function CommandCenter() {
-  const { session, loading: authLoading, login, logout } = useAuth()
-  const { isMasterAdmin } = useAdmin()
+  const { session, loading: authLoading, login, logout, isMasterAdmin } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  // ProtectedRoute sends unauthenticated deep links here with `state.from`; once logged in,
+  // return the user to the page they asked for (A1).
+  const returnTo = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
+  useEffect(() => {
+    if (session && returnTo && returnTo !== '/command-center') {
+      navigate(returnTo, { replace: true })
+    }
+  }, [session, returnTo, navigate])
   const { generating, generatingStatus, result, error, usageSummary, generate, cancel, extractYouTubeTranscript } = useContentGeneration()
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)

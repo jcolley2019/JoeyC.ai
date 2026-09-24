@@ -1,73 +1,59 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAdmin } from './useAdmin'
+import { useAuth } from './useAuth'
 import type { BrandProfile } from '../types'
 
 const CACHE_PREFIX = 'brand-profile-'
 
 export function useBrandProfile() {
-  const [profile, setProfile] = useState<BrandProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string | null>(null)
-  const { isMasterAdmin, loading: roleLoading } = useAdmin()
+  // Session + role come from the shared AuthProvider (A1): no getSession/onAuthStateChange here.
+  const { session, isMasterAdmin, loading: roleLoading } = useAuth()
+  const userId = session?.user.id ?? null
 
-  // Fetch profile on mount
+  // Last server answer, keyed by the user it belongs to — never leaks across logins.
+  const [fetched, setFetched] = useState<{ uid: string; profile: BrandProfile | null } | null>(null)
+
+  // localStorage cache gives an instant first paint while the fetch is in flight.
+  const cached = useMemo<BrandProfile | null>(() => {
+    if (!userId) return null
+    try {
+      const raw = localStorage.getItem(CACHE_PREFIX + userId)
+      return raw ? (JSON.parse(raw) as BrandProfile) : null
+    } catch {
+      return null
+    }
+  }, [userId])
+
+  const profile = userId ? (fetched?.uid === userId ? fetched.profile : cached) : null
+  const loading = roleLoading || (!!userId && fetched?.uid !== userId)
+
+  // Fetch whenever the signed-in user changes (login/logout — not on token refresh)
   useEffect(() => {
+    if (roleLoading || !userId) return
     let cancelled = false
+    const uid = userId
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled || !session?.user) {
-        setLoading(false)
-        return
-      }
-
-      const uid = session.user.id
-      setUserId(uid)
-
-      // Try localStorage cache first for instant render
-      try {
-        const cached = localStorage.getItem(CACHE_PREFIX + uid)
-        if (cached) {
-          const parsed = JSON.parse(cached) as BrandProfile
-          setProfile(parsed)
+    supabase
+      .from('brand_profiles')
+      .select('*')
+      .eq('user_id', uid)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) {
+          console.warn('brand_profiles fetch failed:', error.message)
+          setFetched({ uid, profile: cached })
+        } else if (data) {
+          setFetched({ uid, profile: data as BrandProfile })
+          try { localStorage.setItem(CACHE_PREFIX + uid, JSON.stringify(data)) } catch {}
+        } else {
+          setFetched({ uid, profile: null })
+          try { localStorage.removeItem(CACHE_PREFIX + uid) } catch {}
         }
-      } catch {}
-
-      // Then fetch from Supabase to validate
-      supabase
-        .from('brand_profiles')
-        .select('*')
-        .eq('user_id', uid)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (cancelled) return
-          if (error) {
-            console.warn('brand_profiles fetch failed:', error.message)
-          } else if (data) {
-            setProfile(data as BrandProfile)
-            try { localStorage.setItem(CACHE_PREFIX + uid, JSON.stringify(data)) } catch {}
-          } else {
-            setProfile(null)
-            try { localStorage.removeItem(CACHE_PREFIX + uid) } catch {}
-          }
-          setLoading(false)
-        })
-    })
+      })
 
     return () => { cancelled = true }
-  }, [])
-
-  // Listen for auth changes (login/logout)
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        setProfile(null)
-        setUserId(null)
-        setLoading(false)
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
+  }, [userId, roleLoading, cached])
 
   const saveProfile = useCallback(async (updates: Partial<BrandProfile>) => {
     if (!userId) return
@@ -102,7 +88,7 @@ export function useBrandProfile() {
     }
 
     if (data) {
-      setProfile(data as BrandProfile)
+      setFetched({ uid: userId, profile: data as BrandProfile })
       try { localStorage.setItem(CACHE_PREFIX + userId, JSON.stringify(data)) } catch {}
     }
   }, [userId])
@@ -134,5 +120,5 @@ export function useBrandProfile() {
   // Master admins always count as onboarded (by role, not by a bundled email list)
   const isOnboarded = isMasterAdmin || profile?.onboarding_completed === true
 
-  return { profile, loading: loading || roleLoading, saveProfile, uploadLogo, isOnboarded }
+  return { profile, loading, saveProfile, uploadLogo, isOnboarded }
 }

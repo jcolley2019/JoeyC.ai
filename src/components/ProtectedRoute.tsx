@@ -1,6 +1,6 @@
-import { useState, useEffect, type ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import type { ReactNode } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 interface ProtectedRouteProps {
   children: ReactNode
@@ -8,62 +8,18 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Protects routes that require authentication and/or admin role.
- * - Not logged in → redirect to /command-center (which shows AuthGate login form)
+ * Protects routes that require authentication and/or admin role. Reads the shared
+ * AuthProvider context (A1) — no subscription or role query of its own.
+ * - Not logged in → redirect to /command-center (AuthGate login form), carrying `state.from`
+ *   so the Studio can send the user back here after login
  * - Logged in but not admin on admin route → redirect to /command-center
  * - Logged in (and admin if required) → render children
  */
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
-  const [state, setState] = useState<'loading' | 'authenticated' | 'admin' | 'unauthenticated'>('loading')
+  const { session, loading, isMasterAdmin } = useAuth()
+  const location = useLocation()
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function check() {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (cancelled) return
-
-      if (!session) {
-        setState('unauthenticated')
-        return
-      }
-
-      if (!requireAdmin) {
-        setState('authenticated')
-        return
-      }
-
-      // Check admin role
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .single()
-
-      if (cancelled) return
-
-      if (data?.role === 'master_admin') {
-        setState('admin')
-      } else {
-        setState('authenticated')
-      }
-    }
-
-    check()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      setState('loading')
-      check()
-    })
-
-    return () => {
-      cancelled = true
-      subscription.unsubscribe()
-    }
-  }, [requireAdmin])
-
-  if (state === 'loading') {
+  if (loading) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
@@ -71,13 +27,11 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     )
   }
 
-  // Not logged in → send to /command-center where AuthGate shows the login form
-  if (state === 'unauthenticated') {
-    return <Navigate to="/command-center" replace />
+  if (!session) {
+    return <Navigate to="/command-center" replace state={{ from: location }} />
   }
 
-  // Authenticated but not admin, trying to access admin route
-  if (requireAdmin && state !== 'admin') {
+  if (requireAdmin && !isMasterAdmin) {
     return <Navigate to="/command-center" replace />
   }
 

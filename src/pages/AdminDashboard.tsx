@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useAdmin } from '../hooks/useAdmin'
 import { supabase } from '../lib/supabase'
 import { BrandGuide } from '../components/command-center/BrandGuide'
 import type { Invitation, ActivityLogEntry } from '../types'
@@ -20,9 +18,9 @@ interface AdminUser {
 const isProtected = (u: AdminUser) => u.protected ?? u.role === 'master_admin'
 
 export function AdminDashboard() {
-  const { session, loading: authLoading, logout } = useAuth()
-  const { isMasterAdmin, loading: adminLoading } = useAdmin()
-  const navigate = useNavigate()
+  // ProtectedRoute (requireAdmin) already guarantees a master-admin session here (A1).
+  const { session, logout } = useAuth()
+  const userId = session?.user.id
 
   const [users, setUsers] = useState<AdminUser[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
@@ -51,13 +49,15 @@ export function AdminDashboard() {
     setTimeout(() => setDeleteSuccess(''), 3000)
   }
 
+  // Reads the token at call time so a TOKEN_REFRESHED session object does not refetch (L4-12).
   const fetchData = useCallback(async () => {
-    if (!session) return
+    const { data: { session: current } } = await supabase.auth.getSession()
+    if (!current) return
     setLoadingData(true)
 
     try {
       const { data: adminData, error: adminErr } = await supabase.functions.invoke('admin-users', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${current.access_token}` },
       })
 
       if (adminErr) throw adminErr
@@ -76,21 +76,11 @@ export function AdminDashboard() {
     } finally {
       setLoadingData(false)
     }
-  }, [session])
+  }, [])
 
   useEffect(() => {
-    if (!authLoading && !adminLoading && isMasterAdmin) {
-      fetchData()
-    }
-  }, [authLoading, adminLoading, isMasterAdmin, fetchData])
-
-  useEffect(() => {
-    if (!authLoading && !adminLoading) {
-      if (!session || !isMasterAdmin) {
-        navigate('/')
-      }
-    }
-  }, [authLoading, adminLoading, session, isMasterAdmin, navigate])
+    if (userId) fetchData()
+  }, [userId, fetchData])
 
   // ── Selection helpers ──────────────────────────────────────
   const toggleUser = (id: string) => {
@@ -227,15 +217,7 @@ export function AdminDashboard() {
     }
   }
 
-  if (authLoading || adminLoading) {
-    return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
-      </div>
-    )
-  }
-
-  if (!session || !isMasterAdmin) return null
+  if (!session) return null
 
   const formatDate = (d: string | null) => {
     if (!d) return '—'

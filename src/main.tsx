@@ -5,6 +5,7 @@ import './index.css'
 import App from './App'
 import { LanguageProvider } from './hooks/useLanguage'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { AuthProvider } from './features/auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ScrollToTop } from './components/ScrollToTop'
 import { NotFound } from './pages/NotFound'
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <ScrollToTop />
       <ErrorBoundary>
+        <AuthProvider>
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<App />} />
@@ -79,6 +81,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
+        </AuthProvider>
       </ErrorBoundary>
     </BrowserRouter>
   </StrictMode>,
