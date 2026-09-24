@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ScrollToTop } from './components/ScrollToTop'
 import { NotFound } from './pages/NotFound'
+import { Seo } from './components/Seo'
 
 const BlogList = lazy(() => import('./pages/BlogList').then(m => ({ default: m.BlogList })))
 const BlogPostPage = lazy(() => import('./pages/BlogPost').then(m => ({ default: m.BlogPostPage })))
@@ -19,6 +20,11 @@ const CommandCenter = lazy(() =>
   import('./components/command-center/CommandCenter').then(m => ({ default: m.CommandCenter }))
 )
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })))
+
+/** Private and utility routes: never indexed; each still gets a real title. */
+const NoIndex = ({ title }: { title: string }) => (
+  <Seo title={`${title} — JoeyC.ai`} description="JoeyC.ai" noindex />
+)
 
 const Loading = () => (
   <div className="min-h-screen bg-bg flex items-center justify-center">
@@ -42,26 +48,32 @@ createRoot(document.getElementById('root')!).render(
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<App />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/x-callback" element={<XCallback />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/callback" element={<><NoIndex title="Signing in" /><AuthCallback /></>} />
+            <Route path="/x-callback" element={<><NoIndex title="Connecting X" /><XCallback /></>} />
+            <Route path="/reset-password" element={<><NoIndex title="Reset password" /><ResetPassword /></>} />
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
-            <Route path="/sandbox" element={<Sandbox />} />
+            <Route path="/sandbox" element={<><NoIndex title="Sandbox" /><Sandbox /></>} />
             <Route
               path="/command-center"
               element={
-                <LanguageProvider>
-                  <CommandCenter />
-                </LanguageProvider>
+                <>
+                  <NoIndex title="Content Studio" />
+                  <LanguageProvider>
+                    <CommandCenter />
+                  </LanguageProvider>
+                </>
               }
             />
             <Route
               path="/admin"
               element={
-                <ProtectedRoute requireAdmin>
-                  <AdminDashboard />
-                </ProtectedRoute>
+                <>
+                  <NoIndex title="Admin" />
+                  <ProtectedRoute requireAdmin>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                </>
               }
             />
             <Route path="*" element={<NotFound />} />

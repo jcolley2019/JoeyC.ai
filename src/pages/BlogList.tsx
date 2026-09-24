@@ -90,6 +90,7 @@ export function BlogList() {
         ogImage={`${SITE_URL}/photos/joey-og.jpg`}
         twitterCard="summary"
       />
+      <main>
 
       {/* Hero header */}
       <div className="border-b border-border/50 bg-gradient-to-b from-primary/[0.03] to-transparent">
@@ -289,6 +290,7 @@ export function BlogList() {
           </p>
         )}
       </div>
+      </main>
     </div>
   )
 }

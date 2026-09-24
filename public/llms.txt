@@ -1,19 +1,34 @@
 # JoeyC.ai
 
-## Joey Colley
+> Joey Colley builds apps, websites and automations with AI and shows how. Self-taught, not a traditional developer; ships with Claude, Lovable and Replit and documents it in public.
 
-AI builder and content creator documenting the journey of building real apps with AI tools. Self-taught, not a traditional developer. Uses Claude, Lovable, and Replit to ship real products.
+Canonical site: https://www.joeyc.ai
+Blog: https://www.joeyc.ai/blog (RSS: https://www.joeyc.ai/rss.xml, sitemap: https://www.joeyc.ai/sitemap.xml)
 
 ## Projects
 
-- Luxvibe.io: Luxury hotel booking platform
-- TitiLINKS: Bio link SaaS platform
-- JoeyC.ai: Personal brand and AI education hub
+- Luxvibe.io (https://luxvibe.io): AI-powered luxury hotel booking platform that matches travelers with curated stays using intelligent recommendations. React, LiteAPI, Claude AI.
+- Content Studio (https://www.joeyc.ai/command-center, invite-only): AI content generation command center; turn one idea into posts, blogs, threads and video scripts across every platform. React, Claude API, Supabase.
+- TitiActriz.com (https://titiactriz.com): Actress portfolio and personal brand site with a cinematic aesthetic and dynamic content management. React, Supabase.
+- TitiLINKS (https://titilinks.com): Bio link SaaS built for TikTok creators; one link, every platform, fully customizable. React, Supabase, Framer Motion.
+- Field Report AI (https://fieldreportai.app): AI-powered field reporting tool that turns raw observations into structured, professional reports. React, Claude API.
+- Spanish Chat App (https://medellin-chatter.lovable.app): Conversational Spanish learning app; practice real dialogue with an AI tutor that adapts to your level. React, AI, Lovable.
 
-## Content Focus
+## Blog posts
 
-AI tools for beginners, building in public, app development tutorials.
+- OpenAI Just Killed Sora. Here's Everything That Happened and What It Means for AI Creators: https://www.joeyc.ai/blog/openai-killed-sora-what-it-means-for-ai-creators
+- Why I Built JoeyC.ai: https://www.joeyc.ai/blog/why-i-built-joeyc-ai
+- My Favorite AI Tools Right Now: https://www.joeyc.ai/blog/my-favorite-ai-tools-right-now
+- What I Learned Building Luxvibe.io: https://www.joeyc.ai/blog/what-i-learned-building-luxvibe-io
+- How I Use Claude to Build Faster: https://www.joeyc.ai/blog/how-i-use-claude-to-build-faster
 
 ## Social
 
-TikTok: @buildaiwithjoey | Instagram: @gobuildai
+- TikTok: https://www.tiktok.com/@buildaiwithjoey
+- Instagram: https://www.instagram.com/gobuildai
+- Pinterest: https://www.pinterest.com/buildaiwithjoey
+- X: https://x.com/buildaiwithjoey
+
+## Content focus
+
+AI tools for beginners, building in public, app development with AI assistants.

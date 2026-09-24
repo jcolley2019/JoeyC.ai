@@ -129,7 +129,7 @@ function HeroName() {
 
   return (
     <div ref={containerRef} className="w-full overflow-hidden leading-none">
-      <h2
+      <h1
         className="hero-bg-text font-black text-white text-center uppercase select-none pointer-events-none whitespace-nowrap"
         style={{
           fontFamily: "'Rajdhani', sans-serif",
@@ -152,7 +152,7 @@ function HeroName() {
             {letter === ' ' ? '\u00A0' : letter}
           </span>
         ))}
-      </h2>
+      </h1>
     </div>
   )
 }

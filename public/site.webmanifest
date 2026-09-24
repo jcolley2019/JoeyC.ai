@@ -1,0 +1,13 @@
+{
+  "name": "JoeyC.ai",
+  "short_name": "JoeyC.ai",
+  "description": "Practical AI for everyone: apps, websites and automations built in public.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

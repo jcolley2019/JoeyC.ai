@@ -283,471 +283,491 @@ export function Portfolio() {
       return () => saved.forEach(([el, style]) => { if (style === null) el.removeAttribute('style'); else el.setAttribute('style', style) })
     }
 
-    const mm = gsap.matchMedia()
+    // The box is sized from the rendered "PROJECTS" glyphs, so measurement must wait for the
+    // display font; otherwise a fast first paint measures the fallback font and every phase
+    // inherits the wrong natural size. Values and timings are unchanged.
+    let mm: gsap.MatchMedia | null = null
+    let cancelled = false
+    const setup = contextSafe(() => {
+      if (cancelled) return
+      const m = gsap.matchMedia()
+      mm = m
 
-    // ── Reduced motion: simple static fallback ──
-    mm.add('(prefers-reduced-motion: reduce)', () => {
-      const restore = snapshotStyles([section, pin, box, lettersWrap, mobileHeadingRef.current, gridRef.current])
+      // ── Reduced motion: simple static fallback ──
+      m.add('(prefers-reduced-motion: reduce)', () => {
+        const restore = snapshotStyles([section, pin, box, lettersWrap, mobileHeadingRef.current, gridRef.current])
 
-      section.style.height = 'auto'
-      pin.style.height = 'auto'
-      box.style.display = 'none'
-      if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'block'
-      lettersWrap.style.display = 'none'
+        section.style.height = 'auto'
+        pin.style.height = 'auto'
+        box.style.display = 'none'
+        if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'block'
+        lettersWrap.style.display = 'none'
 
-      const mobileGrid = gridRef.current
-      if (mobileGrid) {
-        mobileGrid.style.position = 'relative'
-        mobileGrid.style.top = 'auto'
-        mobileGrid.style.left = 'auto'
-        mobileGrid.style.transform = 'none'
-        mobileGrid.style.width = '100%'
-      }
+        const mobileGrid = gridRef.current
+        if (mobileGrid) {
+          mobileGrid.style.position = 'relative'
+          mobileGrid.style.top = 'auto'
+          mobileGrid.style.left = 'auto'
+          mobileGrid.style.transform = 'none'
+          mobileGrid.style.width = '100%'
+        }
 
-      const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
-      const obs = new IntersectionObserver(
-        contextSafe((entries: IntersectionObserverEntry[]) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              gsap.to(entry.target, { opacity: 1, y: 0, duration: 0.6, ease: 'power4.out' })
-              obs.unobserve(entry.target)
-            }
-          })
-        }),
-        { threshold: 0.1 }
-      )
-      cards.forEach((card) => {
-        gsap.set(card, { opacity: 0, y: 30 })
-        obs.observe(card)
-      })
-      return () => {
-        obs.disconnect()
-        restore()
-      }
-    })
-
-    // ── Mobile: Full ScrollTrigger animation with vertical letters ──
-    mm.add('(max-width: 767px) and (prefers-reduced-motion: no-preference)', () => {
-      const restore = snapshotStyles([section, box, lettersWrap, mobileHeadingRef.current, gridRef.current])
-
-      if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'none'
-
-      const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
-      const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
-      if (!letters.length || !cards.length) return restore
-
-      section.style.height = '600vh'
-
-      // Force column layout before measuring so we get stacked height
-      lettersWrap.style.flexDirection = 'column'
-
-      // Measure vertical letters at scale 1
-      gsap.set(box, { scale: 1, xPercent: -50, yPercent: -50 })
-      gsap.set(lettersWrap, { scale: 1, xPercent: -50, yPercent: -50 })
-
-      const mWrapRect = lettersWrap.getBoundingClientRect()
-      const mNaturalWidth = mWrapRect.width + 80
-      const mNaturalHeight = mWrapRect.height + 48
-
-      box.style.width = mNaturalWidth + 'px'
-      box.style.height = mNaturalHeight + 'px'
-
-      const mEntryScale = 0.4
-      gsap.set(box, { xPercent: -50, yPercent: -50, scale: mEntryScale })
-      gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: mEntryScale })
-
-      // Function-based so every ScrollTrigger refresh (resize/rotation) re-reads the viewport
-      const mFullWidth = () => window.innerWidth * 0.90 - 40
-      const mFullHeight = () => window.innerHeight - 80  // viewport minus navbar
-
-      // Position grid to align with expanded box on mobile
-      const grid = gridRef.current
-      if (grid) {
-        grid.style.width = mFullWidth() + 'px'
-        grid.style.left = '50%'
-        grid.style.top = '80px'
-        grid.style.bottom = 'auto'
-        grid.style.transform = 'translateX(-50%)'
-        grid.style.paddingTop = '0px'
-        grid.style.height = 'auto'
-        // Ensure grid starts at y:0 — card 1 at top, no negative offset
-        gsap.set(grid, { y: 0, xPercent: -50, yPercent: 0 })
-      }
-
-      // Pre-compute mobile scatter: P flies UP, S flies DOWN, middle scatter left/right
-      const mLetterTargets = letters.map((_, i) => {
-        if (i === 0) return { x: 0, y: '-120vh', rotation: -15 }
-        if (i === 7) return { x: 0, y: '120vh', rotation: 15 }
-        const xDir = i % 2 === 0 ? -1 : 1
-        return {
-          x: xDir * gsap.utils.random(200, 400),
-          y: gsap.utils.random(-100, 100),
-          rotation: gsap.utils.random(-20, 20),
+        const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
+        const obs = new IntersectionObserver(
+          contextSafe((entries: IntersectionObserverEntry[]) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                gsap.to(entry.target, { opacity: 1, y: 0, duration: 0.6, ease: 'power4.out' })
+                obs.unobserve(entry.target)
+              }
+            })
+          }),
+          { threshold: 0.1 }
+        )
+        cards.forEach((card) => {
+          gsap.set(card, { opacity: 0, y: 30 })
+          obs.observe(card)
+        })
+        return () => {
+          obs.disconnect()
+          restore()
         }
       })
 
-      // Cards alternate entry: odd from left, even from right
-      const mCardEntryX = cards.map((_, i) => i % 2 === 0 ? '-110vw' : '110vw')
-      const mCardEntryRot = cards.map(() => gsap.utils.random(-3, 3))
-      const mCardExitX = cards.map((_, i) => i % 2 === 0 ? '-110vw' : '110vw')
+      // ── Mobile: Full ScrollTrigger animation with vertical letters ──
+      m.add('(max-width: 767px) and (prefers-reduced-motion: no-preference)', () => {
+        const restore = snapshotStyles([section, box, lettersWrap, mobileHeadingRef.current, gridRef.current])
 
-      gsap.set(cards, {
-        x: (i: number) => mCardEntryX[i],
-        opacity: 0,
-        scale: 0.8,
-        rotation: (i: number) => mCardEntryRot[i],
-      })
+        if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'none'
 
-      // Double-tap detection for mobile
-      let lastTapTime = 0
-      const handleCardTap = (_card: HTMLDivElement, index: number) => {
-        const now = Date.now()
-        if (now - lastTapTime < 300) {
-          // Double tap — open link
-          const project = projects[index]
-          if (project.link.startsWith('/')) {
-            window.location.href = project.link
-          } else {
-            window.open(project.link, '_blank', 'noopener,noreferrer')
+        const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
+        const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
+        if (!letters.length || !cards.length) return restore
+
+        section.style.height = '600vh'
+
+        // Force column layout before measuring so we get stacked height
+        lettersWrap.style.flexDirection = 'column'
+
+        // Measure vertical letters at scale 1
+        gsap.set(box, { scale: 1, xPercent: -50, yPercent: -50 })
+        gsap.set(lettersWrap, { scale: 1, xPercent: -50, yPercent: -50 })
+
+        const mWrapRect = lettersWrap.getBoundingClientRect()
+        const mNaturalWidth = mWrapRect.width + 80
+        const mNaturalHeight = mWrapRect.height + 48
+
+        box.style.width = mNaturalWidth + 'px'
+        box.style.height = mNaturalHeight + 'px'
+
+        const mEntryScale = 0.4
+        gsap.set(box, { xPercent: -50, yPercent: -50, scale: mEntryScale })
+        gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: mEntryScale })
+
+        // Function-based so every ScrollTrigger refresh (resize/rotation) re-reads the viewport
+        const mFullWidth = () => window.innerWidth * 0.90 - 40
+        const mFullHeight = () => window.innerHeight - 80  // viewport minus navbar
+
+        // Position grid to align with expanded box on mobile
+        const grid = gridRef.current
+        if (grid) {
+          grid.style.width = mFullWidth() + 'px'
+          grid.style.left = '50%'
+          grid.style.top = '80px'
+          grid.style.bottom = 'auto'
+          grid.style.transform = 'translateX(-50%)'
+          grid.style.paddingTop = '0px'
+          grid.style.height = 'auto'
+          // Ensure grid starts at y:0 — card 1 at top, no negative offset
+          gsap.set(grid, { y: 0, xPercent: -50, yPercent: 0 })
+        }
+
+        // Pre-compute mobile scatter: P flies UP, S flies DOWN, middle scatter left/right
+        const mLetterTargets = letters.map((_, i) => {
+          if (i === 0) return { x: 0, y: '-120vh', rotation: -15 }
+          if (i === 7) return { x: 0, y: '120vh', rotation: 15 }
+          const xDir = i % 2 === 0 ? -1 : 1
+          return {
+            x: xDir * gsap.utils.random(200, 400),
+            y: gsap.utils.random(-100, 100),
+            rotation: gsap.utils.random(-20, 20),
+          }
+        })
+
+        // Cards alternate entry: odd from left, even from right
+        const mCardEntryX = cards.map((_, i) => i % 2 === 0 ? '-110vw' : '110vw')
+        const mCardEntryRot = cards.map(() => gsap.utils.random(-3, 3))
+        const mCardExitX = cards.map((_, i) => i % 2 === 0 ? '-110vw' : '110vw')
+
+        gsap.set(cards, {
+          x: (i: number) => mCardEntryX[i],
+          opacity: 0,
+          scale: 0.8,
+          rotation: (i: number) => mCardEntryRot[i],
+        })
+
+        // Double-tap detection for mobile
+        let lastTapTime = 0
+        const handleCardTap = (_card: HTMLDivElement, index: number) => {
+          const now = Date.now()
+          if (now - lastTapTime < 300) {
+            // Double tap — open link
+            const project = projects[index]
+            if (project.link.startsWith('/')) {
+              window.location.href = project.link
+            } else {
+              window.open(project.link, '_blank', 'noopener,noreferrer')
+            }
+          }
+          lastTapTime = now
+        }
+
+        // Attach tap listeners
+        const tapHandlers = cards.map((card, i) => {
+          const handler = () => handleCardTap(card, i)
+          card.addEventListener('touchend', handler, { passive: true })
+          return handler
+        })
+
+        const mTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: 'top top',
+            end: 'bottom bottom',
+            pin: pin,
+            scrub: 3,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+            onRefresh: () => { if (grid) grid.style.width = mFullWidth() + 'px' },
+            onUpdate: (self) => {
+              const p = self.progress
+              gridRef.current?.classList.toggle('cards-interactive', p > 0.45 && p < 0.82)
+            },
+          },
+        })
+
+        // Phase 1: Box + text zoom in (0 → 0.08)
+        mTl.to(box, { scale: 1, duration: 0.08, ease: 'power2.out' }, 0)
+        mTl.to(lettersWrap, { scale: 1, duration: 0.08, ease: 'power2.out' }, 0)
+
+        // Phase 2: Box widens (0.08 → 0.18)
+        mTl.to(box, { width: mFullWidth, duration: 0.10, ease: 'power2.inOut' }, 0.08)
+        mTl.to(box, { height: mFullHeight, duration: 0.07, ease: 'power2.inOut' }, 0.18)
+
+        // Phase 2b: Box scales beyond viewport (0.20 → 0.28), fades after
+        mTl.to(box, { scale: 3, duration: 0.08, ease: 'power2.in' }, 0.20)
+        mTl.to(box, { opacity: 0, duration: 0.02 }, 0.27)
+        mTl.to(lettersWrap, { opacity: 0, duration: 0.02 }, 0.35)
+
+        // Phase 3: Letters scatter (0.25 → 0.35), stay visible until off screen
+        mTl.to(letters, {
+          x: (i: number) => mLetterTargets[i].x as number,
+          y: (i: number) => mLetterTargets[i].y as number,
+          rotation: (i: number) => mLetterTargets[i].rotation,
+          duration: 0.10,
+          stagger: 0.008,
+          ease: 'power2.inOut',
+        } as gsap.TweenVars, 0.25)
+
+        // Phase 4: Cards fly in alternating left/right (0.35 → 0.50)
+        mTl.to(cards, {
+          x: 0,
+          opacity: 1,
+          scale: 1,
+          rotation: 0,
+          duration: 0.15,
+          stagger: 0.012,
+          ease: 'power2.out',
+        }, 0.35)
+
+        // Phase 5: Grid shifts UP to reveal cards 5 and 6 (0.50 → 0.72)
+        if (grid) {
+          // Measure actual card height instead of guessing. Measured once at setup on purpose:
+          // re-measuring on refresh sees the cards mid-transform and changes the shift distance.
+          const mCardH = cards[0]?.getBoundingClientRect().height || (window.innerHeight - 120) / 6
+          const mTotalH = mCardH * cards.length + 12 * (cards.length - 1)
+          const mVisibleH = window.innerHeight - 80 // viewport minus top offset
+          const mOverflow = Math.max(0, mTotalH - mVisibleH) + 200
+          if (mOverflow > 0) {
+            mTl.to(grid, { y: -mOverflow, duration: 0.22, ease: 'none' }, 0.50)
+            // Reset grid y AFTER cards have exited (0.90)
+            mTl.set(grid, { y: 0 }, 0.90)
           }
         }
-        lastTapTime = now
-      }
 
-      // Attach tap listeners
-      const tapHandlers = cards.map((card, i) => {
-        const handler = () => handleCardTap(card, i)
-        card.addEventListener('touchend', handler, { passive: true })
-        return handler
-      })
+        // Phase 6: Pinned idle — all 6 cards visible (0.72 → 0.82)
+        mTl.to({}, { duration: 0.10 }, 0.72)
 
-      const mTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: 'top top',
-          end: 'bottom bottom',
-          pin: pin,
-          scrub: 3,
-          anticipatePin: 1,
-          invalidateOnRefresh: true,
-          onRefresh: () => { if (grid) grid.style.width = mFullWidth() + 'px' },
-          onUpdate: (self) => {
-            const p = self.progress
-            gridRef.current?.classList.toggle('cards-interactive', p > 0.45 && p < 0.82)
-          },
-        },
-      })
+        // Phase 7: Cards exit alternating (0.82 → 0.90)
+        mTl.to(cards, {
+          x: (i: number) => mCardExitX[i],
+          opacity: 0,
+          scale: 0.6,
+          rotation: (_i: number) => gsap.utils.random(-5, 5),
+          duration: 0.08,
+          stagger: 0.008,
+          ease: 'power3.in',
+        }, 0.82)
 
-      // Phase 1: Box + text zoom in (0 → 0.08)
-      mTl.to(box, { scale: 1, duration: 0.08, ease: 'power2.out' }, 0)
-      mTl.to(lettersWrap, { scale: 1, duration: 0.08, ease: 'power2.out' }, 0)
+        // Phase 8: Box returns — scale back to 1, opacity back to 1 (0.90 → 0.93)
+        mTl.set(box, { scale: 3 }, 0.90)
+        mTl.to(box, { scale: 1, opacity: 1, duration: 0.03, ease: 'power2.out' }, 0.90)
+        mTl.to(lettersWrap, { opacity: 1, duration: 0.03, ease: 'power2.out' }, 0.90)
 
-      // Phase 2: Box widens (0.08 → 0.18)
-      mTl.to(box, { width: mFullWidth, duration: 0.10, ease: 'power2.inOut' }, 0.08)
-      mTl.to(box, { height: mFullHeight, duration: 0.07, ease: 'power2.inOut' }, 0.18)
+        // Phase 9: Letters reassemble (0.93 → 0.96)
+        mTl.set(letters, { opacity: 1 }, 0.93)
+        mTl.to(letters, {
+          x: 0,
+          y: 0,
+          rotation: 0,
+          scale: 1,
+          duration: 0.03,
+          stagger: 0.004,
+          ease: 'power2.out',
+        }, 0.93)
 
-      // Phase 2b: Box scales beyond viewport (0.20 → 0.28), fades after
-      mTl.to(box, { scale: 3, duration: 0.08, ease: 'power2.in' }, 0.20)
-      mTl.to(box, { opacity: 0, duration: 0.02 }, 0.27)
-      mTl.to(lettersWrap, { opacity: 0, duration: 0.02 }, 0.35)
+        // Phase 10: Box shrinks back + fades (0.96 → 1.0)
+        mTl.to(box, { height: mNaturalHeight, width: mNaturalWidth, scale: mEntryScale, duration: 0.02, ease: 'power1.inOut' }, 0.96)
+        mTl.to(lettersWrap, { scale: mEntryScale, duration: 0.02, ease: 'power2.in' }, 0.96)
+        mTl.to(box, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
+        mTl.to(lettersWrap, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
 
-      // Phase 3: Letters scatter (0.25 → 0.35), stay visible until off screen
-      mTl.to(letters, {
-        x: (i: number) => mLetterTargets[i].x as number,
-        y: (i: number) => mLetterTargets[i].y as number,
-        rotation: (i: number) => mLetterTargets[i].rotation,
-        duration: 0.10,
-        stagger: 0.008,
-        ease: 'power2.inOut',
-      } as gsap.TweenVars, 0.25)
-
-      // Phase 4: Cards fly in alternating left/right (0.35 → 0.50)
-      mTl.to(cards, {
-        x: 0,
-        opacity: 1,
-        scale: 1,
-        rotation: 0,
-        duration: 0.15,
-        stagger: 0.012,
-        ease: 'power2.out',
-      }, 0.35)
-
-      // Phase 5: Grid shifts UP to reveal cards 5 and 6 (0.50 → 0.72)
-      if (grid) {
-        // Measure actual card height instead of guessing. Measured once at setup on purpose:
-        // re-measuring on refresh sees the cards mid-transform and changes the shift distance.
-        const mCardH = cards[0]?.getBoundingClientRect().height || (window.innerHeight - 120) / 6
-        const mTotalH = mCardH * cards.length + 12 * (cards.length - 1)
-        const mVisibleH = window.innerHeight - 80 // viewport minus top offset
-        const mOverflow = Math.max(0, mTotalH - mVisibleH) + 200
-        if (mOverflow > 0) {
-          mTl.to(grid, { y: -mOverflow, duration: 0.22, ease: 'none' }, 0.50)
-          // Reset grid y AFTER cards have exited (0.90)
-          mTl.set(grid, { y: 0 }, 0.90)
+        // Same-breakpoint resizes: one debounced refresh re-invalidates the function-based values.
+        // A breakpoint flip reverts this whole context (timeline, ScrollTrigger, gsap.set styles)
+        // and re-runs the matching one.
+        let mResizeTimer = 0
+        const mDebouncedResize = () => {
+          window.clearTimeout(mResizeTimer)
+          mResizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200)
         }
-      }
+        window.addEventListener('resize', mDebouncedResize)
 
-      // Phase 6: Pinned idle — all 6 cards visible (0.72 → 0.82)
-      mTl.to({}, { duration: 0.10 }, 0.72)
-
-      // Phase 7: Cards exit alternating (0.82 → 0.90)
-      mTl.to(cards, {
-        x: (i: number) => mCardExitX[i],
-        opacity: 0,
-        scale: 0.6,
-        rotation: (_i: number) => gsap.utils.random(-5, 5),
-        duration: 0.08,
-        stagger: 0.008,
-        ease: 'power3.in',
-      }, 0.82)
-
-      // Phase 8: Box returns — scale back to 1, opacity back to 1 (0.90 → 0.93)
-      mTl.set(box, { scale: 3 }, 0.90)
-      mTl.to(box, { scale: 1, opacity: 1, duration: 0.03, ease: 'power2.out' }, 0.90)
-      mTl.to(lettersWrap, { opacity: 1, duration: 0.03, ease: 'power2.out' }, 0.90)
-
-      // Phase 9: Letters reassemble (0.93 → 0.96)
-      mTl.set(letters, { opacity: 1 }, 0.93)
-      mTl.to(letters, {
-        x: 0,
-        y: 0,
-        rotation: 0,
-        scale: 1,
-        duration: 0.03,
-        stagger: 0.004,
-        ease: 'power2.out',
-      }, 0.93)
-
-      // Phase 10: Box shrinks back + fades (0.96 → 1.0)
-      mTl.to(box, { height: mNaturalHeight, width: mNaturalWidth, scale: mEntryScale, duration: 0.02, ease: 'power1.inOut' }, 0.96)
-      mTl.to(lettersWrap, { scale: mEntryScale, duration: 0.02, ease: 'power2.in' }, 0.96)
-      mTl.to(box, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
-      mTl.to(lettersWrap, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
-
-      // Same-breakpoint resizes: one debounced refresh re-invalidates the function-based values.
-      // A breakpoint flip reverts this whole context (timeline, ScrollTrigger, gsap.set styles)
-      // and re-runs the matching one.
-      let mResizeTimer = 0
-      const mDebouncedResize = () => {
-        window.clearTimeout(mResizeTimer)
-        mResizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200)
-      }
-      window.addEventListener('resize', mDebouncedResize)
-
-      return () => {
-        window.removeEventListener('resize', mDebouncedResize)
-        window.clearTimeout(mResizeTimer)
-        cards.forEach((card, i) => card.removeEventListener('touchend', tapHandlers[i]))
-        restore()
-      }
-    })
-
-    // ── Desktop: Full ScrollTrigger 8-phase animation ──
-    mm.add('(min-width: 768px) and (prefers-reduced-motion: no-preference)', () => {
-      const restore = snapshotStyles([box, mobileHeadingRef.current])
-
-      if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'none'
-
-      const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
-      const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
-      if (!letters.length || !cards.length) return restore
-
-      // ── Size the box to snugly fit the PROJECTS text ──
-      // Reset scale to 1 before measuring so we get
-      // the TRUE natural size of the text
-      gsap.set(box, { scale: 1, xPercent: -50, yPercent: -50 })
-      gsap.set(lettersWrap, { scale: 1, xPercent: -50, yPercent: -50 })
-
-      const wrapRect = lettersWrap.getBoundingClientRect()
-      const naturalWidth = wrapRect.width + 320  // 160px padding each side
-      const naturalHeight = wrapRect.height * 1.2
-
-      box.style.width = naturalWidth + 'px'
-      box.style.height = naturalHeight + 'px'
-
-      // Apply centering AFTER setting dimensions so GSAP centers correctly on any screen
-      const entryScale = 0.5
-      gsap.set(box, { xPercent: -50, yPercent: -50, scale: entryScale })
-      gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: entryScale })
-
-      // Calculate expansion targets — clamped to avoid exceeding viewport on smaller screens
-      // (function-based: re-read on every ScrollTrigger refresh, i.e. any resize)
-      const fullWidth = () => Math.min(window.innerWidth * 0.95, window.innerWidth - 40)
-      const fullHeight = () => window.innerHeight - 100
-
-      // ── Pre-compute random scatter values ──
-      const letterTargets = letters.map((_, i) => {
-        if (i === 0) return { x: '-120vw', y: 0, rotation: -15 }
-        if (i === 7) return { x: '120vw', y: 0, rotation: 15 }
-        const isAccent = BLUE_INDICES.has(i)
-        const multiplier = isAccent ? 1.5 : 1
-        const yDir = i % 2 === 0 ? -1 : 1
-        return {
-          x: (i - 4) * gsap.utils.random(40, 100) * multiplier,
-          y: yDir * gsap.utils.random(100, 250) * multiplier,
-          rotation: gsap.utils.random(-20, 20),
+        return () => {
+          window.removeEventListener('resize', mDebouncedResize)
+          window.clearTimeout(mResizeTimer)
+          cards.forEach((card, i) => card.removeEventListener('touchend', tapHandlers[i]))
+          restore()
         }
       })
 
-      const cardEntryRotations = cards.map(() => gsap.utils.random(-3, 3))
-      const cardExitTargets = cards.map(() => ({
-        x: gsap.utils.random(-110, -130) + 'vw',
-        y: gsap.utils.random(-100, 100),
-        rotation: gsap.utils.random(-10, 10),
-      }))
+      // ── Desktop: Full ScrollTrigger 8-phase animation ──
+      m.add('(min-width: 768px) and (prefers-reduced-motion: no-preference)', () => {
+        const restore = snapshotStyles([box, mobileHeadingRef.current])
 
-      // ── Set initial card state (off-screen right) ──
-      gsap.set(cards, {
-        x: '110vw',
-        opacity: 0,
-        scale: 0.8,
-        rotation: (i: number) => cardEntryRotations[i],
-      })
+        if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'none'
 
-      // ── Master timeline ──
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: 'top top',
-          end: 'bottom bottom',
-          pin: pin,
-          scrub: 1,
-          anticipatePin: 1,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            const p = self.progress
-            gridRef.current?.classList.toggle('cards-interactive', p > 0.50 && p < 0.75)
+        const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
+        const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
+        if (!letters.length || !cards.length) return restore
+
+        // ── Size the box to snugly fit the PROJECTS text ──
+        // Reset scale to 1 before measuring so we get
+        // the TRUE natural size of the text
+        gsap.set(box, { scale: 1, xPercent: -50, yPercent: -50 })
+        gsap.set(lettersWrap, { scale: 1, xPercent: -50, yPercent: -50 })
+
+        const wrapRect = lettersWrap.getBoundingClientRect()
+        const naturalWidth = wrapRect.width + 320  // 160px padding each side
+        const naturalHeight = wrapRect.height * 1.2
+
+        box.style.width = naturalWidth + 'px'
+        box.style.height = naturalHeight + 'px'
+
+        // Apply centering AFTER setting dimensions so GSAP centers correctly on any screen
+        const entryScale = 0.5
+        gsap.set(box, { xPercent: -50, yPercent: -50, scale: entryScale })
+        gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: entryScale })
+
+        // Calculate expansion targets — clamped to avoid exceeding viewport on smaller screens
+        // (function-based: re-read on every ScrollTrigger refresh, i.e. any resize)
+        const fullWidth = () => Math.min(window.innerWidth * 0.95, window.innerWidth - 40)
+        const fullHeight = () => window.innerHeight - 100
+
+        // ── Pre-compute random scatter values ──
+        const letterTargets = letters.map((_, i) => {
+          if (i === 0) return { x: '-120vw', y: 0, rotation: -15 }
+          if (i === 7) return { x: '120vw', y: 0, rotation: 15 }
+          const isAccent = BLUE_INDICES.has(i)
+          const multiplier = isAccent ? 1.5 : 1
+          const yDir = i % 2 === 0 ? -1 : 1
+          return {
+            x: (i - 4) * gsap.utils.random(40, 100) * multiplier,
+            y: yDir * gsap.utils.random(100, 250) * multiplier,
+            rotation: gsap.utils.random(-20, 20),
+          }
+        })
+
+        const cardEntryRotations = cards.map(() => gsap.utils.random(-3, 3))
+        const cardExitTargets = cards.map(() => ({
+          x: gsap.utils.random(-110, -130) + 'vw',
+          y: gsap.utils.random(-100, 100),
+          rotation: gsap.utils.random(-10, 10),
+        }))
+
+        // ── Set initial card state (off-screen right) ──
+        gsap.set(cards, {
+          x: '110vw',
+          opacity: 0,
+          scale: 0.8,
+          rotation: (i: number) => cardEntryRotations[i],
+        })
+
+        // ── Master timeline ──
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: 'top top',
+            end: 'bottom bottom',
+            pin: pin,
+            scrub: 1,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              const p = self.progress
+              gridRef.current?.classList.toggle('cards-interactive', p > 0.50 && p < 0.75)
+            },
           },
-        },
+        })
+
+        // ── Phase 1: Box + text zoom up together (0 → 0.10) ──
+        tl.to(box, {
+          scale: 1,
+          duration: 0.10,
+          ease: 'power2.out',
+        }, 0)
+        tl.to(lettersWrap, {
+          scale: 1,
+          duration: 0.10,
+          ease: 'power2.out',
+        }, 0)
+
+        // ── Phase 2: Box widens horizontally (0.10 → 0.20) ──
+        tl.to(box, {
+          width: fullWidth,
+          duration: 0.10,
+          ease: 'power2.inOut',
+        }, 0.10)
+
+        // ── Phase 3: Box expands vertically (0.20 → 0.28) ──
+        tl.to(box, {
+          height: fullHeight,
+          duration: 0.08,
+          ease: 'power2.inOut',
+        }, 0.20)
+
+        // ── Phase 4: Letter scatter (0.28 → 0.40) ──
+        tl.to(letters, {
+          x: (i: number) => letterTargets[i].x as number,
+          y: (i: number) => letterTargets[i].y as number,
+          rotation: (i: number) => letterTargets[i].rotation,
+          opacity: 0,
+          duration: 0.12,
+          stagger: 0.008,
+          ease: 'power2.inOut',
+        } as gsap.TweenVars, 0.28)
+
+        // ── Phase 5: Cards tumble in from right (0.40 → 0.55) ──
+        tl.to(cards, {
+          x: 0,
+          opacity: 1,
+          scale: 1,
+          rotation: 0,
+          duration: 0.15,
+          stagger: 0.02,
+          ease: 'power2.out',
+        }, 0.40)
+
+        // ── Phase 6: Pinned idle (0.55 → 0.72) — no tweens ──
+
+        // ── Phase 7: Cards fly off LEFT (0.72 → 0.82) ──
+        tl.to(cards, {
+          x: (i: number) => cardExitTargets[i].x,
+          y: (i: number) => cardExitTargets[i].y,
+          rotation: (i: number) => cardExitTargets[i].rotation,
+          opacity: 0,
+          scale: 0.6,
+          duration: 0.10,
+          stagger: 0.012,
+          ease: 'power3.in',
+        }, 0.72)
+
+        // ── Phase 8: Letters reassemble (0.82 → 0.88) ──
+        tl.to(letters, {
+          x: 0,
+          y: 0,
+          rotation: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.06,
+          stagger: 0.008,
+          ease: 'power2.out',
+        }, 0.82)
+
+        // ── Phase 9: Box shrinks back (0.88 → 0.95) ──
+        // Vertical shrink
+        tl.to(box, {
+          height: naturalHeight,
+          duration: 0.035,
+          ease: 'power1.inOut',
+        }, 0.88)
+        // Horizontal shrink
+        tl.to(box, {
+          width: naturalWidth,
+          duration: 0.035,
+          ease: 'power1.inOut',
+        }, 0.915)
+
+        // ── Phase 10: Box + text shrink to small + fade (0.95 → 1.0) ──
+        tl.to(box, {
+          scale: entryScale,
+          duration: 0.03,
+          ease: 'power2.in',
+        }, 0.95)
+        tl.to(lettersWrap, {
+          scale: entryScale,
+          duration: 0.03,
+          ease: 'power2.in',
+        }, 0.95)
+        // Fade out
+        tl.to(box, {
+          opacity: 0,
+          duration: 0.02,
+          ease: 'power1.in',
+        }, 0.98)
+        tl.to(lettersWrap, {
+          opacity: 0,
+          duration: 0.02,
+          ease: 'power1.in',
+        }, 0.98)
+
+        // Same-breakpoint resizes: one debounced refresh re-invalidates the function-based values.
+        let resizeTimer = 0
+        const debouncedResize = () => {
+          window.clearTimeout(resizeTimer)
+          resizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200)
+        }
+        window.addEventListener('resize', debouncedResize)
+
+        return () => {
+          window.removeEventListener('resize', debouncedResize)
+          window.clearTimeout(resizeTimer)
+          restore()
+        }
       })
 
-      // ── Phase 1: Box + text zoom up together (0 → 0.10) ──
-      tl.to(box, {
-        scale: 1,
-        duration: 0.10,
-        ease: 'power2.out',
-      }, 0)
-      tl.to(lettersWrap, {
-        scale: 1,
-        duration: 0.10,
-        ease: 'power2.out',
-      }, 0)
-
-      // ── Phase 2: Box widens horizontally (0.10 → 0.20) ──
-      tl.to(box, {
-        width: fullWidth,
-        duration: 0.10,
-        ease: 'power2.inOut',
-      }, 0.10)
-
-      // ── Phase 3: Box expands vertically (0.20 → 0.28) ──
-      tl.to(box, {
-        height: fullHeight,
-        duration: 0.08,
-        ease: 'power2.inOut',
-      }, 0.20)
-
-      // ── Phase 4: Letter scatter (0.28 → 0.40) ──
-      tl.to(letters, {
-        x: (i: number) => letterTargets[i].x as number,
-        y: (i: number) => letterTargets[i].y as number,
-        rotation: (i: number) => letterTargets[i].rotation,
-        opacity: 0,
-        duration: 0.12,
-        stagger: 0.008,
-        ease: 'power2.inOut',
-      } as gsap.TweenVars, 0.28)
-
-      // ── Phase 5: Cards tumble in from right (0.40 → 0.55) ──
-      tl.to(cards, {
-        x: 0,
-        opacity: 1,
-        scale: 1,
-        rotation: 0,
-        duration: 0.15,
-        stagger: 0.02,
-        ease: 'power2.out',
-      }, 0.40)
-
-      // ── Phase 6: Pinned idle (0.55 → 0.72) — no tweens ──
-
-      // ── Phase 7: Cards fly off LEFT (0.72 → 0.82) ──
-      tl.to(cards, {
-        x: (i: number) => cardExitTargets[i].x,
-        y: (i: number) => cardExitTargets[i].y,
-        rotation: (i: number) => cardExitTargets[i].rotation,
-        opacity: 0,
-        scale: 0.6,
-        duration: 0.10,
-        stagger: 0.012,
-        ease: 'power3.in',
-      }, 0.72)
-
-      // ── Phase 8: Letters reassemble (0.82 → 0.88) ──
-      tl.to(letters, {
-        x: 0,
-        y: 0,
-        rotation: 0,
-        opacity: 1,
-        scale: 1,
-        duration: 0.06,
-        stagger: 0.008,
-        ease: 'power2.out',
-      }, 0.82)
-
-      // ── Phase 9: Box shrinks back (0.88 → 0.95) ──
-      // Vertical shrink
-      tl.to(box, {
-        height: naturalHeight,
-        duration: 0.035,
-        ease: 'power1.inOut',
-      }, 0.88)
-      // Horizontal shrink
-      tl.to(box, {
-        width: naturalWidth,
-        duration: 0.035,
-        ease: 'power1.inOut',
-      }, 0.915)
-
-      // ── Phase 10: Box + text shrink to small + fade (0.95 → 1.0) ──
-      tl.to(box, {
-        scale: entryScale,
-        duration: 0.03,
-        ease: 'power2.in',
-      }, 0.95)
-      tl.to(lettersWrap, {
-        scale: entryScale,
-        duration: 0.03,
-        ease: 'power2.in',
-      }, 0.95)
-      // Fade out
-      tl.to(box, {
-        opacity: 0,
-        duration: 0.02,
-        ease: 'power1.in',
-      }, 0.98)
-      tl.to(lettersWrap, {
-        opacity: 0,
-        duration: 0.02,
-        ease: 'power1.in',
-      }, 0.98)
-
-      // Same-breakpoint resizes: one debounced refresh re-invalidates the function-based values.
-      let resizeTimer = 0
-      const debouncedResize = () => {
-        window.clearTimeout(resizeTimer)
-        resizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200)
-      }
-      window.addEventListener('resize', debouncedResize)
-
-      return () => {
-        window.removeEventListener('resize', debouncedResize)
-        window.clearTimeout(resizeTimer)
-        restore()
-      }
     })
 
-    return () => mm.revert()
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined
+    if (fonts && fonts.status !== 'loaded') {
+      fonts.ready.then(() => setup(), () => setup())
+    } else {
+      setup()
+    }
+
+    return () => {
+      cancelled = true
+      mm?.revert()
+    }
   }, { scope: sectionRef })
 
   return (

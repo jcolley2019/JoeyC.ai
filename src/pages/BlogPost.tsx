@@ -218,9 +218,10 @@ export function BlogPostPage() {
           headline: post.title,
           description: post.excerpt,
           url: `${SITE_URL}/blog/${post.slug}`,
+          mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/blog/${post.slug}` },
+          image: post.cover_image || `${SITE_URL}/photos/joey-og.jpg`,
           datePublished: post.published_at || post.created_at,
-          dateModified: post.updated_at,
-          ...(post.cover_image ? { image: post.cover_image } : {}),
+          dateModified: post.updated_at || post.published_at || post.created_at,
           author: {
             '@type': 'Person',
             name: 'Joey Colley',
@@ -231,9 +232,19 @@ export function BlogPostPage() {
             name: 'Joey Colley',
             url: SITE_URL,
           },
+        }, {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE_URL}/blog` },
+            { '@type': 'ListItem', position: 3, name: post.title, item: `${SITE_URL}/blog/${post.slug}` },
+          ],
         }]}
       />
 
+      <main>
+      <article>
       {/* Article header */}
       <div className="border-b border-border/30 bg-gradient-to-b from-primary/[0.03] to-transparent">
         <div className="max-w-3xl mx-auto px-6 pt-20 pb-10">
@@ -300,7 +311,7 @@ export function BlogPostPage() {
       )}
 
       {/* Article body */}
-      <article className="max-w-3xl mx-auto px-6 py-12">
+      <div className="max-w-3xl mx-auto px-6 py-12">
         <Markdown
           remarkPlugins={remarkPlugins}
           rehypePlugins={rehypePlugins}
@@ -338,7 +349,9 @@ export function BlogPostPage() {
             More posts
           </Link>
         </div>
+      </div>
       </article>
+      </main>
     </div>
   )
 }

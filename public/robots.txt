@@ -1,3 +1,10 @@
 User-agent: *
 Allow: /
+Disallow: /command-center
+Disallow: /admin
+Disallow: /reset-password
+Disallow: /auth/
+Disallow: /x-callback
+Disallow: /sandbox
+
 Sitemap: https://www.joeyc.ai/sitemap.xml
