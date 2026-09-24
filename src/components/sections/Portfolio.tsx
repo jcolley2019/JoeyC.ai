@@ -52,6 +52,7 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
         setHovered(true)
         const vid = videoRef.current
         if (vid && project.video) {
+          if (vid.readyState === 0) vid.load()
           vid.currentTime = startTime
           vid.play().catch(() => {})
         }
@@ -107,6 +108,7 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
         if (vid.src !== window.location.origin + project.video) {
           vid.src = project.video
         }
+        if (vid.readyState === 0) vid.load()
         vid.currentTime = startTime
         vid.play().catch(() => {})
       }
@@ -169,12 +171,12 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
             </div>
           )}
 
-          {/* Video — always in DOM for preloading, toggled with opacity */}
+          {/* Video — always in DOM, toggled with opacity; bytes fetched only on hover/tap */}
           {project.video && (
             <video
               ref={videoRef}
               src={project.video}
-              preload="auto"
+              preload="none"
               className={project.portraitVideo
                 ? 'absolute z-10'
                 : 'absolute inset-0 w-full h-full object-cover z-10'
