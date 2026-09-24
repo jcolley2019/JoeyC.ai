@@ -99,7 +99,12 @@ export function parseMetaFence(markdown: string): { meta: BlogMeta | null; body:
   const match = META_FENCE_RE.exec(markdown)
   if (!match) return { meta: null, body: markdown }
 
-  const lines = match[1].split(/\r?\n/).map(l => l.replace(/[*_`]/g, '').replace(/^\s*[-•]\s*/, '').trim())
+  // Drop bold/italic/code marks; an underscore inside a word (cache_control) is text, not emphasis.
+  const lines = match[1].split(/\r?\n/).map(l => l
+    .replace(/[*`]/g, '')
+    .replace(/(?<![\p{L}\p{N}])_+|_+(?![\p{L}\p{N}])/gu, '')
+    .replace(/^\s*[-•]\s*/, '')
+    .trim())
   const field = (name: string) => {
     const line = lines.find(l => l.toLowerCase().startsWith(name.toLowerCase() + ':'))
     const value = line ? line.slice(name.length + 1).trim() : ''
