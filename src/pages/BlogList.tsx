@@ -90,12 +90,12 @@ export function BlogList() {
         <meta property="og:description" content="AI experiments, build logs, and lessons learned — by Joey Colley." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://joeyc.ai/blog" />
-        <meta property="og:image" content="https://joeyc.ai/photos/joey-headshot2.png" />
+        <meta property="og:image" content="https://joeyc.ai/photos/joey-og.jpg" />
         <meta property="og:site_name" content="JoeyC.ai" />
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content="Blog — JoeyC.ai" />
         <meta name="twitter:description" content="AI experiments, build logs, and lessons learned — by Joey Colley." />
-        <meta name="twitter:image" content="https://joeyc.ai/photos/joey-headshot2.png" />
+        <meta name="twitter:image" content="https://joeyc.ai/photos/joey-og.jpg" />
       </Helmet>
 
       {/* Hero header */}

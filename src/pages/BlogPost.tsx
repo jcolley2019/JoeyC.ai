@@ -198,7 +198,7 @@ export function BlogPostPage() {
         <meta property="og:type" content="article" />
         <meta property="og:url" content={`https://joeyc.ai/blog/${post.slug}`} />
         <meta property="og:site_name" content="JoeyC.ai" />
-        <meta property="og:image" content={post.cover_image || 'https://joeyc.ai/photos/joey-headshot2.png'} />
+        <meta property="og:image" content={post.cover_image || 'https://joeyc.ai/photos/joey-og.jpg'} />
         <meta property="article:author" content="Joey Colley" />
         {post.published_at && (
           <meta property="article:published_time" content={post.published_at} />
@@ -214,7 +214,7 @@ export function BlogPostPage() {
         <meta name="twitter:card" content={post.cover_image ? 'summary_large_image' : 'summary'} />
         <meta name="twitter:title" content={post.title} />
         <meta name="twitter:description" content={post.excerpt} />
-        <meta name="twitter:image" content={post.cover_image || 'https://joeyc.ai/photos/joey-headshot2.png'} />
+        <meta name="twitter:image" content={post.cover_image || 'https://joeyc.ai/photos/joey-og.jpg'} />
 
         {/* JSON-LD BlogPosting Schema */}
         <script type="application/ld+json">{JSON.stringify({
@@ -273,7 +273,7 @@ export function BlogPostPage() {
           {/* Meta row */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <img src="/photos/joey-headshot1.png" alt="Joey Colley" className="w-10 h-10 rounded-full object-cover" />
+              <img src="/photos/joey-headshot1.webp" alt="Joey Colley" className="w-10 h-10 rounded-full object-cover" />
               <div>
                 <p className="notranslate text-sm text-text-primary font-medium" translate="no">Joey Colley</p>
                 <div className="flex items-center gap-2 text-xs font-mono text-text-secondary">
@@ -317,7 +317,7 @@ export function BlogPostPage() {
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-border/30">
           <div className="flex items-center gap-4 mb-6">
-            <img src="/photos/joey-headshot1.png" alt="Joey Colley" className="w-12 h-12 rounded-full object-cover" />
+            <img src="/photos/joey-headshot1.webp" alt="Joey Colley" className="w-12 h-12 rounded-full object-cover" />
             <div>
               <p className="notranslate font-semibold text-text-primary" translate="no">Joey Colley</p>
               <p className="text-sm text-text-secondary">
