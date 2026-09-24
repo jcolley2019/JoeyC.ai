@@ -14,6 +14,58 @@ interface AdminUser {
   protected?: boolean
 }
 
+// Presentational pieces hoisted to module scope so they keep identity across renders (A4 / L4-07)
+// Checkbox component for consistent styling
+const Checkbox = ({ checked, onChange, disabled }: { checked: boolean; onChange: () => void; disabled?: boolean }) => (
+  <input
+    type="checkbox"
+    checked={checked}
+    onChange={onChange}
+    disabled={disabled}
+    className="w-4 h-4 rounded border-border bg-bg text-primary focus:ring-primary/30 focus:ring-offset-0 cursor-pointer disabled:opacity-0 disabled:cursor-default accent-primary"
+  />
+)
+
+// Confirmation bar component
+const ConfirmBar = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
+  <div className="flex items-center justify-between mb-3 px-4 py-3 rounded-lg border border-red-500/30 bg-red-500/10">
+    <p className="text-[14px] text-red-400 font-medium">{message}</p>
+    <div className="flex gap-2">
+      <button onClick={onCancel} className="px-3 py-1.5 text-xs font-mono border border-border text-text-secondary rounded-md hover:text-text-primary transition-colors">
+        Cancel
+      </button>
+      <button onClick={onConfirm} className="px-3 py-1.5 text-xs font-mono bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors font-semibold">
+        Yes, Delete
+      </button>
+    </div>
+  </div>
+)
+
+// Success toast component
+const Toast = ({ message }: { message: string }) => message ? (
+  <div className="mt-3 px-4 py-2.5 rounded-lg border border-green-500/30 bg-green-500/10 flex items-center gap-2">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-400 shrink-0">
+      <path d="M20 6L9 17l-5-5" />
+    </svg>
+    <p className="text-[14px] text-green-400 font-mono font-semibold">{message}</p>
+  </div>
+) : null
+
+// Delete Selected button — always visible, disabled when nothing selected
+const DeleteSelectedBtn = ({ count, onClick }: { count: number; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    disabled={count === 0}
+    className={`px-3 py-1.5 text-xs font-mono border rounded-md transition-colors ${
+      count > 0
+        ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+        : 'border-border text-text-secondary/40 cursor-not-allowed'
+    }`}
+  >
+    Delete Selected{count > 0 ? ` (${count})` : ''}
+  </button>
+)
+
 // Fallback to the role for responses from an admin-users build without the flag.
 const isProtected = (u: AdminUser) => u.protected ?? u.role === 'master_admin'
 
@@ -56,7 +108,10 @@ export function AdminDashboard() {
     setLoadingData(true)
 
     try {
+      // The list endpoint is the function's GET branch; invoke() defaults to POST, whose
+      // branch expects a JSON action body and 500s on an empty one.
       const { data: adminData, error: adminErr } = await supabase.functions.invoke('admin-users', {
+        method: 'GET',
         headers: { Authorization: `Bearer ${current.access_token}` },
       })
 
@@ -246,57 +301,6 @@ export function AdminDashboard() {
     return entry.action
   }
 
-  // Checkbox component for consistent styling
-  const Checkbox = ({ checked, onChange, disabled }: { checked: boolean; onChange: () => void; disabled?: boolean }) => (
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={onChange}
-      disabled={disabled}
-      className="w-4 h-4 rounded border-border bg-bg text-primary focus:ring-primary/30 focus:ring-offset-0 cursor-pointer disabled:opacity-0 disabled:cursor-default accent-primary"
-    />
-  )
-
-  // Confirmation bar component
-  const ConfirmBar = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
-    <div className="flex items-center justify-between mb-3 px-4 py-3 rounded-lg border border-red-500/30 bg-red-500/10">
-      <p className="text-[14px] text-red-400 font-medium">{message}</p>
-      <div className="flex gap-2">
-        <button onClick={onCancel} className="px-3 py-1.5 text-xs font-mono border border-border text-text-secondary rounded-md hover:text-text-primary transition-colors">
-          Cancel
-        </button>
-        <button onClick={onConfirm} className="px-3 py-1.5 text-xs font-mono bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors font-semibold">
-          Yes, Delete
-        </button>
-      </div>
-    </div>
-  )
-
-  // Success toast component
-  const Toast = () => deleteSuccess ? (
-    <div className="mt-3 px-4 py-2.5 rounded-lg border border-green-500/30 bg-green-500/10 flex items-center gap-2">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-400 shrink-0">
-        <path d="M20 6L9 17l-5-5" />
-      </svg>
-      <p className="text-[14px] text-green-400 font-mono font-semibold">{deleteSuccess}</p>
-    </div>
-  ) : null
-
-  // Delete Selected button — always visible, disabled when nothing selected
-  const DeleteSelectedBtn = ({ count, onClick }: { count: number; onClick: () => void }) => (
-    <button
-      onClick={onClick}
-      disabled={count === 0}
-      className={`px-3 py-1.5 text-xs font-mono border rounded-md transition-colors ${
-        count > 0
-          ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
-          : 'border-border text-text-secondary/40 cursor-not-allowed'
-      }`}
-    >
-      Delete Selected{count > 0 ? ` (${count})` : ''}
-    </button>
-  )
-
   const selectableUsers = users.filter(u => !isProtected(u))
 
   return (
@@ -446,7 +450,7 @@ export function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
-                <Toast />
+                <Toast message={deleteSuccess} />
               </div>
             )}
 
@@ -529,7 +533,7 @@ export function AdminDashboard() {
                     </div>
                   )}
                 </div>
-                <Toast />
+                <Toast message={deleteSuccess} />
               </div>
             )}
 
@@ -607,7 +611,7 @@ export function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
-                <Toast />
+                <Toast message={deleteSuccess} />
               </div>
             )}
           </>
