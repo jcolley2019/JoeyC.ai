@@ -848,6 +848,46 @@ body {
 
 /* Reduced motion: no GSAP animations, static grid */
 @media (prefers-reduced-motion: reduce) {
+  /* Every keyframe-driven element on the landing page rests at its final state. */
+  .particle {
+    animation: none !important;
+    opacity: 0; /* particleFloat ends at opacity 0 */
+  }
+  .lower-third-scan,
+  .section-divider::after {
+    animation: none !important;
+    opacity: 0; /* both scan loops end at opacity 0 */
+  }
+  .gradient-text {
+    animation: none !important;
+    background-position: 0% 50%;
+  }
+  .to-top,
+  .to-bottom,
+  .to-left,
+  .to-right {
+    animation: none !important;
+    transform: none;
+    opacity: 1;
+  }
+  .letter-blue,
+  .letter-white {
+    transition: none !important;
+  }
+  .hero-grid,
+  .animate-float,
+  .animate-slide-in,
+  .animate-slide-in-right,
+  .animate-fade-up,
+  .animate-scale-in {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+  .cursor-blink::after {
+    animation: none !important;
+  }
+
   .projects-pin-container {
     height: auto !important;
   }

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useRef, useMemo } from 'react'
 import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 
 function Particles() {
   const particles = useMemo(() =>
-    Array.from({ length: 60 }, (_, i) => ({
+    Array.from({ length: 20 }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
       delay: Math.random() * 15,
@@ -40,72 +41,91 @@ function HeroName() {
   const lettersRef = useRef<(HTMLSpanElement | null)[]>([])
   const tickRef = useRef<number>(0)
 
-  useEffect(() => {
+  useGSAP(() => {
     const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
     if (!letters.length) return
 
-    // Set initial state
-    gsap.set(letters, {
-      opacity: 0,
-      y: 60,
-    })
+    const mm = gsap.matchMedia()
 
-    // Staggered reveal — left to right
-    gsap.to(letters, {
-      opacity: 1,
-      y: 0,
-      duration: 0.8,
-      stagger: 0.05,
-      ease: 'power4.out',
-      delay: 0.6,
-    })
+    // Under prefers-reduced-motion the letters simply render in their final state.
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // Set initial state
+      gsap.set(letters, {
+        opacity: 0,
+        y: 60,
+      })
 
-    // Start the random letter animation 3 seconds after page load
-    const startDelay = window.setTimeout(() => {
-      const animateChar = () => {
-        if (Math.random() > 0.98) {
-          const char = letters[Math.floor(Math.random() * letters.length)]
-          if (
-            char.classList.contains('to-top') ||
-            char.classList.contains('to-right') ||
-            char.classList.contains('to-bottom') ||
-            char.classList.contains('to-left') ||
-            char.classList.contains('letter-blue')
-          ) return
+      // Staggered reveal — left to right
+      gsap.to(letters, {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.05,
+        ease: 'power4.out',
+        delay: 0.6,
+      })
 
-          const directions = ['bottom', 'left', 'top', 'right'] as const
-          const dir = directions[Math.floor(Math.random() * 4)]
-          const cls = `to-${dir}`
-
-          // Step 1: turn blue over 200ms
-          char.classList.add('letter-blue')
-
-          // Step 2: after 200ms, trigger the slide animation
-          setTimeout(() => {
-            char.classList.add(cls)
-          }, 200)
-
-          // Step 3: after slide completes (3000ms + 200ms offset), fade back to white
-          setTimeout(() => {
-            char.classList.remove(cls)
-            char.classList.remove('letter-blue')
-            char.classList.add('letter-white')
-            // Remove the white transition class after it completes
-            setTimeout(() => {
-              char.classList.remove('letter-white')
-            }, 200)
-          }, 3200)
-        }
+      // Every timer created by the swap sequence is tracked so unmount clears all of them.
+      const timeouts = new Set<number>()
+      const later = (fn: () => void, ms: number) => {
+        const id = window.setTimeout(() => {
+          timeouts.delete(id)
+          fn()
+        }, ms)
+        timeouts.add(id)
       }
 
-      tickRef.current = window.setInterval(animateChar, 100)
-    }, 3000)
+      // Start the random letter animation 3 seconds after page load
+      later(() => {
+        const animateChar = () => {
+          if (Math.random() > 0.98) {
+            const char = letters[Math.floor(Math.random() * letters.length)]
+            if (
+              char.classList.contains('to-top') ||
+              char.classList.contains('to-right') ||
+              char.classList.contains('to-bottom') ||
+              char.classList.contains('to-left') ||
+              char.classList.contains('letter-blue')
+            ) return
 
-    return () => {
-      clearTimeout(startDelay)
-      clearInterval(tickRef.current)
-    }
-  }, [])
+            const directions = ['bottom', 'left', 'top', 'right'] as const
+            const dir = directions[Math.floor(Math.random() * 4)]
+            const cls = `to-${dir}`
+
+            // Step 1: turn blue over 200ms
+            char.classList.add('letter-blue')
+
+            // Step 2: after 200ms, trigger the slide animation
+            later(() => {
+              char.classList.add(cls)
+            }, 200)
+
+            // Step 3: after slide completes (3000ms + 200ms offset), fade back to white
+            later(() => {
+              char.classList.remove(cls)
+              char.classList.remove('letter-blue')
+              char.classList.add('letter-white')
+              // Remove the white transition class after it completes
+              later(() => {
+                char.classList.remove('letter-white')
+              }, 200)
+            }, 3200)
+          }
+        }
+
+        tickRef.current = window.setInterval(animateChar, 100)
+      }, 3000)
+
+      return () => {
+        timeouts.forEach(id => window.clearTimeout(id))
+        timeouts.clear()
+        clearInterval(tickRef.current)
+        letters.forEach(char => char.classList.remove('to-top', 'to-right', 'to-bottom', 'to-left', 'letter-blue', 'letter-white'))
+      }
+    })
+
+    return () => mm.revert()
+  }, { scope: containerRef })
 
   return (
     <div ref={containerRef} className="w-full overflow-hidden leading-none">
@@ -141,18 +161,31 @@ function HeroName() {
 export function Hero() {
   const contentRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+  useGSAP(() => {
     if (!contentRef.current) return
 
-    // Animate the lower-third card in
     const card = contentRef.current.querySelector('.hero-card')
-    if (card && window.matchMedia('(min-width: 1367px)').matches) {
-      gsap.fromTo(card,
-        { opacity: 0, x: 60 },
-        { opacity: 1, x: 0, duration: 1, ease: 'power4.out', delay: 0.8 }
-      )
-    }
-  }, [])
+    if (!card) return
+
+    const mm = gsap.matchMedia()
+
+    // Animate the lower-third card in (the 1367px gate is read once, as before)
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      if (window.matchMedia('(min-width: 1367px)').matches) {
+        gsap.fromTo(card,
+          { opacity: 0, x: 60 },
+          { opacity: 1, x: 0, duration: 1, ease: 'power4.out', delay: 0.8 }
+        )
+      }
+    })
+
+    // Reduced motion: the card is simply shown (its JSX starts at opacity 0)
+    mm.add('(prefers-reduced-motion: reduce)', () => {
+      gsap.set(card, { opacity: 1, x: 0 })
+    })
+
+    return () => mm.revert()
+  }, { scope: contentRef })
 
   return (
     <section

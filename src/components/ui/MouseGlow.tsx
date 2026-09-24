@@ -11,6 +11,9 @@ export function MouseGlow() {
     const canvas = canvasRef.current
     if (!canvas) return
 
+    // Touch / stylus-only devices never produce a hover glow: skip the loop and listeners entirely.
+    if (window.matchMedia('(pointer: coarse)').matches) return
+
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
@@ -22,26 +25,11 @@ export function MouseGlow() {
 
     window.addEventListener('resize', resize, { passive: true })
 
-    const onMove = (e: MouseEvent) => {
-      mouse.current = { x: e.clientX, y: e.clientY }
-
-      // Spawn particles on move
-      for (let i = 0; i < 3; i++) {
-        particles.current.push({
-          x: mouse.current.x + (Math.random() - 0.5) * 50,
-          y: mouse.current.y + (Math.random() - 0.5) * 50,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4,
-          life: 0,
-          maxLife: 60 + Math.random() * 40,
-        })
-      }
-      if (particles.current.length > 120) {
-        particles.current = particles.current.slice(-120)
-      }
-    }
-
-    window.addEventListener('mousemove', onMove, { passive: true })
+    // Loop state: runs while the pointer is moving; 500 ms after the last move it keeps
+    // going only until the trail has faded and the glow has caught up, then parks.
+    let running = false
+    let idle = true
+    let idleTimer = 0
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -89,14 +77,56 @@ export function MouseGlow() {
         ctx.fill()
       }
 
+      const settled =
+        particles.current.length === 0 &&
+        Math.abs(mouse.current.x - smoothMouse.current.x) < 0.5 &&
+        Math.abs(mouse.current.y - smoothMouse.current.y) < 0.5
+
+      if (idle && settled) {
+        running = false
+        return
+      }
       raf.current = requestAnimationFrame(draw)
     }
-    draw()
+
+    const start = () => {
+      if (running) return
+      running = true
+      raf.current = requestAnimationFrame(draw)
+    }
+
+    const onMove = (e: PointerEvent) => {
+      mouse.current = { x: e.clientX, y: e.clientY }
+
+      // Spawn particles on move
+      for (let i = 0; i < 3; i++) {
+        particles.current.push({
+          x: mouse.current.x + (Math.random() - 0.5) * 50,
+          y: mouse.current.y + (Math.random() - 0.5) * 50,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          life: 0,
+          maxLife: 60 + Math.random() * 40,
+        })
+      }
+      if (particles.current.length > 120) {
+        particles.current = particles.current.slice(-120)
+      }
+
+      idle = false
+      window.clearTimeout(idleTimer)
+      idleTimer = window.setTimeout(() => { idle = true }, 500)
+      start()
+    }
+
+    window.addEventListener('pointermove', onMove, { passive: true })
 
     return () => {
-      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('pointermove', onMove)
       window.removeEventListener('resize', resize)
+      window.clearTimeout(idleTimer)
       cancelAnimationFrame(raf.current)
+      running = false
     }
   }, [])
 

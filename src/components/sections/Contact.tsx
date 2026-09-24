@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 import { useSiteSetting } from '../../hooks/useSiteSettings'
 
 const SERVICE_OPTIONS = [
@@ -73,29 +74,37 @@ export function Contact() {
   const rightRef = useRef<HTMLDivElement>(null)
   const sectionRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!sectionRef.current) return
+  useGSAP((_ctx, contextSafe) => {
+    const section = sectionRef.current
+    if (!section || !contextSafe) return
 
-    if (leftRef.current) gsap.set(leftRef.current, { opacity: 0, x: -150 })
-    if (rightRef.current) gsap.set(rightRef.current, { opacity: 0, x: 150 })
+    const mm = gsap.matchMedia()
 
-    const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          if (leftRef.current) {
-            gsap.to(leftRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
+    // Reduced motion: content stays in its final position, nothing is hidden or observed.
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      if (leftRef.current) gsap.set(leftRef.current, { opacity: 0, x: -150 })
+      if (rightRef.current) gsap.set(rightRef.current, { opacity: 0, x: 150 })
+
+      const obs = new IntersectionObserver(
+        contextSafe(([e]: IntersectionObserverEntry[]) => {
+          if (e.isIntersecting) {
+            if (leftRef.current) {
+              gsap.to(leftRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
+            }
+            if (rightRef.current) {
+              gsap.to(rightRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
+            }
+            obs.disconnect()
           }
-          if (rightRef.current) {
-            gsap.to(rightRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
-          }
-          obs.disconnect()
-        }
-      },
-      { threshold: 0.1 }
-    )
-    obs.observe(sectionRef.current)
-    return () => obs.disconnect()
-  }, [])
+        }),
+        { threshold: 0.1 }
+      )
+      obs.observe(section)
+      return () => obs.disconnect()
+    })
+
+    return () => mm.revert()
+  }, { scope: sectionRef })
 
   const update = (field: keyof FormData, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }))

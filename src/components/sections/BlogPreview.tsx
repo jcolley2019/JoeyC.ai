@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 import { supabase } from '../../lib/supabase'
 import type { BlogPost } from '../../types'
 
@@ -12,6 +13,7 @@ const PLACEHOLDER_POSTS = [
 
 export function BlogPreview() {
   const [posts, setPosts] = useState<(BlogPost | typeof PLACEHOLDER_POSTS[0])[]>([])
+  const sectionRef = useRef<HTMLElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -34,39 +36,48 @@ export function BlogPreview() {
       })
   }, [])
 
-  useEffect(() => {
-    const header = headerRef.current
-    const grid = gridRef.current
-    const observers: IntersectionObserver[] = []
+  // Re-runs when posts arrive (as before); revertOnUpdate clears the previous run's inline styles first.
+  useGSAP((_ctx, contextSafe) => {
+    if (!contextSafe) return
+    const mm = gsap.matchMedia()
 
-    if (header) {
-      gsap.set(header, { opacity: 0, y: 60 })
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
-        { threshold: 0.1 }
-      )
-      obs.observe(header)
-      observers.push(obs)
-    }
+    // Reduced motion: content stays in its final position, nothing is hidden or observed.
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const header = headerRef.current
+      const grid = gridRef.current
+      const observers: IntersectionObserver[] = []
 
-    if (grid) {
-      const cards = Array.from(grid.querySelectorAll('.blog-preview-card'))
-      if (cards.length > 0) {
-        gsap.set(cards, { opacity: 0, x: 200 })
+      if (header) {
+        gsap.set(header, { opacity: 0, y: 60 })
         const obs = new IntersectionObserver(
-          ([e]) => { if (e.isIntersecting) { gsap.to(cards, { x: 0, opacity: 1, ease: 'power3.out', duration: 0.8, stagger: 0.15 }); obs.disconnect() } },
-          { threshold: 0.2 }
+          contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } }),
+          { threshold: 0.1 }
         )
-        obs.observe(grid)
+        obs.observe(header)
         observers.push(obs)
       }
-    }
 
-    return () => observers.forEach(obs => obs.disconnect())
-  }, [posts])
+      if (grid) {
+        const cards = Array.from(grid.querySelectorAll('.blog-preview-card'))
+        if (cards.length > 0) {
+          gsap.set(cards, { opacity: 0, x: 200 })
+          const obs = new IntersectionObserver(
+            contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(cards, { x: 0, opacity: 1, ease: 'power3.out', duration: 0.8, stagger: 0.15 }); obs.disconnect() } }),
+            { threshold: 0.2 }
+          )
+          obs.observe(grid)
+          observers.push(obs)
+        }
+      }
+
+      return () => observers.forEach(obs => obs.disconnect())
+    })
+
+    return () => mm.revert()
+  }, { scope: sectionRef, dependencies: [posts], revertOnUpdate: true })
 
   return (
-    <section className="py-28 px-6 bg-bg-section">
+    <section ref={sectionRef} className="py-28 px-6 bg-bg-section">
       <div className="max-w-6xl mx-auto">
         <div ref={headerRef}>
           <p className="section-label mb-6">

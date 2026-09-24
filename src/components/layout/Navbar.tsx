@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import gsap from 'gsap'
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
+import { useGSAP } from '@gsap/react'
 
 gsap.registerPlugin(ScrollToPlugin)
 
@@ -31,8 +32,8 @@ export function Navbar() {
     return () => { document.body.style.overflow = '' }
   }, [menuOpen])
 
-  // Animate in
-  useEffect(() => {
+  // Animate in — every tween is owned by this context and reverted on unmount
+  const { contextSafe } = useGSAP(() => {
     if (!menuOpen || !overlayRef.current) return
 
     gsap.fromTo(overlayRef.current,
@@ -52,18 +53,23 @@ export function Navbar() {
         { opacity: 1, y: 0, duration: 0.5, ease: 'power4.out', delay: 0.1 }
       )
     }
-  }, [menuOpen])
+  }, { dependencies: [menuOpen] })
+
+  const scrollTimerRef = useRef<number>(0)
+  useEffect(() => () => window.clearTimeout(scrollTimerRef.current), [])
 
   const close = useCallback(() => {
     if (!overlayRef.current) { setMenuOpen(false); return }
 
-    gsap.to(overlayRef.current, {
-      opacity: 0,
-      duration: 0.3,
-      ease: 'power2.in',
-      onComplete: () => setMenuOpen(false),
-    })
-  }, [])
+    contextSafe(() => {
+      gsap.to(overlayRef.current, {
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.in',
+        onComplete: () => setMenuOpen(false),
+      })
+    })()
+  }, [contextSafe])
 
   const handleLinkClick = useCallback((href: string, isRoute?: boolean) => {
     if (isRoute) {
@@ -72,10 +78,11 @@ export function Navbar() {
     }
     close()
     // Wait for overlay to fade out, then scroll via GSAP
-    setTimeout(() => {
+    window.clearTimeout(scrollTimerRef.current)
+    scrollTimerRef.current = window.setTimeout(contextSafe(() => {
       gsap.to(window, { scrollTo: { y: href, offsetY: 0 }, duration: 1, ease: 'power2.inOut' })
-    }, 350)
-  }, [close])
+    }), 350)
+  }, [close, contextSafe])
 
   return (
     <>

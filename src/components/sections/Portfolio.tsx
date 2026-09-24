@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, forwardRef, useCallback } from 'react'
+import { useRef, useState, forwardRef, useCallback } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useGSAP } from '@gsap/react'
 import { projects } from '../../data/projects'
 import type { Project } from '../../types'
 
@@ -268,19 +269,26 @@ export function Portfolio() {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const mobileHeadingRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+  useGSAP((_ctx, contextSafe) => {
     const section = sectionRef.current
     const pin = pinContainerRef.current
     const box = boxRef.current
     const lettersWrap = lettersWrapRef.current
-    if (!section || !pin || !box || !lettersWrap) return
+    if (!section || !pin || !box || !lettersWrap || !contextSafe) return
 
-    // Check for mobile or reduced motion
-    const isMobile = window.matchMedia('(max-width: 767px)').matches
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    // Inline styles written directly (not via gsap) are snapshotted per context and put back
+    // when that context reverts, so a breakpoint flip starts from a clean element.
+    const snapshotStyles = (els: (HTMLElement | null)[]) => {
+      const saved = els.filter(Boolean).map(el => [el as HTMLElement, (el as HTMLElement).getAttribute('style')] as const)
+      return () => saved.forEach(([el, style]) => { if (style === null) el.removeAttribute('style'); else el.setAttribute('style', style) })
+    }
+
+    const mm = gsap.matchMedia()
 
     // ── Reduced motion: simple static fallback ──
-    if (prefersReducedMotion) {
+    mm.add('(prefers-reduced-motion: reduce)', () => {
+      const restore = snapshotStyles([section, pin, box, lettersWrap, mobileHeadingRef.current, gridRef.current])
+
       section.style.height = 'auto'
       pin.style.height = 'auto'
       box.style.display = 'none'
@@ -298,30 +306,35 @@ export function Portfolio() {
 
       const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
       const obs = new IntersectionObserver(
-        (entries) => {
+        contextSafe((entries: IntersectionObserverEntry[]) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
               gsap.to(entry.target, { opacity: 1, y: 0, duration: 0.6, ease: 'power4.out' })
               obs.unobserve(entry.target)
             }
           })
-        },
+        }),
         { threshold: 0.1 }
       )
       cards.forEach((card) => {
         gsap.set(card, { opacity: 0, y: 30 })
         obs.observe(card)
       })
-      return () => obs.disconnect()
-    }
+      return () => {
+        obs.disconnect()
+        restore()
+      }
+    })
 
     // ── Mobile: Full ScrollTrigger animation with vertical letters ──
-    if (isMobile) {
+    mm.add('(max-width: 767px) and (prefers-reduced-motion: no-preference)', () => {
+      const restore = snapshotStyles([section, box, lettersWrap, mobileHeadingRef.current, gridRef.current])
+
       if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'none'
 
       const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
       const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
-      if (!letters.length || !cards.length) return
+      if (!letters.length || !cards.length) return restore
 
       section.style.height = '600vh'
 
@@ -343,6 +356,7 @@ export function Portfolio() {
       gsap.set(box, { xPercent: -50, yPercent: -50, scale: mEntryScale })
       gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: mEntryScale })
 
+      // Re-evaluated every time this context (re)runs, i.e. on every breakpoint flip
       const mFullWidth = window.innerWidth * 0.90 - 40
       const mFullHeight = window.innerHeight - 80  // viewport minus navbar
 
@@ -401,10 +415,10 @@ export function Portfolio() {
       }
 
       // Attach tap listeners
-      cards.forEach((card, i) => {
+      const tapHandlers = cards.map((card, i) => {
         const handler = () => handleCardTap(card, i)
         card.addEventListener('touchend', handler, { passive: true })
-        ;(card as any)._tapHandler = handler
+        return handler
       })
 
       const mTl = gsap.timeline({
@@ -507,228 +521,210 @@ export function Portfolio() {
       mTl.to(box, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
       mTl.to(lettersWrap, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
 
-      // Debounced resize
-      let mResizeTimer: number
-      const mDebouncedResize = () => {
-        clearTimeout(mResizeTimer)
-        mResizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200)
-      }
-      window.addEventListener('resize', mDebouncedResize)
-
+      // Same-breakpoint resizes: ScrollTrigger's own debounced auto-refresh re-measures the pin.
+      // A breakpoint flip reverts this whole context (timeline, ScrollTrigger, gsap.set styles)
+      // and re-runs the matching one with fresh innerWidth/innerHeight values.
       return () => {
-        mTl.kill()
-        window.removeEventListener('resize', mDebouncedResize)
-        clearTimeout(mResizeTimer)
-        cards.forEach((card) => {
-          const handler = (card as any)._tapHandler
-          if (handler) card.removeEventListener('touchend', handler)
-        })
+        cards.forEach((card, i) => card.removeEventListener('touchend', tapHandlers[i]))
+        restore()
       }
-    }
+    })
 
     // ── Desktop: Full ScrollTrigger 8-phase animation ──
+    mm.add('(min-width: 768px) and (prefers-reduced-motion: no-preference)', () => {
+      const restore = snapshotStyles([box, mobileHeadingRef.current])
 
-    if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'none'
+      if (mobileHeadingRef.current) mobileHeadingRef.current.style.display = 'none'
 
-    const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
-    const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
-    if (!letters.length || !cards.length) return
+      const letters = lettersRef.current.filter(Boolean) as HTMLSpanElement[]
+      const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[]
+      if (!letters.length || !cards.length) return restore
 
-    // ── Size the box to snugly fit the PROJECTS text ──
-    // Reset scale to 1 before measuring so we get
-    // the TRUE natural size of the text
-    gsap.set(box, { scale: 1, xPercent: -50, yPercent: -50 })
-    gsap.set(lettersWrap, { scale: 1, xPercent: -50, yPercent: -50 })
+      // ── Size the box to snugly fit the PROJECTS text ──
+      // Reset scale to 1 before measuring so we get
+      // the TRUE natural size of the text
+      gsap.set(box, { scale: 1, xPercent: -50, yPercent: -50 })
+      gsap.set(lettersWrap, { scale: 1, xPercent: -50, yPercent: -50 })
 
-    const wrapRect = lettersWrap.getBoundingClientRect()
-    const naturalWidth = wrapRect.width + 320  // 160px padding each side
-    const naturalHeight = wrapRect.height * 1.2
+      const wrapRect = lettersWrap.getBoundingClientRect()
+      const naturalWidth = wrapRect.width + 320  // 160px padding each side
+      const naturalHeight = wrapRect.height * 1.2
 
-    box.style.width = naturalWidth + 'px'
-    box.style.height = naturalHeight + 'px'
+      box.style.width = naturalWidth + 'px'
+      box.style.height = naturalHeight + 'px'
 
-    // Apply centering AFTER setting dimensions so GSAP centers correctly on any screen
-    const entryScale = 0.5
-    gsap.set(box, { xPercent: -50, yPercent: -50, scale: entryScale })
-    gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: entryScale })
+      // Apply centering AFTER setting dimensions so GSAP centers correctly on any screen
+      const entryScale = 0.5
+      gsap.set(box, { xPercent: -50, yPercent: -50, scale: entryScale })
+      gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: entryScale })
 
-    // Calculate expansion targets — clamped to avoid exceeding viewport on smaller screens
-    const fullWidth = Math.min(window.innerWidth * 0.95, window.innerWidth - 40)
-    const fullHeight = window.innerHeight - 100
+      // Calculate expansion targets — clamped to avoid exceeding viewport on smaller screens
+      // (re-evaluated on every breakpoint flip)
+      const fullWidth = Math.min(window.innerWidth * 0.95, window.innerWidth - 40)
+      const fullHeight = window.innerHeight - 100
 
-    // ── Pre-compute random scatter values ──
-    const letterTargets = letters.map((_, i) => {
-      if (i === 0) return { x: '-120vw', y: 0, rotation: -15 }
-      if (i === 7) return { x: '120vw', y: 0, rotation: 15 }
-      const isAccent = BLUE_INDICES.has(i)
-      const multiplier = isAccent ? 1.5 : 1
-      const yDir = i % 2 === 0 ? -1 : 1
-      return {
-        x: (i - 4) * gsap.utils.random(40, 100) * multiplier,
-        y: yDir * gsap.utils.random(100, 250) * multiplier,
-        rotation: gsap.utils.random(-20, 20),
-      }
-    })
+      // ── Pre-compute random scatter values ──
+      const letterTargets = letters.map((_, i) => {
+        if (i === 0) return { x: '-120vw', y: 0, rotation: -15 }
+        if (i === 7) return { x: '120vw', y: 0, rotation: 15 }
+        const isAccent = BLUE_INDICES.has(i)
+        const multiplier = isAccent ? 1.5 : 1
+        const yDir = i % 2 === 0 ? -1 : 1
+        return {
+          x: (i - 4) * gsap.utils.random(40, 100) * multiplier,
+          y: yDir * gsap.utils.random(100, 250) * multiplier,
+          rotation: gsap.utils.random(-20, 20),
+        }
+      })
 
-    const cardEntryRotations = cards.map(() => gsap.utils.random(-3, 3))
-    const cardExitTargets = cards.map(() => ({
-      x: gsap.utils.random(-110, -130) + 'vw',
-      y: gsap.utils.random(-100, 100),
-      rotation: gsap.utils.random(-10, 10),
-    }))
+      const cardEntryRotations = cards.map(() => gsap.utils.random(-3, 3))
+      const cardExitTargets = cards.map(() => ({
+        x: gsap.utils.random(-110, -130) + 'vw',
+        y: gsap.utils.random(-100, 100),
+        rotation: gsap.utils.random(-10, 10),
+      }))
 
-    // ── Set initial card state (off-screen right) ──
-    gsap.set(cards, {
-      x: '110vw',
-      opacity: 0,
-      scale: 0.8,
-      rotation: (i: number) => cardEntryRotations[i],
-    })
+      // ── Set initial card state (off-screen right) ──
+      gsap.set(cards, {
+        x: '110vw',
+        opacity: 0,
+        scale: 0.8,
+        rotation: (i: number) => cardEntryRotations[i],
+      })
 
-    // ── Master timeline ──
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: section,
-        start: 'top top',
-        end: 'bottom bottom',
-        pin: pin,
-        scrub: 1,
-        anticipatePin: 1,
-        onUpdate: (self) => {
-          const p = self.progress
-          gridRef.current?.classList.toggle('cards-interactive', p > 0.50 && p < 0.75)
+      // ── Master timeline ──
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: 'top top',
+          end: 'bottom bottom',
+          pin: pin,
+          scrub: 1,
+          anticipatePin: 1,
+          onUpdate: (self) => {
+            const p = self.progress
+            gridRef.current?.classList.toggle('cards-interactive', p > 0.50 && p < 0.75)
+          },
         },
-      },
+      })
+
+      // ── Phase 1: Box + text zoom up together (0 → 0.10) ──
+      tl.to(box, {
+        scale: 1,
+        duration: 0.10,
+        ease: 'power2.out',
+      }, 0)
+      tl.to(lettersWrap, {
+        scale: 1,
+        duration: 0.10,
+        ease: 'power2.out',
+      }, 0)
+
+      // ── Phase 2: Box widens horizontally (0.10 → 0.20) ──
+      tl.to(box, {
+        width: fullWidth,
+        duration: 0.10,
+        ease: 'power2.inOut',
+      }, 0.10)
+
+      // ── Phase 3: Box expands vertically (0.20 → 0.28) ──
+      tl.to(box, {
+        height: fullHeight,
+        duration: 0.08,
+        ease: 'power2.inOut',
+      }, 0.20)
+
+      // ── Phase 4: Letter scatter (0.28 → 0.40) ──
+      tl.to(letters, {
+        x: (i: number) => letterTargets[i].x as number,
+        y: (i: number) => letterTargets[i].y as number,
+        rotation: (i: number) => letterTargets[i].rotation,
+        opacity: 0,
+        duration: 0.12,
+        stagger: 0.008,
+        ease: 'power2.inOut',
+      } as gsap.TweenVars, 0.28)
+
+      // ── Phase 5: Cards tumble in from right (0.40 → 0.55) ──
+      tl.to(cards, {
+        x: 0,
+        opacity: 1,
+        scale: 1,
+        rotation: 0,
+        duration: 0.15,
+        stagger: 0.02,
+        ease: 'power2.out',
+      }, 0.40)
+
+      // ── Phase 6: Pinned idle (0.55 → 0.72) — no tweens ──
+
+      // ── Phase 7: Cards fly off LEFT (0.72 → 0.82) ──
+      tl.to(cards, {
+        x: (i: number) => cardExitTargets[i].x,
+        y: (i: number) => cardExitTargets[i].y,
+        rotation: (i: number) => cardExitTargets[i].rotation,
+        opacity: 0,
+        scale: 0.6,
+        duration: 0.10,
+        stagger: 0.012,
+        ease: 'power3.in',
+      }, 0.72)
+
+      // ── Phase 8: Letters reassemble (0.82 → 0.88) ──
+      tl.to(letters, {
+        x: 0,
+        y: 0,
+        rotation: 0,
+        opacity: 1,
+        scale: 1,
+        duration: 0.06,
+        stagger: 0.008,
+        ease: 'power2.out',
+      }, 0.82)
+
+      // ── Phase 9: Box shrinks back (0.88 → 0.95) ──
+      // Vertical shrink
+      tl.to(box, {
+        height: naturalHeight,
+        duration: 0.035,
+        ease: 'power1.inOut',
+      }, 0.88)
+      // Horizontal shrink
+      tl.to(box, {
+        width: naturalWidth,
+        duration: 0.035,
+        ease: 'power1.inOut',
+      }, 0.915)
+
+      // ── Phase 10: Box + text shrink to small + fade (0.95 → 1.0) ──
+      tl.to(box, {
+        scale: entryScale,
+        duration: 0.03,
+        ease: 'power2.in',
+      }, 0.95)
+      tl.to(lettersWrap, {
+        scale: entryScale,
+        duration: 0.03,
+        ease: 'power2.in',
+      }, 0.95)
+      // Fade out
+      tl.to(box, {
+        opacity: 0,
+        duration: 0.02,
+        ease: 'power1.in',
+      }, 0.98)
+      tl.to(lettersWrap, {
+        opacity: 0,
+        duration: 0.02,
+        ease: 'power1.in',
+      }, 0.98)
+
+      // Same-breakpoint resizes: ScrollTrigger's own debounced auto-refresh re-measures the pin.
+      return restore
     })
 
-    // ── Phase 1: Box + text zoom up together (0 → 0.10) ──
-    tl.to(box, {
-      scale: 1,
-      duration: 0.10,
-      ease: 'power2.out',
-    }, 0)
-    tl.to(lettersWrap, {
-      scale: 1,
-      duration: 0.10,
-      ease: 'power2.out',
-    }, 0)
-
-    // ── Phase 2: Box widens horizontally (0.10 → 0.20) ──
-    tl.to(box, {
-      width: fullWidth,
-      duration: 0.10,
-      ease: 'power2.inOut',
-    }, 0.10)
-
-    // ── Phase 3: Box expands vertically (0.20 → 0.28) ──
-    tl.to(box, {
-      height: fullHeight,
-      duration: 0.08,
-      ease: 'power2.inOut',
-    }, 0.20)
-
-    // ── Phase 4: Letter scatter (0.28 → 0.40) ──
-    tl.to(letters, {
-      x: (i: number) => letterTargets[i].x as number,
-      y: (i: number) => letterTargets[i].y as number,
-      rotation: (i: number) => letterTargets[i].rotation,
-      opacity: 0,
-      duration: 0.12,
-      stagger: 0.008,
-      ease: 'power2.inOut',
-    } as gsap.TweenVars, 0.28)
-
-    // ── Phase 5: Cards tumble in from right (0.40 → 0.55) ──
-    tl.to(cards, {
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      rotation: 0,
-      duration: 0.15,
-      stagger: 0.02,
-      ease: 'power2.out',
-    }, 0.40)
-
-    // ── Phase 6: Pinned idle (0.55 → 0.72) — no tweens ──
-
-    // ── Phase 7: Cards fly off LEFT (0.72 → 0.82) ──
-    tl.to(cards, {
-      x: (i: number) => cardExitTargets[i].x,
-      y: (i: number) => cardExitTargets[i].y,
-      rotation: (i: number) => cardExitTargets[i].rotation,
-      opacity: 0,
-      scale: 0.6,
-      duration: 0.10,
-      stagger: 0.012,
-      ease: 'power3.in',
-    }, 0.72)
-
-    // ── Phase 8: Letters reassemble (0.82 → 0.88) ──
-    tl.to(letters, {
-      x: 0,
-      y: 0,
-      rotation: 0,
-      opacity: 1,
-      scale: 1,
-      duration: 0.06,
-      stagger: 0.008,
-      ease: 'power2.out',
-    }, 0.82)
-
-    // ── Phase 9: Box shrinks back (0.88 → 0.95) ──
-    // Vertical shrink
-    tl.to(box, {
-      height: naturalHeight,
-      duration: 0.035,
-      ease: 'power1.inOut',
-    }, 0.88)
-    // Horizontal shrink
-    tl.to(box, {
-      width: naturalWidth,
-      duration: 0.035,
-      ease: 'power1.inOut',
-    }, 0.915)
-
-    // ── Phase 10: Box + text shrink to small + fade (0.95 → 1.0) ──
-    tl.to(box, {
-      scale: entryScale,
-      duration: 0.03,
-      ease: 'power2.in',
-    }, 0.95)
-    tl.to(lettersWrap, {
-      scale: entryScale,
-      duration: 0.03,
-      ease: 'power2.in',
-    }, 0.95)
-    // Fade out
-    tl.to(box, {
-      opacity: 0,
-      duration: 0.02,
-      ease: 'power1.in',
-    }, 0.98)
-    tl.to(lettersWrap, {
-      opacity: 0,
-      duration: 0.02,
-      ease: 'power1.in',
-    }, 0.98)
-
-    // ── Debounced resize handler ──
-    let resizeTimer: number
-    const debouncedResize = () => {
-      clearTimeout(resizeTimer)
-      resizeTimer = window.setTimeout(() => {
-        ScrollTrigger.refresh()
-      }, 200)
-    }
-    window.addEventListener('resize', debouncedResize)
-
-    // ── Cleanup ──
-    return () => {
-      tl.kill()
-      window.removeEventListener('resize', debouncedResize)
-      clearTimeout(resizeTimer)
-    }
-  }, [])
+    return () => mm.revert()
+  }, { scope: sectionRef })
 
   return (
     <section

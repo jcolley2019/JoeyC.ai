@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 import { socials } from '../../data/socials'
 import { useSocialBurst } from '../../hooks/useSocialBurst'
 
 export function Content() {
+  const sectionRef = useRef<HTMLElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const photoRef = useRef<HTMLDivElement>(null)
   const connectHeaderRef = useRef<HTMLDivElement>(null)
@@ -76,65 +78,73 @@ export function Content() {
     }
   }, [])
 
-  useEffect(() => {
-    const header = headerRef.current
-    const photo = photoRef.current
-    const connectHeader = connectHeaderRef.current
-    const socialGrid = socialGridRef.current
-    const observers: IntersectionObserver[] = []
+  useGSAP((_ctx, contextSafe) => {
+    if (!contextSafe) return
+    const mm = gsap.matchMedia()
 
-    // Header — slide from left
-    if (header) {
-      gsap.set(header, { opacity: 0, x: -150 })
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
-        { threshold: 0.1 }
-      )
-      obs.observe(header)
-      observers.push(obs)
-    }
+    // Reduced motion: content stays in its final position, nothing is hidden or observed.
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const header = headerRef.current
+      const photo = photoRef.current
+      const connectHeader = connectHeaderRef.current
+      const socialGrid = socialGridRef.current
+      const observers: IntersectionObserver[] = []
 
-    // Photo — fade up
-    if (photo) {
-      gsap.set(photo, { opacity: 0, y: 60 })
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { gsap.to(photo, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
-        { threshold: 0.1 }
-      )
-      obs.observe(photo)
-      observers.push(obs)
-    }
-
-    // Connect header — fade up
-    if (connectHeader) {
-      gsap.set(connectHeader, { opacity: 0, y: 60 })
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { gsap.to(connectHeader, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } },
-        { threshold: 0.1 }
-      )
-      obs.observe(connectHeader)
-      observers.push(obs)
-    }
-
-    // Social cards — stagger up
-    if (socialGrid) {
-      const cards = Array.from(socialGrid.querySelectorAll('.social-card'))
-      if (cards.length > 0) {
-        gsap.set(cards, { opacity: 0, y: 80 })
+      // Header — slide from left
+      if (header) {
+        gsap.set(header, { opacity: 0, x: -150 })
         const obs = new IntersectionObserver(
-          ([e]) => { if (e.isIntersecting) { gsap.to(cards, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out', stagger: 0.1 }); obs.disconnect() } },
+          contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } }),
           { threshold: 0.1 }
         )
-        obs.observe(socialGrid)
+        obs.observe(header)
         observers.push(obs)
       }
-    }
 
-    return () => observers.forEach(obs => obs.disconnect())
-  }, [])
+      // Photo — fade up
+      if (photo) {
+        gsap.set(photo, { opacity: 0, y: 60 })
+        const obs = new IntersectionObserver(
+          contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(photo, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } }),
+          { threshold: 0.1 }
+        )
+        obs.observe(photo)
+        observers.push(obs)
+      }
+
+      // Connect header — fade up
+      if (connectHeader) {
+        gsap.set(connectHeader, { opacity: 0, y: 60 })
+        const obs = new IntersectionObserver(
+          contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(connectHeader, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } }),
+          { threshold: 0.1 }
+        )
+        obs.observe(connectHeader)
+        observers.push(obs)
+      }
+
+      // Social cards — stagger up
+      if (socialGrid) {
+        const cards = Array.from(socialGrid.querySelectorAll('.social-card'))
+        if (cards.length > 0) {
+          gsap.set(cards, { opacity: 0, y: 80 })
+          const obs = new IntersectionObserver(
+            contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(cards, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out', stagger: 0.1 }); obs.disconnect() } }),
+            { threshold: 0.1 }
+          )
+          obs.observe(socialGrid)
+          observers.push(obs)
+        }
+      }
+
+      return () => observers.forEach(obs => obs.disconnect())
+    })
+
+    return () => mm.revert()
+  }, { scope: sectionRef })
 
   return (
-    <section id="content" className="py-28 px-6">
+    <section id="content" ref={sectionRef} className="py-28 px-6">
       <div className="max-w-5xl mx-auto">
         {/* === CONTENT HEADER === */}
         <div ref={headerRef}>

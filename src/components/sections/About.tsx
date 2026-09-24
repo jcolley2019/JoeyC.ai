@@ -1,34 +1,43 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 
 export function About() {
   const textRef = useRef<HTMLDivElement>(null)
   const photoRef = useRef<HTMLDivElement>(null)
   const sectionRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!sectionRef.current) return
+  useGSAP((_ctx, contextSafe) => {
+    const section = sectionRef.current
+    if (!section || !contextSafe) return
 
-    if (textRef.current) gsap.set(textRef.current, { opacity: 0, y: 60 })
-    if (photoRef.current) gsap.set(photoRef.current, { opacity: 0, x: 150 })
+    const mm = gsap.matchMedia()
 
-    const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          if (textRef.current) {
-            gsap.to(textRef.current, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' })
+    // Reduced motion: content stays in its final position, nothing is hidden or observed.
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      if (textRef.current) gsap.set(textRef.current, { opacity: 0, y: 60 })
+      if (photoRef.current) gsap.set(photoRef.current, { opacity: 0, x: 150 })
+
+      const obs = new IntersectionObserver(
+        contextSafe(([e]: IntersectionObserverEntry[]) => {
+          if (e.isIntersecting) {
+            if (textRef.current) {
+              gsap.to(textRef.current, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' })
+            }
+            if (photoRef.current) {
+              gsap.to(photoRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
+            }
+            obs.disconnect()
           }
-          if (photoRef.current) {
-            gsap.to(photoRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power4.out' })
-          }
-          obs.disconnect()
-        }
-      },
-      { threshold: 0.1 }
-    )
-    obs.observe(sectionRef.current)
-    return () => obs.disconnect()
-  }, [])
+        }),
+        { threshold: 0.1 }
+      )
+      obs.observe(section)
+      return () => obs.disconnect()
+    })
+
+    return () => mm.revert()
+  }, { scope: sectionRef })
 
   return (
     <section id="about" className="py-28 px-6 overflow-hidden">
