@@ -2,7 +2,7 @@
  * /sitemap.xml, served first-party (was a Supabase edge function). Only real lastmod values,
  * no changefreq/priority, slugs XML-escaped.
  */
-import { SITE_URL, getSupabase, escapeXml, isoDate, type VercelRequest, type VercelResponse } from './_shared'
+import { SITE_URL, getSupabase, escapeXml, isoDate, type VercelRequest, type VercelResponse } from './_shared.js'
 
 interface Row { slug: string; updated_at: string | null; published_at: string | null }
 
@@ -20,7 +20,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
   }
 
   const lastmodOf = (p: Row) => isoDate(p.updated_at) ?? isoDate(p.published_at)
-  const newest = posts.map(lastmodOf).filter((d): d is string => !!d).sort().at(-1) ?? null
+  const newest = posts.map(lastmodOf).filter((d): d is string => !!d).sort().slice(-1)[0] ?? null
 
   const entries: Array<{ loc: string; lastmod: string | null }> = [
     { loc: SITE_URL, lastmod: newest },

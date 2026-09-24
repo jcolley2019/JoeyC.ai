@@ -10,8 +10,8 @@ import {
   SITE_URL, SITE_NAME, AUTHOR,
   getSupabase, renderMarkdown, escapeHtml, firstParam,
   type VercelRequest, type VercelResponse, type PostRow,
-} from './_shared'
-import { stripLeadingH1, readingTimeMinutes } from '../src/lib/markdown'
+} from './_shared.js'
+import { stripLeadingH1, readingTimeMinutes } from '../src/lib/markdown.js'
 
 const BLOG_DESCRIPTION = 'AI experiments, build logs, and lessons learned — by Joey Colley.'
 const BLOG_OG_IMAGE = `${SITE_URL}/photos/joey-og.jpg`

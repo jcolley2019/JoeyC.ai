@@ -11,7 +11,7 @@ import remarkRehype from 'remark-rehype'
 import rehypeRaw from 'rehype-raw'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
-import { highlightLanguages } from '../src/lib/markdown'
+import { highlightLanguages } from '../src/lib/markdown.js'
 
 export const SITE_URL = 'https://www.joeyc.ai'
 export const SITE_NAME = 'JoeyC.ai'

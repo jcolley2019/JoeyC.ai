@@ -2,8 +2,8 @@
  * /rss.xml, served first-party (was a Supabase edge function). Adds content:encoded with the
  * rendered post HTML; atom:link self points at /rss.xml.
  */
-import { SITE_URL, AUTHOR, getSupabase, renderMarkdown, escapeXml, type VercelRequest, type VercelResponse, type PostRow } from './_shared'
-import { stripLeadingH1 } from '../src/lib/markdown'
+import { SITE_URL, AUTHOR, getSupabase, renderMarkdown, escapeXml, type VercelRequest, type VercelResponse, type PostRow } from './_shared.js'
+import { stripLeadingH1 } from '../src/lib/markdown.js'
 
 const FEED_DESCRIPTION = 'AI experiments, build logs, and lessons learned — by Joey Colley.'
 
