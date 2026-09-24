@@ -3,6 +3,12 @@ import { supabase } from '../../lib/supabase'
 import { useLanguage } from '../../hooks/useLanguage'
 import type { ContentGeneration } from '../../types'
 
+/** Rows from today (UTC) count toward the daily quota, so RLS refuses deleting them. */
+const isDeletable = (gen: ContentGeneration) => {
+  const now = new Date()
+  return new Date(gen.created_at).getTime() < Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+}
+
 export function ContentHistory() {
   const { t } = useLanguage()
   const [generations, setGenerations] = useState<ContentGeneration[]>([])
@@ -60,20 +66,25 @@ export function ContentHistory() {
     }
   }
 
+  const selectedDeletable = generations.filter(g => selected.has(g.id) && isDeletable(g))
+  const selectedToday = generations.some(g => selected.has(g.id) && !isDeletable(g))
+
   const handleDelete = async () => {
-    if (selected.size === 0) return
+    if (selectedDeletable.length === 0) return
     setDeleting(true)
 
-    const ids = Array.from(selected)
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('content_generations')
       .delete()
-      .in('id', ids)
+      .in('id', selectedDeletable.map(g => g.id))
+      .select('id')
 
     if (!error) {
-      setGenerations(prev => prev.filter(g => !selected.has(g.id)))
-      setSelected(new Set())
-      if (expanded && selected.has(expanded)) {
+      // RLS skips rows it refuses without an error, so drop only what was deleted.
+      const deleted = new Set((data ?? []).map(row => row.id as string))
+      setGenerations(prev => prev.filter(g => !deleted.has(g.id)))
+      setSelected(prev => new Set([...prev].filter(id => !deleted.has(id))))
+      if (expanded && deleted.has(expanded)) {
         setExpanded(null)
       }
     }
@@ -135,7 +146,7 @@ export function ContentHistory() {
           </span>
         )}
 
-        {selected.size > 0 && (
+        {selectedDeletable.length > 0 && (
           <button
             onClick={handleDelete}
             disabled={deleting}
@@ -145,6 +156,9 @@ export function ContentHistory() {
           </button>
         )}
       </div>
+      {selectedToday && (
+        <p className="text-xs text-text-secondary font-mono">{t('history.todaylocked')}</p>
+      )}
 
       {/* List */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto">

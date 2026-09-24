@@ -136,6 +136,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'history.selected': { en: 'selected', es: 'seleccionados' },
   'history.delete': { en: 'Delete', es: 'Eliminar' },
   'history.deleting': { en: 'Deleting...', es: 'Eliminando...' },
+  'history.todaylocked': { en: "Today's items count toward today's limit; delete them after 00:00 UTC.", es: 'Los elementos de hoy cuentan para el límite diario; elimínalos después de las 00:00 UTC.' },
 
   // === Guided Tour ===
   'tour.skip': { en: 'Skip tour', es: 'Saltar tour' },
