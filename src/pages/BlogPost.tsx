@@ -211,12 +211,16 @@ export function BlogPostPage() {
 
   const readingTime = Math.max(1, Math.ceil(post.content.split(/\s+/).length / 200))
 
-  // Strip the H1 title from content if it matches the post title
-  let articleContent = post.content
-  const firstLine = articleContent.split('\n')[0]
-  if (firstLine?.startsWith('# ') && firstLine.replace('# ', '').trim() === post.title.trim()) {
-    articleContent = articleContent.split('\n').slice(1).join('\n').trim()
-  }
+  // The page renders post.title as the visible H1, so always drop a leading markdown H1
+  // (after any leading blank lines or `---` breaks) to avoid two H1s.
+  const contentLines = post.content.split('\n')
+  let firstIdx = 0
+  while (firstIdx < contentLines.length && /^\s*(?:-{3,}|\*{3,}|_{3,})?\s*$/.test(contentLines[firstIdx])) firstIdx += 1
+  const articleContent = (
+    /^#\s+\S/.test(contentLines[firstIdx] ?? '')
+      ? contentLines.slice(firstIdx + 1)
+      : contentLines.slice(firstIdx)
+  ).join('\n').trim()
 
   return (
     <div className="min-h-screen bg-bg noise-overlay">

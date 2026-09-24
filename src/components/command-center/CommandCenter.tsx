@@ -22,6 +22,7 @@ import { useBrandProfile } from '../../hooks/useBrandProfile'
 import { useXAccount } from '../../hooks/useXAccount'
 import type { BlogClarifyData } from './BlogClarifyForm'
 import type { OutputFormat, Platform } from '../../types'
+import { deriveTitleAndSlug } from '../../lib/publish'
 
 // AI platform keywords to detect in brain dump text
 const VIDEO_PLATFORM_KEYWORDS = ['veo', 'sora', 'kling', 'higgsfield', 'seedance', 'runway', 'pika', 'hailuo']
@@ -497,11 +498,9 @@ export function CommandCenter() {
                   setPublishStatus('publishing')
                   setPublishError(null)
                   try {
-                    const lines = content.split('\n')
-                    const titleLine = lines.find(l => l.startsWith('# '))
-                    const title = titleLine?.replace(/^#\s*/, '').trim() || 'Untitled Post'
-                    const body = lines.filter(l => l !== titleLine).join('\n').trim()
-                    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                    const derived = deriveTitleAndSlug(content)
+                    if (!derived.ok) throw new Error(derived.error)
+                    const { title, slug, body } = derived.post
                     const excerpt = body.replace(/[#*_`>\[\]()!]/g, '').replace(/\n+/g, ' ').slice(0, 200).trim()
 
                     // Auto-detect tags from content
