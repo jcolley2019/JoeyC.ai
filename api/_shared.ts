@@ -34,6 +34,7 @@ export interface PostRow {
   published_at: string | null
   updated_at: string | null
   tags: string[] | null
+  meta_description?: string | null // JCAI-FIX-06/C2 migration; absent before it is applied
 }
 
 export function getSupabase(): SupabaseClient | null {

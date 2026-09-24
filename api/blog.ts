@@ -145,7 +145,8 @@ async function renderPost(res: VercelResponse, shell: string, slug: string) {
 
   const { data, error } = await supabase
     .from('blog_posts')
-    .select('title, slug, excerpt, content, cover_image, published_at, updated_at, tags')
+    // '*' so the page keeps working whether or not the blog_meta migration is applied yet.
+    .select('*')
     .eq('status', 'published')
     .eq('slug', slug)
     .single()
@@ -155,7 +156,7 @@ async function renderPost(res: VercelResponse, shell: string, slug: string) {
   }
   const post = data as PostRow
   const url = `${SITE_URL}/blog/${post.slug}`
-  const description = post.excerpt ?? ''
+  const description = post.meta_description || post.excerpt || ''
   const ogImage = post.cover_image || BLOG_OG_IMAGE
   const articleMarkdown = stripLeadingH1(post.content)
   const articleHtml = await renderMarkdown(articleMarkdown)

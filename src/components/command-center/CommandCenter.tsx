@@ -42,7 +42,7 @@ function detectAiPlatform(text: string): { mediaType: 'video' | 'image'; aiPlatf
 export function CommandCenter() {
   const { session, loading: authLoading, login, logout } = useAuth()
   const { isMasterAdmin } = useAdmin()
-  const { generating, result, error, usageSummary, generate, extractYouTubeTranscript } = useContentGeneration()
+  const { generating, generatingStatus, result, error, usageSummary, generate, cancel, extractYouTubeTranscript } = useContentGeneration()
   const perplexityHashtags = useSiteSetting('perplexity_hashtags_enabled', false)
   const extraPlatform = useSiteSetting('extra_platform_youtube', true)
   const { t } = useLanguage()
@@ -427,6 +427,18 @@ export function CommandCenter() {
                   }}
                 />
               )}
+              {generating && (
+                <div className="flex items-center gap-3 text-[13px] font-mono text-[#94a3b8]">
+                  <span>{generatingStatus ?? 'Generating...'}</span>
+                  <button
+                    type="button"
+                    onClick={cancel}
+                    className="px-2 py-0.5 rounded border border-border text-[12px] hover:border-red-400 hover:text-red-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
               {error && <p className="text-red-400 text-sm font-mono">{error}</p>}
               {usageSummary && (
                 <div className="flex flex-col md:flex-row md:items-center gap-2 px-3 py-2 rounded-lg border border-border/50 bg-bg-card/30 text-[13px] font-mono text-[#94a3b8]">
@@ -492,7 +504,7 @@ export function CommandCenter() {
                 rawContent={generatedContent}
                 onContentChange={setGeneratedContent}
                 onClear={() => setGeneratedContent(null)}
-                onPublishBlog={async (content) => {
+                onPublishBlog={async (content, meta) => {
                   setPublishStatus('publishing')
                   setPublishError(null)
                   try {
@@ -514,6 +526,9 @@ export function CommandCenter() {
                       tags: tags.length > 0 ? tags : ['AI', 'Building in Public'],
                       status: 'published',
                       published_at: new Date().toISOString(),
+                      // From the generated ```meta fence; BlogPost/api/blog prefer it over the excerpt.
+                      ...(meta?.metaDescription ? { meta_description: meta.metaDescription } : {}),
+                      ...(meta?.primaryKeyword ? { primary_keyword: meta.primaryKeyword } : {}),
                     })
 
                     if (dbError) throw new Error(dbError.message)

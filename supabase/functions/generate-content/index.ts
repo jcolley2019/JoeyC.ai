@@ -1,20 +1,35 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.128.0";
 import { corsHeadersFor } from "../_shared/cors.ts";
 import { requireEnv } from "../_shared/env.ts";
 import { validateRequest } from "./validate.ts";
+import { voiceBlock, type BrandVoice } from "./voice.ts";
 
 const SUPABASE_URL = requireEnv("SUPABASE_URL");
 const SUPABASE_ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
 const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 const ANTHROPIC_API_KEY = requireEnv("ANTHROPIC_API_KEY");
+const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
-// Model tiers — Sonnet 4.6 for research-heavy blog, Haiku 4.5 for derivatives
+// Model tiers — Sonnet 5 for research-heavy blog and direct generation, Haiku 4.5 for derivatives
 const MODELS = {
-  research: "claude-sonnet-4-6",       // Blog posts with web search
-  standard: "claude-sonnet-4-6",       // Direct generation (non-cascade)
+  research: "claude-sonnet-5",             // Blog posts with web search
+  standard: "claude-sonnet-5",             // Direct generation (non-cascade)
   derivative: "claude-haiku-4-5-20251001", // Cheap reformatting from blog content
 };
+
+// Anthropic list prices in USD per million tokens, from
+// https://platform.claude.com/docs/en/about-claude/pricing (read 2026-09-24):
+//   Claude Sonnet 5   input $2    5-minute cache write $2.50  cache hit $0.20  output $10
+//   Claude Haiku 4.5  input $1    5-minute cache write $1.25  cache hit $0.10  output $5
+//   Web search        $10 per 1,000 searches, on top of tokens
+// The Studio's cost line is computed here from these numbers; the client has no price table.
+const MODEL_PRICING: Record<string, { input: number; cacheWrite: number; cacheRead: number; output: number }> = {
+  "claude-sonnet-5": { input: 2, cacheWrite: 2.5, cacheRead: 0.2, output: 10 },
+  "claude-haiku-4-5-20251001": { input: 1, cacheWrite: 1.25, cacheRead: 0.1, output: 5 },
+};
+const WEB_SEARCH_USD_PER_REQUEST = 10 / 1000;
 
 // Cost controls
 const MAX_WEB_SEARCHES = 5;       // Max web search invocations per blog post
@@ -62,13 +77,17 @@ Write like a real human. The following are BANNED — never use them:
 - Mix trending hashtags (riding current waves) with niche hashtags (targeted reach) and evergreen hashtags (consistent discovery)
 - Every hashtag MUST include the # symbol`;
 
+// Format instructions are identical for every user and go first in the system
+// prompt, so the prompt cache can reuse them. Whose voice to write in comes
+// from voiceBlock() (voice.ts) and is appended after them as the AUTHOR section.
+const FORMAT_PREAMBLE =
+  "You are a content creation assistant. The AUTHOR section at the end of these instructions says whose voice you write in; \"the author\" below always means that person.";
+
 function getSystemPrompt(
   outputFormat: string,
   platform?: string,
-  brandContext?: Record<string, unknown>
 ): string {
-  const base =
-    "You are a content creation assistant for Joey Colley, a non-traditional AI developer who builds apps with AI tools and documents the journey on social media. Joey's voice is authentic, conversational, slightly irreverent, and anti-corporate-slop. He speaks plainly, uses short sentences, and connects with people who are curious about AI but aren't traditional engineers." + ANTI_SLOP_DIRECTIVE;
+  const base = FORMAT_PREAMBLE + ANTI_SLOP_DIRECTIVE;
 
   if (outputFormat === "social") {
     const platformGuides: Record<string, string> = {
@@ -78,13 +97,13 @@ function getSystemPrompt(
 Write the exact opening line/action that stops the scroll. This is the most important part — it should create curiosity or make a bold claim. Write 2-3 hook options.
 
 **📝 SCRIPT**
-Write a full talking-head script, 30-60 seconds worth. Use short punchy sentences. Include stage directions in [brackets] like [show screen] or [cut to demo]. Write it exactly how Joey would say it out loud — casual, real, no corporate speak.
+Write a full talking-head script, 30-60 seconds worth. Use short punchy sentences. Include stage directions in [brackets] like [show screen] or [cut to demo]. Write it exactly how the author would say it out loud — casual, real, no corporate speak.
 
 **💬 CAPTION**
 Write the post caption. Keep it punchy with line breaks. Conversational tone.
 
 **📣 CTA (call to action)**
-What Joey tells viewers to do at the end of the video AND in the caption. Make it specific and actionable.
+What the author tells viewers to do at the end of the video AND in the caption. Make it specific and actionable.
 
 **#️⃣ HASHTAGS**
 5-8 relevant hashtags. Mix trending and niche. IMPORTANT: Every single hashtag MUST include the # symbol (e.g. #AI #BuildInPublic). Never omit the # prefix.
@@ -156,7 +175,7 @@ Write the full LinkedIn post:
 - No hashtags unless truly relevant (max 3, at the very end)
 
 **💬 FIRST COMMENT**
-Write a follow-up comment Joey should post immediately after publishing. This should add extra value, context, or a resource link. LinkedIn's algorithm boosts posts with early comments.
+Write a follow-up comment the author should post immediately after publishing. This should add extra value, context, or a resource link. LinkedIn's algorithm boosts posts with early comments.
 
 **📣 ENGAGEMENT STRATEGY**
 2-3 specific actions to boost reach: who to tag, which posts to engage with before/after posting, best time to post.
@@ -178,7 +197,7 @@ One-line description of the video idea. What's the angle that makes this worth w
 Write the full YouTube description:
 - First 2 lines are the hook (visible before "show more") — make them count
 - Key timestamps placeholder (00:00 format)
-- 2-3 relevant links (Joey's socials, tools mentioned)
+- 2-3 relevant links (the author's socials, tools mentioned)
 - Brief summary of what the video covers
 
 **🏷️ TAGS**
@@ -285,45 +304,14 @@ Include 3-5 illustration placeholders throughout the article at natural visual b
 
 **Conclusion** — Brief wrap-up with a specific CTA (follow on TikTok/Instagram, try it yourself, drop a comment).
 
-**Author bio line** — End with a short separator (---) and a one-line author note like: *Joey Colley builds apps with AI and shares the journey on [TikTok](https://www.tiktok.com/@buildaiwithjoey) and [Instagram](https://www.instagram.com/gobuildai).*
+**Author bio line** — End with a short separator (---) and the author sign-off from the AUTHOR section, verbatim.
 
 ## Voice & Style
 - Conversational, practical, real — like explaining to a friend
 - Short sentences. Punch. No corporate jargon.
-- Joey's personal experience woven throughout
+- The author's personal experience woven throughout
 - Aim for 1500-2500 words
 - No fluff, no filler, every sentence earns its place`
-
-    // Inject brand context if provided
-    if (brandContext && brandContext.display_name) {
-      const voiceGuides: Record<string, string> = {
-        modern: 'clear, concise, professional — clean and direct',
-        luxury: 'elegant, aspirational, refined — sophisticated word choices',
-        editorial: 'authoritative, magazine-style — confident and commanding',
-        tech: 'direct, data-driven, forward-thinking — sharp and precise',
-      }
-      const voice = voiceGuides[(brandContext.style_preset as string) || 'modern'] || voiceGuides.modern
-
-      let brandBlock = `\n\n## AUTHOR BRANDING OVERRIDE\nWrite this blog post as ${brandContext.display_name}`
-      if (brandContext.title) brandBlock += `, ${brandContext.title}`
-      brandBlock += '.'
-      if (brandContext.bio) brandBlock += `\nAuthor bio: ${brandContext.bio}`
-      brandBlock += `\nBrand voice: ${voice}`
-      if (brandContext.website_url) brandBlock += `\nWebsite: ${brandContext.website_url}`
-
-      // Build social links for author bio
-      const socials: string[] = []
-      if (brandContext.tiktok_handle) socials.push(`[TikTok](https://www.tiktok.com/@${(brandContext.tiktok_handle as string).replace('@', '')})`)
-      if (brandContext.instagram_handle) socials.push(`[Instagram](https://www.instagram.com/${(brandContext.instagram_handle as string).replace('@', '')})`)
-      if (brandContext.youtube_handle) socials.push(`[YouTube](https://www.youtube.com/@${(brandContext.youtube_handle as string).replace('@', '')})`)
-      if (brandContext.pinterest_handle) socials.push(`[Pinterest](https://www.pinterest.com/${(brandContext.pinterest_handle as string).replace('@', '')})`)
-      if (brandContext.linkedin_handle) socials.push(`[LinkedIn](https://www.linkedin.com/in/${brandContext.linkedin_handle})`)
-
-      brandBlock += `\n\nReplace the default author bio line at the end with:\n---\n**About the Author**\n${brandContext.display_name}${brandContext.title ? ` is a ${brandContext.title}` : ''}. ${brandContext.bio || ''}\nFollow: ${socials.join(' | ') || 'N/A'}`
-      if (brandContext.website_url) brandBlock += `\n${brandContext.website_url}`
-
-      return blogPrompt + brandBlock
-    }
 
     return blogPrompt;
   }
@@ -412,7 +400,7 @@ If real-time hashtag data is provided, select the most relevant 2-3 from that li
 After the thread, add:
 
 **📌 QUOTE TWEET**
-Write a short quote-tweet Joey can use to re-share the thread later for more reach.
+Write a short quote-tweet the author can use to re-share the thread later for more reach.
 
 Aim for 8-12 tweets total. The thread should tell a complete story or teach something specific from start to finish.
 
@@ -425,7 +413,7 @@ Aim for 8-12 tweets total. The thread should tell a complete story or teach some
 // Derivative prompt — takes blog content and reformats for a specific platform/format
 function getDerivativePrompt(outputFormat: string, platform?: string): string {
   const base =
-    "You are reformatting an existing blog article into a different content format. The blog has already been researched and written — your job is to distill and reformat it, NOT to add new information. Keep Joey Colley's authentic voice: conversational, slightly irreverent, anti-corporate-slop, short sentences." + ANTI_SLOP_DIRECTIVE;
+    "You are reformatting an existing blog article into a different content format. The blog has already been researched and written — your job is to distill and reformat it, NOT to add new information. Keep the author's voice, described in the AUTHOR section at the end of these instructions." + ANTI_SLOP_DIRECTIVE;
 
   if (outputFormat === "social") {
     const guides: Record<string, string> = {
@@ -523,34 +511,68 @@ async function saveGeneration(adminClient: Db, userId: string, batchId: string, 
   if (error) console.error("content_generations insert failed:", error.message);
 }
 
+// ── Anthropic calls ────────────────────────────────────────────────────
+
+interface GenerationUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens: number;
+  cache_read_input_tokens: number;
+  web_search_requests: number;
+}
+
+interface GenerationResult {
+  content: string;
+  usage: GenerationUsage;
+  webSearchesUsed: boolean;
+}
+
+type StreamEvent = { type: "text"; text: string } | { type: "searching" };
+
+function costUsd(model: string, u: GenerationUsage): number {
+  const p = MODEL_PRICING[model];
+  if (!p) return 0;
+  const tokens =
+    u.input_tokens * p.input +
+    u.cache_creation_input_tokens * p.cacheWrite +
+    u.cache_read_input_tokens * p.cacheRead +
+    u.output_tokens * p.output;
+  return tokens / 1_000_000 + u.web_search_requests * WEB_SEARCH_USD_PER_REQUEST;
+}
+
+/**
+ * One generation, following pause_turn continuations (long web-search turns).
+ *
+ * `system` is [static format instructions (cache_control), per-user voice],
+ * so repeated calls of the same format reuse the cached prefix.
+ * With `onEvent` the request is streamed and text deltas are reported as they
+ * arrive; finalMessage() still gives the complete content blocks, which is
+ * what a pause_turn continuation has to send back.
+ */
 async function callAnthropic(params: {
   model: string;
   maxTokens: number;
-  systemPrompt: string;
+  system: Anthropic.TextBlockParam[];
   userMessage: string;
   useWebSearch: boolean;
   maxWebSearches: number;
-}): Promise<{ content: string; usage: { input_tokens: number; output_tokens: number }; webSearchesUsed: boolean }> {
-  const tools: Record<string, unknown>[] = [];
-
-  // Add web search tool only when requested (blog posts)
-  if (params.useWebSearch) {
-    tools.push({
-      type: "web_search_20250305",
-      name: "web_search",
-      max_uses: params.maxWebSearches,
-    });
-  }
+  onEvent?: (e: StreamEvent) => void;
+  signal?: AbortSignal;
+}): Promise<GenerationResult> {
+  const tools: Anthropic.ToolUnion[] = params.useWebSearch
+    ? [{ type: "web_search_20260318", name: "web_search", max_uses: params.maxWebSearches }]
+    : [];
 
   // Messages accumulate across pause_turn continuations
-  let messages: Record<string, unknown>[] = [
-    {
-      role: "user",
-      content: params.userMessage,
-    },
-  ];
+  let messages: Anthropic.MessageParam[] = [{ role: "user", content: params.userMessage }];
 
-  let totalUsage = { input_tokens: 0, output_tokens: 0 };
+  const usage: GenerationUsage = {
+    input_tokens: 0,
+    output_tokens: 0,
+    cache_creation_input_tokens: 0,
+    cache_read_input_tokens: 0,
+    web_search_requests: 0,
+  };
   let generatedContent = "";
   let webSearchesUsed = false;
   let maxContinuations = 5; // Safety limit for pause_turn loops
@@ -558,43 +580,40 @@ async function callAnthropic(params: {
   while (maxContinuations > 0) {
     maxContinuations--;
 
-    const body: Record<string, unknown> = {
+    const body: Anthropic.MessageCreateParamsNonStreaming = {
       model: params.model,
       max_tokens: params.maxTokens,
-      system: params.systemPrompt,
+      system: params.system,
       messages,
+      ...(tools.length > 0 ? { tools } : {}),
+      // Sonnet 5 thinks adaptively unless told not to. The prompts and token
+      // budgets here were tuned without thinking, so keep it off.
+      ...(params.model.startsWith("claude-sonnet") ? { thinking: { type: "disabled" as const } } : {}),
     };
 
-    if (tools.length > 0) {
-      body.tools = tools;
+    let message: Anthropic.Message;
+    if (params.onEvent) {
+      const onEvent = params.onEvent;
+      const stream = anthropic.messages.stream(body, { signal: params.signal });
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          onEvent({ type: "text", text: event.delta.text });
+        } else if (event.type === "content_block_start" && event.content_block.type === "server_tool_use") {
+          onEvent({ type: "searching" });
+        }
+      }
+      message = await stream.finalMessage();
+    } else {
+      message = await anthropic.messages.create(body, { signal: params.signal });
     }
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(body),
-    });
+    usage.input_tokens += message.usage.input_tokens || 0;
+    usage.output_tokens += message.usage.output_tokens || 0;
+    usage.cache_creation_input_tokens += message.usage.cache_creation_input_tokens || 0;
+    usage.cache_read_input_tokens += message.usage.cache_read_input_tokens || 0;
+    usage.web_search_requests += message.usage.server_tool_use?.web_search_requests || 0;
 
-    if (!anthropicRes.ok) {
-      const errBody = await anthropicRes.text();
-      console.error("Anthropic API error:", anthropicRes.status, errBody);
-      throw new Error(`AI generation failed (${anthropicRes.status}): ${errBody.substring(0, 200)}`);
-    }
-
-    const aiData = await anthropicRes.json();
-
-    // Accumulate usage
-    if (aiData.usage) {
-      totalUsage.input_tokens += aiData.usage.input_tokens || 0;
-      totalUsage.output_tokens += aiData.usage.output_tokens || 0;
-    }
-
-    // Extract text from response blocks
-    for (const block of aiData.content || []) {
+    for (const block of message.content) {
       if (block.type === "text") {
         generatedContent += block.text;
       } else if (block.type === "web_search_tool_result") {
@@ -603,22 +622,19 @@ async function callAnthropic(params: {
     }
 
     // If stop_reason is pause_turn, continue by sending the response back
-    if (aiData.stop_reason === "pause_turn") {
-      messages = [
-        ...messages,
-        { role: "assistant", content: aiData.content },
-      ];
+    if (message.stop_reason === "pause_turn") {
+      messages = [...messages, { role: "assistant", content: message.content }];
       continue;
     }
 
-    // Done — either end_turn or max_tokens
+    // Done — end_turn, max_tokens or refusal
     break;
   }
 
   return {
     content: generatedContent,
-    usage: totalUsage,
-    webSearchesUsed,
+    usage,
+    webSearchesUsed: webSearchesUsed || usage.web_search_requests > 0,
   };
 }
 
@@ -700,7 +716,7 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id)
       .maybeSingle();
     if (brandError) console.error("brand_profiles fetch failed:", brandError.message);
-    const brand_context = (brandRow ?? undefined) as Record<string, unknown> | undefined;
+    const voice = voiceBlock(brandRow as BrandVoice | null);
 
     // Determine generation mode
     const isCascadeDerivative = !!cascade_source;
@@ -722,26 +738,26 @@ Deno.serve(async (req) => {
 
     let model: string;
     let maxTokens: number;
-    let systemPrompt: string;
+    let formatPrompt: string; // identical for every user: cached
     let userMessage: string;
 
     if (isCascadeDerivative) {
       // Derivative mode: cheap model, reformatting blog content
       model = MODELS.derivative;
       maxTokens = MAX_TOKENS_DERIVATIVE;
-      systemPrompt = getDerivativePrompt(output_format, platform) + hashtagInjection;
+      formatPrompt = getDerivativePrompt(output_format, platform);
       userMessage = `Here is the blog article to distill:\n\n${cascade_source}\n\nReformat this into the requested format. Stay faithful to the blog's content and insights.`;
     } else if (isBlogWithSearch) {
       // Blog mode: research model with web search
       model = MODELS.research;
       maxTokens = MAX_TOKENS_BLOG;
-      systemPrompt = getSystemPrompt(output_format, platform, brand_context);
+      formatPrompt = getSystemPrompt(output_format, platform);
       userMessage = `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nResearch this topic using web search, then write a comprehensive blog article with real data and citations.`;
     } else if (needsHashtags) {
       // Social/thread mode: web search for content accuracy AND hashtags
       model = MODELS.standard;
       maxTokens = MAX_TOKENS_STANDARD;
-      systemPrompt = getSystemPrompt(output_format, platform) + hashtagInjection;
+      formatPrompt = getSystemPrompt(output_format, platform);
       userMessage = hashtagData
         ? `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nBefore generating content, use web search to verify any facts, tools, or trends mentioned in the input. Make sure all claims are current and accurate. Then transform this into the requested format. Use the real-time hashtag data provided in the system prompt — select the most relevant hashtags from that researched list.`
         : `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nBefore generating content, use web search to: 1) Verify any facts, tools, or trends mentioned in the input — make sure everything is current and accurate. 2) Find currently trending and high-performing hashtags for this topic on ${platform || 'social media'}. Then transform this into the requested format.`;
@@ -749,68 +765,135 @@ Deno.serve(async (req) => {
       // Image & Video Prompt mode: web search for accuracy
       model = MODELS.standard;
       maxTokens = MAX_TOKENS_STANDARD;
-      systemPrompt = getSystemPrompt(output_format, platform);
+      formatPrompt = getSystemPrompt(output_format, platform);
       userMessage = `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nUse web search to verify any tools, platforms, or features mentioned. Then generate a platform-optimized prompt based on the metadata provided.`;
     } else {
       // Standard mode: direct generation without web search
       model = MODELS.standard;
       maxTokens = MAX_TOKENS_STANDARD;
-      systemPrompt = getSystemPrompt(output_format, platform);
+      formatPrompt = getSystemPrompt(output_format, platform);
       userMessage = `Here is the raw input (type: ${input_type}):\n\n${input_text}\n\nTransform this into the requested format.`;
     }
 
-    const result = await callAnthropic({
+    // Static part first so the cache hits; the voice and hashtags vary per user/request.
+    const system: Anthropic.TextBlockParam[] = [
+      { type: "text", text: formatPrompt, cache_control: { type: "ephemeral" } },
+      { type: "text", text: voice + (isVideoPrompt || isBlogWithSearch ? "" : hashtagInjection) },
+    ];
+
+    const generation = {
       model,
       maxTokens,
-      systemPrompt,
+      system,
       userMessage,
       useWebSearch,
       maxWebSearches: MAX_WEB_SEARCHES,
-    });
+    };
 
-    // Empty output is not stored and does not count toward the quota.
-    if (!result.content.trim()) {
-      await releasePending(adminClient, user.id, batchId);
-      reserved = null;
-      return json({ error: "The model returned no content. This did not count toward your daily limit." }, 502);
-    }
+    // Store the result, log it, and build the usage payload the Studio shows.
+    const finish = async (result: GenerationResult) => {
+      // Empty output is not stored and does not count toward the quota.
+      if (!result.content.trim()) {
+        await releasePending(adminClient, user.id, batchId);
+        return { ok: false as const, error: "The model returned no content. This did not count toward your daily limit." };
+      }
 
-    // Save to database with usage tracking
-    await saveGeneration(adminClient, user.id, batchId, {
-      input_type,
-      input_text: isCascadeDerivative ? `[Derived from blog] ${(cascade_source as string).substring(0, 200)}...` : input_text,
-      output_format,
-      platform: platform || null,
-      generated_content: result.content,
-    });
-    reserved = null;
-
-    // Log activity metadata (privacy-safe — no content)
-    await adminClient.from("activity_log").insert({
-      user_id: user.id,
-      action: "content_generation",
-      metadata: {
+      await saveGeneration(adminClient, user.id, batchId, {
         input_type,
+        input_text: isCascadeDerivative ? `[Derived from blog] ${(cascade_source as string).substring(0, 200)}...` : input_text,
         output_format,
         platform: platform || null,
-        cascade: isCascadeDerivative,
-      },
-    });
+        generated_content: result.content,
+      });
 
-    return json({
-      content: result.content,
-      usage: {
-        input_tokens: result.usage.input_tokens,
-        output_tokens: result.usage.output_tokens,
-        model,
-        web_search_used: result.webSearchesUsed,
-      },
-      limits: {
-        daily_used: reservation.used,
-        daily_limit: DAILY_GENERATION_LIMIT,
-        reset_at: nextUtcMidnight(),
-      },
-    });
+      // Log activity metadata (privacy-safe — no content)
+      await adminClient.from("activity_log").insert({
+        user_id: user.id,
+        action: "content_generation",
+        metadata: {
+          input_type,
+          output_format,
+          platform: platform || null,
+          cascade: isCascadeDerivative,
+        },
+      });
+
+      return {
+        ok: true as const,
+        payload: {
+          usage: {
+            ...result.usage,
+            model,
+            web_search_used: result.webSearchesUsed,
+            cost_usd: Number(costUsd(model, result.usage).toFixed(6)),
+          },
+          web_search_used: result.webSearchesUsed,
+          limits: {
+            daily_used: reservation.used,
+            daily_limit: DAILY_GENERATION_LIMIT,
+            reset_at: nextUtcMidnight(),
+          },
+        },
+      };
+    };
+
+    // Blog: stream the tokens through as server-sent events (L4-05), so the
+    // Studio shows progress and a long research run keeps the connection busy.
+    //   event: content_block_delta  {"text": "..."}      per text delta
+    //   event: status               {"status": "searching"}
+    //   event: done                 {usage, web_search_used, limits}
+    //   event: error                {"error": "..."}
+    if (isBlogWithSearch) {
+      reserved = null; // the stream owns the reservation from here
+      const encoder = new TextEncoder();
+      const upstream = new AbortController();
+      const body = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const write = (chunk: string) => {
+            try { controller.enqueue(encoder.encode(chunk)); } catch { /* client went away */ }
+          };
+          const send = (event: string, data: unknown) => write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+          const keepAlive = setInterval(() => write(": keep-alive\n\n"), 15_000);
+          try {
+            const result = await callAnthropic({
+              ...generation,
+              signal: upstream.signal,
+              onEvent: (e) => e.type === "text" ? send("content_block_delta", { text: e.text }) : send("status", { status: "searching" }),
+            });
+            const outcome = await finish(result);
+            if (outcome.ok) send("done", outcome.payload);
+            else send("error", { error: outcome.error });
+          } catch (err) {
+            console.error("Blog stream error:", err);
+            await releasePending(adminClient, user.id, batchId);
+            send("error", { error: err instanceof Error ? err.message : "Generation failed" });
+          } finally {
+            clearInterval(keepAlive);
+            try { controller.close(); } catch { /* already closed */ }
+          }
+        },
+        cancel() {
+          // The Studio aborted (unmount or Cancel): stop paying for tokens nobody reads.
+          upstream.abort();
+        },
+      });
+      return new Response(body, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+
+    const result = await callAnthropic(generation);
+    const outcome = await finish(result);
+    reserved = null;
+    if (!outcome.ok) {
+      return json({ error: outcome.error }, 502);
+    }
+    return json({ content: result.content, ...outcome.payload });
   } catch (err) {
     console.error("Error:", err);
     if (reserved) await releasePending(reserved.adminClient, reserved.userId, reserved.batchId);

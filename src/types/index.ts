@@ -33,6 +33,9 @@ export interface BlogPost {
   created_at: string
   updated_at: string
   published_at: string | null
+  // SEO fields from the generated ```meta fence (JCAI-FIX-06/C2); null on older posts.
+  meta_description?: string | null
+  primary_keyword?: string | null
 }
 
 export interface ContentGeneration {
@@ -54,11 +57,17 @@ export interface GenerationUsage {
   output_tokens: number
   model: string
   web_search_used: boolean
+  // Returned by generate-content since JCAI-FIX-06; priced server-side.
+  cost_usd?: number
+  cache_read_input_tokens?: number
+  cache_creation_input_tokens?: number
+  web_search_requests?: number
 }
 
 export interface GenerationLimits {
   daily_used: number
   daily_limit: number
+  reset_at?: string // next UTC midnight
 }
 
 export interface UserRole {

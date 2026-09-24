@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { OutputFormat, Platform, GenerationUsage, GenerationLimits } from '../types'
 
 // Mirrors MAX_INPUT_CHARS in supabase/functions/generate-content/validate.ts.
 const MAX_INPUT_CHARS = 30_000
+
+// How often a streaming blog repaints the tabs (ms). Every delta would re-parse
+// the whole markdown; ~12 repaints a second reads as live typing.
+const STREAM_REPAINT_MS = 80
 
 interface GenerateParams {
   input_type: 'youtube' | 'text' | 'voice'
@@ -32,13 +36,9 @@ interface GenerateResult {
   limits: GenerationLimits
 }
 
-/** Turn a non-2xx edge-function response into a user-facing message. */
-async function functionErrorMessage(fnError: Error & { context?: unknown }): Promise<string> {
-  let body: { error?: string; reset_at?: string } | null = null
-  if (fnError.context instanceof Response) {
-    try { body = await fnError.context.clone().json() } catch { /* not JSON */ }
-  }
-  let msg = body?.error || fnError.message || 'Generation failed'
+/** User-facing message for an error body from generate-content. */
+function errorBodyMessage(body: { error?: string; reset_at?: string } | null, fallback: string): string {
+  let msg = body?.error || fallback
   if (body?.reset_at) {
     const local = new Date(body.reset_at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })
     msg += ` That is ${local} your time.`
@@ -46,11 +46,22 @@ async function functionErrorMessage(fnError: Error & { context?: unknown }): Pro
   return msg
 }
 
-async function callGenerate(params: GenerateParams): Promise<GenerateResult> {
+/** Turn a non-2xx edge-function response into a user-facing message. */
+async function functionErrorMessage(fnError: Error & { context?: unknown }): Promise<string> {
+  let body: { error?: string; reset_at?: string } | null = null
+  if (fnError.context instanceof Response) {
+    try { body = await fnError.context.clone().json() } catch { /* not JSON */ }
+  }
+  return errorBodyMessage(body, fnError.message || 'Generation failed')
+}
+
+async function callGenerate(params: GenerateParams, signal: AbortSignal): Promise<GenerateResult> {
   const { data, error: fnError } = await supabase.functions.invoke('generate-content', {
     body: params,
+    signal,
   })
   if (fnError) {
+    if (signal.aborted) throw signal.reason
     const msg = await functionErrorMessage(fnError)
     console.error('Edge function error:', msg)
     throw new Error(msg)
@@ -60,6 +71,77 @@ async function callGenerate(params: GenerateParams): Promise<GenerateResult> {
     usage: data.usage,
     limits: data.limits,
   }
+}
+
+/**
+ * The blog call streams (server-sent events), which supabase.functions.invoke
+ * cannot read, so it is a plain fetch with the session's bearer token.
+ * `onText` receives the whole article so far after each delta.
+ */
+async function streamGenerate(
+  params: GenerateParams,
+  accessToken: string,
+  signal: AbortSignal,
+  onText: (textSoFar: string) => void,
+  onStatus: (status: string) => void,
+): Promise<GenerateResult> {
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-content`, {
+    method: 'POST',
+    signal,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) {
+    let body: { error?: string; reset_at?: string } | null = null
+    try { body = await res.json() } catch { /* not JSON */ }
+    throw new Error(errorBodyMessage(body, `Generation failed (${res.status})`))
+  }
+  // A generate-content build without streaming answers with plain JSON.
+  if (!(res.headers.get('Content-Type') ?? '').includes('text/event-stream') || !res.body) {
+    const data = await res.json()
+    return { content: data.content, usage: data.usage, limits: data.limits }
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let content = ''
+  let done: { usage: GenerationUsage; limits: GenerationLimits } | null = null
+
+  for (;;) {
+    const { done: eof, value } = await reader.read()
+    if (eof) break
+    buffer += decoder.decode(value, { stream: true })
+    let sep: number
+    while ((sep = buffer.indexOf('\n\n')) >= 0) {
+      const frame = buffer.slice(0, sep)
+      buffer = buffer.slice(sep + 2)
+      let event = 'message'
+      let data = ''
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim()
+        else if (line.startsWith('data:')) data += line.slice(5).trim()
+      }
+      if (!data) continue // keep-alive comment
+      const payload = JSON.parse(data)
+      if (event === 'content_block_delta') {
+        content += payload.text
+        onText(content)
+      } else if (event === 'status') {
+        onStatus('Researching...')
+      } else if (event === 'done') {
+        done = payload
+      } else if (event === 'error') {
+        throw new Error(payload.error || 'Generation failed')
+      }
+    }
+  }
+  if (!done) throw new Error('The connection closed before the article finished. Try again.')
+  return { content, usage: done.usage, limits: done.limits }
 }
 
 export interface UsageSummary {
@@ -79,24 +161,18 @@ function calcUsageSummary(results: GenerateResult[]): UsageSummary {
   const models = new Set<string>()
   let dailyUsed = 0
   let dailyLimit = 50
+  let cost = 0
 
   for (const r of results) {
-    totalInputTokens += r.usage.input_tokens
+    totalInputTokens += r.usage.input_tokens + (r.usage.cache_read_input_tokens ?? 0) + (r.usage.cache_creation_input_tokens ?? 0)
     totalOutputTokens += r.usage.output_tokens
     models.add(r.usage.model)
     if (r.usage.web_search_used) webSearchUsed = true
-    dailyUsed = r.limits.daily_used
+    // Parallel calls finish in any order; the highest count is the latest.
+    dailyUsed = Math.max(dailyUsed, r.limits.daily_used)
     dailyLimit = r.limits.daily_limit
-  }
-
-  // Rough cost estimate (Sonnet 4.6: $3/$15 per 1M, Haiku 4.5: $0.80/$4 per 1M)
-  let cost = 0
-  for (const r of results) {
-    const isHaiku = r.usage.model.includes('haiku')
-    const inputRate = isHaiku ? 0.80 : 3.0
-    const outputRate = isHaiku ? 4.0 : 15.0
-    cost += (r.usage.input_tokens / 1_000_000) * inputRate
-    cost += (r.usage.output_tokens / 1_000_000) * outputRate
+    // Priced on the server (MODEL_PRICING in generate-content).
+    cost += r.usage.cost_usd ?? 0
   }
 
   return {
@@ -110,14 +186,30 @@ function calcUsageSummary(results: GenerateResult[]): UsageSummary {
   }
 }
 
+/** Tabs markup the Studio parses: "## <label>" sections separated by "---". */
+function combineSections(sections: { label: string; content: string }[]): string {
+  return sections.map(s => `## ${s.label}\n\n${s.content}`).join('\n\n---\n\n')
+}
+
 export function useContentGeneration() {
   const [generating, setGenerating] = useState(false)
   const [generatingStatus, setGeneratingStatus] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
-  const generate = async (params: GenerateMultiParams) => {
+  // Leaving the Studio stops the in-flight calls (and the server stops the model).
+  useEffect(() => () => abortRef.current?.abort(), [])
+
+  const cancel = useCallback(() => abortRef.current?.abort(), [])
+
+  const generate = async (params: GenerateMultiParams): Promise<string | null> => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const { signal } = controller
+
     setGenerating(true)
     setGeneratingStatus(null)
     setError(null)
@@ -148,6 +240,7 @@ export function useContentGeneration() {
               input_text: params.input_text,
               platforms: params.platforms,
             },
+            signal,
           })
           if (!fnError && data?.hashtags) {
             realTimeHashtags = data.hashtags
@@ -155,137 +248,89 @@ export function useContentGeneration() {
         } catch {
           // Silent fallback — Perplexity failed, Claude will handle hashtags
         }
+        if (signal.aborted) throw signal.reason
       }
 
       setGeneratingStatus('Generating Content...')
 
-      if (useCascade) {
-        // === CASCADE FLOW ===
-        // Step 1: Generate blog with web search (Sonnet 4.6)
-        const blogResult = await callGenerate({
-          input_type: params.input_type,
-          input_text: params.input_text,
-          output_format: 'blog',
-          batch_id,
-        })
-        allResults.push(blogResult)
+      // Every call of this press, in tab order. The blog slot fills in while it
+      // streams; the others appear when their call returns.
+      const slots: { label: string; params: GenerateParams; content: string | null }[] = []
+      const derivativeSlot = (label: string, p: Omit<GenerateParams, 'batch_id' | 'input_type' | 'input_text'>) =>
+        slots.push({ label, content: null, params: { input_type: params.input_type, input_text: params.input_text, batch_id, ...p } })
 
-        // Step 2: Derive all other formats from blog content (Haiku 4.5, parallel)
-        const derivativeCalls: { label: string; params: GenerateParams }[] = []
-
-        for (const format of otherFormats) {
-          if (format === 'social') {
-            for (const platform of params.platforms) {
-              const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1)
-              derivativeCalls.push({
-                label: `📱 ${platformLabel}`,
-                params: {
-                  input_type: params.input_type,
-                  input_text: params.input_text,
-                  output_format: 'social',
-                  platform,
-                  cascade_source: blogResult.content,
-                  real_time_hashtags: realTimeHashtags,
-                  batch_id,
-                },
-              })
-            }
-          } else {
-            const formatLabel = format === 'video' ? '🎬 Image & Video Prompt' : '🧵 X Thread'
-            derivativeCalls.push({
-              label: formatLabel,
-              params: {
-                input_type: params.input_type,
-                input_text: params.input_text,
-                output_format: format,
-                cascade_source: blogResult.content,
-                real_time_hashtags: realTimeHashtags,
-                batch_id,
-              },
-            })
+      const formats = useCascade ? otherFormats : params.output_formats
+      if (useCascade) derivativeSlot('📝 Blog Article', { output_format: 'blog' })
+      for (const format of formats) {
+        if (format === 'social') {
+          for (const platform of params.platforms) {
+            const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1)
+            derivativeSlot(`📱 ${platformLabel}`, { output_format: 'social', platform, real_time_hashtags: realTimeHashtags })
           }
-        }
-
-        const derivativeResults = await Promise.all(
-          derivativeCalls.map(async (call) => {
-            const res = await callGenerate(call.params)
-            allResults.push(res)
-            return { label: call.label, content: res.content }
-          })
-        )
-
-        // Combine: blog first, then derivatives
-        let combined = `## 📝 Blog Article\n\n${blogResult.content}`
-        for (const d of derivativeResults) {
-          combined += `\n\n---\n\n## ${d.label}\n\n${d.content}`
-        }
-        setResult(combined)
-
-      } else {
-        // === STANDARD FLOW (no cascade) ===
-        const calls: { label: string; params: GenerateParams }[] = []
-
-        for (const format of params.output_formats) {
-          if (format === 'social') {
-            for (const platform of params.platforms) {
-              const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1)
-              calls.push({
-                label: `📱 ${platformLabel}`,
-                params: {
-                  input_type: params.input_type,
-                  input_text: params.input_text,
-                  output_format: 'social',
-                  platform,
-                  real_time_hashtags: realTimeHashtags,
-                  batch_id,
-                },
-              })
-            }
-          } else {
-            const formatLabel = format === 'blog' ? '📝 Blog Article' : format === 'video' ? '🎬 Image & Video Prompt' : '🧵 X Thread'
-            calls.push({
-              label: formatLabel,
-              params: {
-                input_type: params.input_type,
-                input_text: params.input_text,
-                output_format: format,
-                real_time_hashtags: realTimeHashtags,
-                batch_id,
-              },
-            })
-          }
-        }
-
-        const results = await Promise.all(
-          calls.map(async (call) => {
-            const res = await callGenerate(call.params)
-            allResults.push(res)
-            return { label: call.label, content: res.content }
-          })
-        )
-
-        let combined: string
-        if (results.length === 1) {
-          combined = results[0].content
         } else {
-          combined = results
-            .map(r => `---\n\n## ${r.label}\n\n${r.content}`)
-            .join('\n\n')
-            .replace(/^---\n\n/, '')
+          const formatLabel = format === 'blog' ? '📝 Blog Article' : format === 'video' ? '🎬 Image & Video Prompt' : '🧵 X Thread'
+          derivativeSlot(formatLabel, { output_format: format, real_time_hashtags: realTimeHashtags })
         }
-        setResult(combined)
       }
 
-      // Calculate usage summary
-      const summary = calcUsageSummary(allResults)
-      setUsageSummary(summary)
+      const render = () => {
+        const ready = slots.filter(s => s.content !== null) as { label: string; content: string }[]
+        if (ready.length === 0) return null
+        // A single-format press shows the bare output, as before.
+        return slots.length === 1 ? ready[0].content : combineSections(ready)
+      }
+      let repaint: ReturnType<typeof setTimeout> | null = null
+      const scheduleRepaint = () => {
+        if (repaint) return
+        repaint = setTimeout(() => { repaint = null; if (!signal.aborted) setResult(render()) }, STREAM_REPAINT_MS)
+      }
 
-      return result
+      const run = async (slot: (typeof slots)[number]): Promise<GenerateResult> => {
+        const isBlog = slot.params.output_format === 'blog' && !slot.params.cascade_source
+        const res = isBlog
+          ? await streamGenerate(slot.params, session.access_token, signal,
+              text => {
+                if (slot.content === null) setGeneratingStatus('Writing the article...')
+                slot.content = text
+                scheduleRepaint()
+              },
+              setGeneratingStatus)
+          : await callGenerate(slot.params, signal)
+        slot.content = res.content
+        allResults.push(res)
+        return res
+      }
+
+      if (useCascade) {
+        // === CASCADE FLOW ===
+        // Step 1: Blog with web search (Sonnet 5), streamed into the Blog tab
+        const blogResult = await run(slots[0])
+
+        // Step 2: Derive all other formats from blog content (Haiku 4.5, parallel)
+        setGeneratingStatus(`Adapting for ${slots.length - 1} format${slots.length > 2 ? 's' : ''}...`)
+        for (const slot of slots.slice(1)) slot.params.cascade_source = blogResult.content
+        await Promise.all(slots.slice(1).map(async slot => { await run(slot); scheduleRepaint() }))
+      } else {
+        // === STANDARD FLOW (no cascade) ===
+        await Promise.all(slots.map(async slot => { await run(slot); scheduleRepaint() }))
+      }
+
+      if (repaint) clearTimeout(repaint)
+      const combined = render()
+      setResult(combined)
+
+      // Calculate usage summary
+      setUsageSummary(calcUsageSummary(allResults))
+
+      return combined
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Generation failed'
+      const message = signal.aborted
+        ? 'Generation cancelled.'
+        : err instanceof Error ? err.message : 'Generation failed'
       setError(message)
       return null
     } finally {
+      if (abortRef.current === controller) abortRef.current = null
       setGenerating(false)
       setGeneratingStatus(null)
     }
@@ -310,5 +355,5 @@ export function useContentGeneration() {
     }
   }
 
-  return { generating, generatingStatus, result, error, usageSummary, generate, extractYouTubeTranscript, setResult, setError }
+  return { generating, generatingStatus, result, error, usageSummary, generate, cancel, extractYouTubeTranscript, setResult, setError }
 }

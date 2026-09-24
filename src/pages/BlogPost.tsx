@@ -206,7 +206,7 @@ export function BlogPostPage() {
     <div className="min-h-screen bg-bg noise-overlay">
       <Seo
         title={`${post.title} — JoeyC.ai`}
-        description={post.excerpt}
+        description={post.meta_description || post.excerpt}
         canonical={`${SITE_URL}/blog/${post.slug}`}
         ogType="article"
         ogImage={post.cover_image || `${SITE_URL}/photos/joey-og.jpg`}
@@ -216,7 +216,7 @@ export function BlogPostPage() {
           '@context': 'https://schema.org',
           '@type': 'BlogPosting',
           headline: post.title,
-          description: post.excerpt,
+          description: post.meta_description || post.excerpt,
           url: `${SITE_URL}/blog/${post.slug}`,
           mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/blog/${post.slug}` },
           image: post.cover_image || `${SITE_URL}/photos/joey-og.jpg`,

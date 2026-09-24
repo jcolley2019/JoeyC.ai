@@ -6,6 +6,7 @@ import { useLanguage } from '../../hooks/useLanguage'
 import { useXPosting, parseThreadToTweets, isThreadContent } from '../../hooks/useXPosting'
 import { useBlogConnection } from '../../hooks/useBlogConnection'
 import { BlogConnectionModal } from './BlogConnectionModal'
+import { parseMetaFence, metaFence, type BlogMeta } from '../../lib/publish'
 import type { BrandProfile } from '../../types'
 
 /** Trigger a browser download for a Blob without a library. */
@@ -23,13 +24,17 @@ interface ContentSection {
   format: 'blog' | 'social' | 'thread' | 'video'
   platform?: string
   content: string
+  meta?: BlogMeta | null // blog only: the ```meta fence, split off the article
 }
+
+/** A section's markdown as stored in rawContent (the meta fence stays with its blog). */
+const sectionMarkdown = (s: ContentSection) => (s.meta ? `${metaFence(s.meta)}\n\n` : '') + s.content
 
 interface GeneratedContentTabsProps {
   rawContent: string
   onContentChange: (content: string) => void
   onClear?: () => void
-  onPublishBlog?: (content: string) => void
+  onPublishBlog?: (content: string, meta?: BlogMeta | null) => void
   publishStatus?: 'idle' | 'publishing' | 'success' | 'error'
   publishError?: string | null
   brandProfile?: BrandProfile | null
@@ -130,9 +135,11 @@ function parseSections(raw: string): ContentSection[] {
     if (videoSplit) return videoSplit
 
     // Fallback: single section — detect blog by presence of markdown heading
-    const cleaned = stripThinkingText(raw)
+    const { meta, body } = parseMetaFence(raw)
+    const cleaned = stripThinkingText(body)
     const isBlog = /^#\s+\S/.test(cleaned)
-    return [{ label: isBlog ? 'Blog Article' : 'Content', format: isBlog ? 'blog' : 'social', content: cleaned }]
+    if (!isBlog) return [{ label: 'Content', format: 'social', content: stripThinkingText(raw) }]
+    return [{ label: 'Blog Article', format: 'blog', content: cleaned, meta }]
   }
 
   const sections: ContentSection[] = []
@@ -163,7 +170,12 @@ function parseSections(raw: string): ContentSection[] {
       platform = label.replace('📱 ', '')
     }
 
-    sections.push({ label, format, platform, content: format === 'blog' ? stripThinkingText(content) : content })
+    if (format === 'blog') {
+      const { meta, body } = parseMetaFence(content)
+      sections.push({ label, format, platform, content: stripThinkingText(body), meta })
+    } else {
+      sections.push({ label, format, platform, content })
+    }
   }
 
   return sections
@@ -588,10 +600,10 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
     const newSections = [...sections]
     newSections[activeTab] = { ...currentSection, content: md }
     if (sections.length === 1) {
-      onContentChange(md)
+      onContentChange(sectionMarkdown(newSections[0]))
     } else {
       const rebuilt = newSections
-        .map(s => `## ${s.label}\n\n${s.content}`)
+        .map(s => `## ${s.label}\n\n${sectionMarkdown(s)}`)
         .join('\n\n---\n\n')
       onContentChange(rebuilt)
     }
@@ -621,7 +633,7 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
     }
     const remaining = sections.filter((_, i) => i !== index)
     const rebuilt = remaining
-      .map(s => `## ${s.label}\n\n${s.content}`)
+      .map(s => `## ${s.label}\n\n${sectionMarkdown(s)}`)
       .join('\n\n---\n\n')
     onContentChange(rebuilt)
     if (activeTab >= remaining.length) setActiveTab(remaining.length - 1)
@@ -697,6 +709,19 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
       <div ref={contentContainerRef}>
         {currentSection && (
           <>
+            {currentSection.format === 'blog' && currentSection.meta && (
+              <div className="mb-2 px-3 py-2 rounded-md border border-border/50 bg-bg-card/30 text-[12px] font-mono text-[#94a3b8] space-y-0.5">
+                {currentSection.meta.primaryKeyword && (
+                  <p><span className="text-[#4a6fa5]">keyword</span> {currentSection.meta.primaryKeyword}</p>
+                )}
+                {currentSection.meta.metaDescription && (
+                  <p>
+                    <span className="text-[#4a6fa5]">meta description</span> {currentSection.meta.metaDescription}{' '}
+                    <span className="text-[#5a6478]">({currentSection.meta.metaDescription.length} chars)</span>
+                  </p>
+                )}
+              </div>
+            )}
             {currentSection.format === 'blog' && (
               <div className="relative">
                 {/* Brand badge — top-right of blog card */}
@@ -743,7 +768,7 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
                 {/* Master admin: Publish to site */}
                 {isMasterAdmin && (
                   <button
-                    onClick={() => onPublishBlog?.(currentSection.content)}
+                    onClick={() => onPublishBlog?.(currentSection.content, currentSection.meta)}
                     disabled={publishStatus === 'publishing'}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border transition-colors ${
                       publishStatus === 'success'

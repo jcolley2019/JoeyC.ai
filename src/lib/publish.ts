@@ -82,3 +82,39 @@ export function deriveTitleAndSlug(content: string): DeriveResult {
 
   return { ok: true, post: { title, slug, body: bodyLines.join('\n').trim() } }
 }
+
+export interface BlogMeta {
+  primaryKeyword: string | null
+  metaDescription: string | null
+}
+
+const META_FENCE_RE = /```meta[ \t]*\r?\n([\s\S]*?)\r?\n?```[ \t]*(?:\r?\n|$)/
+
+/**
+ * The blog prompt asks for a ```meta fence (Primary Keyword / Meta Description
+ * lines) above the article. Split it off so the article renders without it and
+ * the two values can be shown and stored with the post.
+ */
+export function parseMetaFence(markdown: string): { meta: BlogMeta | null; body: string } {
+  const match = META_FENCE_RE.exec(markdown)
+  if (!match) return { meta: null, body: markdown }
+
+  const lines = match[1].split(/\r?\n/).map(l => l.replace(/[*_`]/g, '').replace(/^\s*[-•]\s*/, '').trim())
+  const field = (name: string) => {
+    const line = lines.find(l => l.toLowerCase().startsWith(name.toLowerCase() + ':'))
+    const value = line ? line.slice(name.length + 1).trim() : ''
+    return value || null
+  }
+  const meta = { primaryKeyword: field('Primary Keyword'), metaDescription: field('Meta Description') }
+  const body = markdown.slice(0, match.index) + markdown.slice(match.index + match[0].length)
+  return { meta: meta.primaryKeyword || meta.metaDescription ? meta : null, body }
+}
+
+/** Inverse of parseMetaFence, used when the tabs rebuild the raw markdown. */
+export function metaFence(meta: BlogMeta): string {
+  const lines = ['```meta']
+  if (meta.primaryKeyword) lines.push(`Primary Keyword: ${meta.primaryKeyword}`)
+  if (meta.metaDescription) lines.push(`Meta Description: ${meta.metaDescription}`)
+  lines.push('```')
+  return lines.join('\n')
+}
