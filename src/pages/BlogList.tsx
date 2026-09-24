@@ -118,10 +118,10 @@ export function BlogList() {
         </div>
       </div>
 
-      {/* Tag filters */}
-      {allTags.length > 0 && (
+      {/* Tag filters — the row keeps its height while loading so cards don't shift when tags arrive */}
+      {(allTags.length > 0 || loading) && (
         <div className="max-w-5xl mx-auto px-6 pt-8">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 min-h-[2.125rem]">
             <button
               onClick={() => setActiveTag(null)}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
@@ -152,9 +152,9 @@ export function BlogList() {
       {/* Posts grid */}
       <div className="max-w-5xl mx-auto px-6 py-12">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6" aria-busy="true" aria-label="Loading posts">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="bg-bg-card border border-border rounded-xl p-6 animate-pulse">
+              <div key={i} className={`bg-bg-card border border-border rounded-xl p-6 animate-pulse ${i === 1 ? 'md:col-span-2 md:p-8 h-64' : 'h-56'}`}>
                 <div className="h-4 bg-border/50 rounded w-1/4 mb-4" />
                 <div className="h-6 bg-border/50 rounded w-3/4 mb-3" />
                 <div className="h-4 bg-border/50 rounded w-full mb-2" />
@@ -245,21 +245,18 @@ export function BlogList() {
                     {/* Tags + read more */}
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap gap-2">
+                        {/* Plain chips: a <button> inside the card <a> is invalid HTML; the filter row above handles tag selection */}
                         {(post.tags || []).slice(0, 4).map(tag => (
-                          <button
+                          <span
                             key={tag}
-                            onClick={(e) => {
-                              e.preventDefault()
-                              setActiveTag(activeTag === tag ? null : tag)
-                            }}
-                            className={`px-2 py-0.5 rounded-md text-xs font-mono transition-all ${
+                            className={`px-2 py-0.5 rounded-md text-xs font-mono ${
                               activeTag === tag
                                 ? 'bg-primary/20 text-primary border border-primary/40'
-                                : 'bg-primary/5 text-primary/70 border border-primary/10 hover:bg-primary/10 hover:text-primary'
+                                : 'bg-primary/5 text-primary border border-primary/10'
                             }`}
                           >
                             {tag}
-                          </button>
+                          </span>
                         ))}
                       </div>
                       <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-4">

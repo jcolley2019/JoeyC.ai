@@ -112,9 +112,12 @@ export function AuthGate({ onLogin, children, isAuthenticated }: AuthGateProps) 
         ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block font-mono text-xs text-text-secondary mb-1.5">{t('auth.email')}</label>
+            <label htmlFor="auth-email" className="block font-mono text-xs text-text-secondary mb-1.5">{t('auth.email')}</label>
             <input
+              id="auth-email"
+              name="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -124,8 +127,10 @@ export function AuthGate({ onLogin, children, isAuthenticated }: AuthGateProps) 
           </div>
           {mode !== 'forgot' && (
             <div>
-              <label className="block font-mono text-xs text-text-secondary mb-1.5">{t('auth.password')}</label>
+              <label htmlFor="auth-password" className="block font-mono text-xs text-text-secondary mb-1.5">{t('auth.password')}</label>
               <PasswordInput
+                id="auth-password"
+                name="password"
                 value={password}
                 onChange={setPassword}
                 minLength={6}
@@ -135,7 +140,7 @@ export function AuthGate({ onLogin, children, isAuthenticated }: AuthGateProps) 
                 <button
                   type="button"
                   onClick={() => { setMode('forgot'); setError('') }}
-                  className="font-mono text-xs text-text-secondary/70 hover:text-primary transition-colors"
+                  className="font-mono text-xs text-text-secondary hover:text-primary transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -174,7 +179,7 @@ export function AuthGate({ onLogin, children, isAuthenticated }: AuthGateProps) 
 
         {mode === 'login' && (
           <p className="text-center text-xs text-text-secondary mt-4">
-            <span className="text-text-secondary/60">Invite only — request access from the admin</span>
+            <span className="text-text-secondary">Invite only — request access from the admin</span>
           </p>
         )}
 

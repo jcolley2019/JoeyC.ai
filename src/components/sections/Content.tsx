@@ -210,6 +210,7 @@ export function Content() {
                 onClick={(e) => handleCardInteraction(e, social)}
                 onTouchEnd={(e) => handleCardInteraction(e, social)}
                 onMouseEnter={(e) => !social.comingSoon && onMouseEnter(e, social.platform)}
+                aria-disabled={social.comingSoon || undefined}
                 className={`social-card group relative flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(26,143,255,0.1)] overflow-visible ${
                   social.comingSoon
                     ? 'opacity-40 cursor-default border-border bg-bg-card'

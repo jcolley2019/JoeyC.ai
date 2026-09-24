@@ -329,11 +329,11 @@ export function BlogPostPage() {
               <p className="font-semibold text-text-primary">Joey Colley</p>
               <p className="text-sm text-text-secondary">
                 Building apps with AI and sharing the journey on{' '}
-                <a href="https://www.tiktok.com/@buildaiwithjoey" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors">
+                <a href="https://www.tiktok.com/@buildaiwithjoey" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover underline underline-offset-4 decoration-primary/40 transition-colors">
                   TikTok
                 </a>
                 {' & '}
-                <a href="https://www.instagram.com/gobuildai" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors">
+                <a href="https://www.instagram.com/gobuildai" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover underline underline-offset-4 decoration-primary/40 transition-colors">
                   Instagram
                 </a>
               </p>

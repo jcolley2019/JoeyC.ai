@@ -116,7 +116,7 @@ export function About() {
                 ].map((tool) => (
                   <span
                     key={tool}
-                    className="tag-mono px-2.5 py-1 rounded bg-primary/10 text-primary/80 border border-primary/10 text-xs"
+                    className="tag-mono px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/10 text-xs"
                   >
                     {tool}
                   </span>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLanguage } from '../../hooks/useLanguage'
+import { Dialog } from '../ui/Dialog'
 
 interface TourStep {
   targetId: string
@@ -143,7 +144,7 @@ export function GuidedTour({ active, onClose }: GuidedTourProps) {
   const isLast = step === tourSteps.length - 1
 
   return (
-    <>
+    <Dialog aria-label="Guided tour" onClose={handleSkip}>
       {/* Backdrop overlay */}
       <div
         className="fixed inset-0 z-[998] bg-black/50 transition-opacity"
@@ -215,6 +216,6 @@ export function GuidedTour({ active, onClose }: GuidedTourProps) {
           </button>
         </div>
       </div>
-    </>
+    </Dialog>
   )
 }

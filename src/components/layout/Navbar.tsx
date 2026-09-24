@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import gsap from 'gsap'
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin'
 import { useGSAP } from '@gsap/react'
+import { Dialog } from '../ui/Dialog'
 
 gsap.registerPlugin(ScrollToPlugin)
 
@@ -17,6 +18,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const overlayRef = useRef<HTMLDivElement>(null)
+  const navRef = useRef<HTMLElement>(null)
   const linksRef = useRef<(HTMLAnchorElement | null)[]>([])
   const labelRef = useRef<HTMLParagraphElement>(null)
 
@@ -88,6 +90,9 @@ export function Navbar() {
   return (
     <>
       <nav
+        ref={navRef}
+        data-site-nav=""
+        aria-label="Site"
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled
             ? 'bg-bg/90 backdrop-blur-xl border-b border-[#0a3aad]/30 shadow-lg shadow-black/20'
@@ -95,7 +100,8 @@ export function Navbar() {
         }`}
       >
         <div className="w-full max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="#" className="flex items-center group">
+          {/* -ml-2 px-2 min-h-11: 44 px hit area without moving the wordmark (L5-24) */}
+          <a href="#" aria-label="JoeyC.ai — top of page" className="flex items-center group -ml-2 px-2 min-h-11">
             <span className="font-display text-sm font-medium text-primary glow-text group-hover:text-primary-hover transition-colors tracking-wider">
               JoeyC.ai
             </span>
@@ -105,7 +111,9 @@ export function Navbar() {
           <button
             onClick={() => menuOpen ? close() : setMenuOpen(true)}
             className="relative w-10 h-10 flex items-center justify-center text-text-secondary hover:text-primary transition-colors"
-            aria-label="Toggle menu"
+            aria-label="Menu"
+            aria-expanded={menuOpen}
+            aria-controls="site-menu"
           >
             <div className="w-6 flex flex-col gap-[5px]">
               <span
@@ -130,8 +138,12 @@ export function Navbar() {
 
       {/* Full-screen overlay menu */}
       {menuOpen && (
-        <div
+        <Dialog
           ref={overlayRef}
+          id="site-menu"
+          aria-label="Site navigation"
+          onClose={close}
+          keepActive={[navRef]}
           className="fixed inset-0 z-40 bg-bg/98 backdrop-blur-2xl flex flex-col items-center justify-center"
         >
           <p
@@ -167,7 +179,7 @@ export function Navbar() {
               JoeyC.ai
             </span>
           </div>
-        </div>
+        </Dialog>
       )}
     </>
   )

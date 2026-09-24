@@ -33,6 +33,15 @@ html {
    ============================================== */
 
 
+/* Keyboard focus is always visible (E5); mouse clicks don't trigger it thanks to :focus-visible */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.luxe-mode :focus-visible {
+  outline-color: var(--color-primary);
+}
+
 body {
   margin: 0;
   background-color: var(--color-bg);

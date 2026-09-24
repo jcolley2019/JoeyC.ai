@@ -7,6 +7,8 @@ interface PasswordInputProps {
   placeholder?: string
   required?: boolean
   autoComplete?: string
+  id?: string
+  name?: string
 }
 
 /**
@@ -20,12 +22,16 @@ export function PasswordInput({
   placeholder = '••••••••',
   required = true,
   autoComplete,
+  id,
+  name,
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false)
 
   return (
     <div className="relative">
       <input
+        id={id}
+        name={name}
         type={showPassword ? 'text' : 'password'}
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -39,7 +45,8 @@ export function PasswordInput({
         type="button"
         tabIndex={-1}
         onClick={() => setShowPassword(v => !v)}
-        aria-label={showPassword ? 'Hide password' : 'Show password'}
+        aria-label="Show password"
+        aria-pressed={showPassword}
         className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-text-secondary/60 hover:text-primary transition-colors"
       >
         {showPassword ? (

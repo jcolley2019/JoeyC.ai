@@ -51,22 +51,33 @@ type FormData = {
 }
 
 const TOTAL_STEPS = 3
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+/** "luxvibe.io" is a fine answer; add the scheme the server-side link expects. */
+const withScheme = (url: string) => {
+  const v = url.trim()
+  return v && !/^https?:\/\//i.test(v) ? `https://${v}` : v
+}
 
+/** Option grid with radio semantics (E5 / L5-14): Enter or Space selects and focus stays on the option. */
 function RadioGroup({
   options,
   value,
   onChange,
+  labelledBy,
 }: {
   options: readonly string[]
   value: string
   onChange: (v: string) => void
+  labelledBy: string
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+    <div role="radiogroup" aria-labelledby={labelledBy} className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
       {options.map((opt) => (
         <button
           key={opt}
           type="button"
+          role="radio"
+          aria-checked={value === opt}
           onClick={() => onChange(opt)}
           className={`px-4 py-3 rounded-xl border text-sm text-left transition-all ${
             value === opt
@@ -97,6 +108,8 @@ export function Contact() {
     website_hp: '',
   })
   const [errorMessage, setErrorMessage] = useState('')
+  const [emailTouched, setEmailTouched] = useState(false)
+  const emailInvalid = emailTouched && form.email.trim() !== '' && !EMAIL_RE.test(form.email.trim())
 
   const { value: contactEnabled, loading: settingLoading } = useSiteSetting('contact_form_enabled')
   const leftRef = useRef<HTMLDivElement>(null)
@@ -139,7 +152,7 @@ export function Contact() {
     setForm((prev) => ({ ...prev, [field]: value }))
 
   const canAdvance = () => {
-    if (step === 1) return form.name.trim() && form.email.trim() && form.service
+    if (step === 1) return form.name.trim() && EMAIL_RE.test(form.email.trim()) && form.service
     if (step === 2) return true
     return true
   }
@@ -150,7 +163,7 @@ export function Contact() {
     try {
       const res = await fetch('https://cflhanugkedxeybbydha.supabase.co/functions/v1/contact-form', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, website: withScheme(form.website) }),
         headers: { 'Content-Type': 'application/json' },
       })
       if (res.ok) {
@@ -210,7 +223,7 @@ export function Contact() {
               ))}
             </div>
 
-            <p className="mt-8 text-text-secondary/60 text-xs">
+            <p className="mt-8 text-text-secondary text-xs">
               I'll reply within 24 hours.
             </p>
           </div>
@@ -304,14 +317,16 @@ export function Contact() {
 
                 {step === 1 && (
                   <div className="space-y-5">
-                    <p className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
-                      About You
+                    <p aria-live="polite" className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
+                      Step 1 of {TOTAL_STEPS}: About You
                     </p>
                     <div>
                       <label htmlFor="name" className={labelClass}>Name</label>
                       <input
                         type="text"
                         id="name"
+                        name="name"
+                        autoComplete="name"
                         required
                         placeholder="Your name"
                         value={form.name}
@@ -324,16 +339,28 @@ export function Contact() {
                       <input
                         type="email"
                         id="email"
+                        name="email"
+                        autoComplete="email"
+                        inputMode="email"
                         required
                         placeholder="you@email.com"
                         value={form.email}
                         onChange={(e) => update('email', e.target.value)}
+                        onBlur={() => setEmailTouched(true)}
+                        aria-invalid={emailInvalid || undefined}
+                        aria-describedby={emailInvalid ? 'email-error' : undefined}
                         className={inputClass}
                       />
+                      {emailInvalid && (
+                        <p id="email-error" role="alert" className="mt-1.5 text-xs text-red-400">
+                          Enter a valid email address, like you@email.com.
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <label className={labelClass}>What do you need help with?</label>
+                      <span id="label-service" className={labelClass}>What do you need help with?</span>
                       <RadioGroup
+                        labelledBy="label-service"
                         options={SERVICE_OPTIONS}
                         value={form.service}
                         onChange={(v) => update('service', v)}
@@ -344,28 +371,31 @@ export function Contact() {
 
                 {step === 2 && (
                   <div className="space-y-5">
-                    <p className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
-                      Project Details
+                    <p aria-live="polite" className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
+                      Step 2 of {TOTAL_STEPS}: Project Details
                     </p>
                     <div>
-                      <label className={labelClass}>Biggest pain point</label>
+                      <span id="label-pain" className={labelClass}>Biggest pain point</span>
                       <RadioGroup
+                        labelledBy="label-pain"
                         options={PAIN_POINTS}
                         value={form.painPoint}
                         onChange={(v) => update('painPoint', v)}
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Budget range</label>
+                      <span id="label-budget" className={labelClass}>Budget range</span>
                       <RadioGroup
+                        labelledBy="label-budget"
                         options={BUDGET_RANGES}
                         value={form.budget}
                         onChange={(v) => update('budget', v)}
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>Timeline</label>
+                      <span id="label-timeline" className={labelClass}>Timeline</span>
                       <RadioGroup
+                        labelledBy="label-timeline"
                         options={TIMELINE_OPTIONS}
                         value={form.timeline}
                         onChange={(v) => update('timeline', v)}
@@ -376,8 +406,8 @@ export function Contact() {
 
                 {step === 3 && (
                   <div className="space-y-5">
-                    <p className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
-                      A Little More Context
+                    <p aria-live="polite" className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
+                      Step 3 of {TOTAL_STEPS}: A Little More Context
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
@@ -387,6 +417,8 @@ export function Contact() {
                         <input
                           type="text"
                           id="company"
+                          name="organization"
+                          autoComplete="organization"
                           placeholder="Acme Inc."
                           value={form.company}
                           onChange={(e) => update('company', e.target.value)}
@@ -398,9 +430,12 @@ export function Contact() {
                           Website <span className="text-text-secondary/40 normal-case">(optional)</span>
                         </label>
                         <input
-                          type="url"
+                          type="text"
+                          inputMode="url"
                           id="website"
-                          placeholder="https://example.com"
+                          name="url"
+                          autoComplete="url"
+                          placeholder="example.com"
                           value={form.website}
                           onChange={(e) => update('website', e.target.value)}
                           className={inputClass}

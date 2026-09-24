@@ -173,20 +173,14 @@ export function ContentHistory() {
           >
             <div className="flex items-center gap-3">
               {/* Checkbox */}
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleSelect(gen.id) }}
-                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
-                  selected.has(gen.id)
-                    ? 'border-primary bg-primary/20 text-primary'
-                    : 'border-border hover:border-border-hover'
-                }`}
-              >
-                {selected.has(gen.id) && (
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M2 6l3 3 5-5" />
-                  </svg>
-                )}
-              </button>
+              <input
+                type="checkbox"
+                checked={selected.has(gen.id)}
+                onChange={() => toggleSelect(gen.id)}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Select ${gen.input_type} → ${gen.output_format}`}
+                className="w-4 h-4 shrink-0 rounded border-border bg-bg accent-primary cursor-pointer"
+              />
 
               {/* Content row — clickable to expand */}
               <div

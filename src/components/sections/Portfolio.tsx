@@ -243,7 +243,7 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
             {project.tech.map((t) => (
               <span
                 key={t}
-                className="tag-mono px-2 py-0.5 rounded bg-primary/10 text-primary/80 border border-primary/10 text-xs"
+                className="tag-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/10 text-xs"
               >
                 {t}
               </span>
@@ -796,7 +796,7 @@ export function Portfolio() {
         <div ref={boxRef} className="projects-box-visual" />
 
         {/* Letters wrapper — positioned like box, scales with it */}
-        <div ref={lettersWrapRef} className="projects-letters-wrap" aria-label="PROJECTS">
+        <div ref={lettersWrapRef} className="projects-letters-wrap" role="img" aria-label="PROJECTS">
           {LETTERS.map((letter, i) => (
             <span
               key={i}

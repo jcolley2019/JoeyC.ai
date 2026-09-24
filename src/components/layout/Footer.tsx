@@ -9,7 +9,7 @@ export function Footer() {
 
           <p className="text-text-secondary text-sm">
             &copy; {new Date().getFullYear()} Joey Colley.{' '}
-            <span className="text-text-secondary/60">Built with AI, obviously.</span>
+            <span className="text-text-secondary">Built with AI, obviously.</span>
           </p>
         </div>
       </div>

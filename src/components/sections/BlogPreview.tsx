@@ -117,7 +117,7 @@ export function BlogPreview() {
               <p className="text-text-secondary text-xs leading-relaxed line-clamp-3 mb-4">
                 {post.excerpt || ''}
               </p>
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#4a6fa5] group-hover:gap-2.5 transition-all">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#3da0ff] group-hover:gap-2.5 transition-all">
                 Read More
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M3 8h10m-4-4l4 4-4 4" />
@@ -130,7 +130,7 @@ export function BlogPreview() {
         <div className="text-center mt-10">
           <a
             href="/blog"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[#4a6fa5]/30 text-[#4a6fa5] text-sm font-medium hover:bg-[#4a6fa5]/10 hover:border-[#4a6fa5]/50 transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[#3da0ff]/30 text-[#3da0ff] text-sm font-medium hover:bg-[#3da0ff]/10 hover:border-[#3da0ff]/50 transition-all"
           >
             View All Posts
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">

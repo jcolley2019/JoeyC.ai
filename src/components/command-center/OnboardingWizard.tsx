@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { Dialog } from '../ui/Dialog'
 import { ColorPicker } from './ColorPicker'
 import type { StylePreset } from '../../types'
 
@@ -112,14 +113,6 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
     }
   }, [open])
 
-  // ESC to skip
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onSkip() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [open, onSkip])
-
   // Determine steps based on asset choice — Theme is always first
   const getSteps = useCallback((): string[] => {
     if (!assetChoice) return ['Theme', 'Welcome', 'Assets']
@@ -211,7 +204,9 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
   const currentLabel = steps[step]
 
   return (
-    <div
+    <Dialog
+      aria-label="Set up your brand"
+      onClose={onSkip}
       className={`fixed inset-0 z-[100] flex items-center justify-center transition-all duration-300 ${
         visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
@@ -613,6 +608,6 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   )
 }
