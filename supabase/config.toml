@@ -386,3 +386,49 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# ── Edge function gateway JWT verification ─────────────────────────────────
+# Recorded from the live project on 2026-09-23 (audit/00-map.md). "verify_jwt"
+# only checks that SOME valid JWT is present — the public anon key qualifies —
+# so every function still performs its own auth check in code.
+# Do not change a value here without redeploying that function.
+
+[functions.generate-content]
+verify_jwt = true
+
+[functions.blog-connection]
+verify_jwt = true
+
+[functions.post-to-x]
+verify_jwt = true
+
+[functions.x-oauth]
+verify_jwt = true
+
+# JCAI-FIX-01/S1 (L3-01, L3-09): previously OFF, now ON. In-function
+# requireUser() gate added at the same time.
+[functions.translate]
+verify_jwt = true
+
+[functions.youtube-transcript]
+verify_jwt = true
+
+[functions.perplexity-hashtags]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false
+
+[functions.send-invite]
+verify_jwt = false
+
+[functions.rss]
+verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false
+
+# Public contact form: no user session by design; abuse controls live in the
+# function itself (JCAI-FIX-01/S5).
+[functions.contact-form]
+verify_jwt = false

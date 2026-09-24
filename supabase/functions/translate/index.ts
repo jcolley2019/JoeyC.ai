@@ -1,4 +1,21 @@
+import { requireUser } from "../_shared/auth.ts";
+
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+
+// Hard cap on input size so an authenticated caller cannot burn a max-size
+// Sonnet call per request (L3-01). The Studio sends one input panel's text.
+const MAX_TEXT_CHARS = 20_000;
+
+// target_language is interpolated into the system prompt, so it is restricted
+// to a fixed list instead of accepting arbitrary instructions (L3-01).
+const ALLOWED_LANGUAGES = new Set([
+  "English",
+  "Spanish",
+  "French",
+  "German",
+  "Portuguese",
+  "Italian",
+]);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,19 +23,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+
+  // Auth gate runs before the body is parsed and before any external call.
+  const auth = await requireUser(req, corsHeaders);
+  if (!auth.ok) return auth.response;
+
   try {
     const { text, target_language } = await req.json();
 
-    if (!text || !target_language) {
-      return new Response(
-        JSON.stringify({ error: "text and target_language required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (typeof text !== "string" || !text.trim() || typeof target_language !== "string") {
+      return json({ error: "text and target_language required" }, 400);
+    }
+
+    if (text.length > MAX_TEXT_CHARS) {
+      return json({ error: `text exceeds ${MAX_TEXT_CHARS} characters` }, 400);
+    }
+
+    if (!ALLOWED_LANGUAGES.has(target_language)) {
+      return json({ error: "Unsupported target_language" }, 400);
     }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -39,14 +75,8 @@ Deno.serve(async (req) => {
     const data = await response.json();
     const translated = data.content?.[0]?.text || "";
 
-    return new Response(
-      JSON.stringify({ translated }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ translated });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: String(err) }, 500);
   }
 });
