@@ -166,6 +166,9 @@ export function Content() {
             <img
               src="/photos/joey-hero5.png"
               alt="Joey Colley"
+              width={1024}
+              height={1024}
+              loading="lazy"
               className="w-full sm:w-[240px] md:w-[280px] h-auto object-contain"
               style={{
                 WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',

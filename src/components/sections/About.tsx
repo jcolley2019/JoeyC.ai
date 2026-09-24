@@ -148,6 +148,9 @@ export function About() {
             <img
               src="/photos/joey-hero2.png"
               alt="Joey Colley"
+              width={1024}
+              height={1536}
+              loading="lazy"
               className="w-[22rem] md:w-[25rem] lg:w-[27.5rem] xl:w-[32.5rem] h-auto object-contain drop-shadow-[0_0_40px_rgba(74,111,165,0.08)]"
               style={{
                 WebkitMaskImage: 'radial-gradient(ellipse 80% 85% at 50% 40%, black 40%, transparent 70%)',

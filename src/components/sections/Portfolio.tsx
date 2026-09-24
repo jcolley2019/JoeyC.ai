@@ -156,6 +156,9 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
             <img
               src={project.image}
               alt={project.title}
+              width={920}
+              height={453}
+              loading="lazy"
               className="absolute inset-0 w-full h-full object-cover object-top"
             />
           )}

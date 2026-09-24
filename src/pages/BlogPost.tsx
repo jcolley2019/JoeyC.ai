@@ -111,6 +111,7 @@ const mdComponents: Components = {
       <img
         src={src}
         alt={alt}
+        loading="lazy"
         className="my-6 rounded-xl border border-border w-full"
       />
     )
