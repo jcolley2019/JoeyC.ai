@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useAdmin } from '../hooks/useAdmin'
 import { supabase } from '../lib/supabase'
 import { MASTER_EMAILS } from '../lib/constants'
-import { brand, emailTemplates } from '../lib/brand'
+import { BrandGuide } from '../components/command-center/BrandGuide'
 import type { Invitation, ActivityLogEntry } from '../types'
 
 interface AdminUser {
@@ -35,10 +35,6 @@ export function AdminDashboard() {
 
   // Tab
   const [activeTab, setActiveTab] = useState<'users' | 'activity' | 'invitations' | 'brand'>('users')
-  const [copiedField, setCopiedField] = useState<string | null>(null)
-  const [emailPreview, setEmailPreview] = useState<'invitation' | 'confirmation' | 'resetPassword' | 'magicLink'>('invitation')
-  const emailPreviewRef = useRef<HTMLIFrameElement>(null)
-
   // Selection state
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
   const [selectedActivity, setSelectedActivity] = useState<Set<string>>(new Set())
@@ -556,144 +552,7 @@ export function AdminDashboard() {
             {/* ═══════════════════════════════════════════════════ */}
             {/* Brand Kit Tab                                      */}
             {/* ═══════════════════════════════════════════════════ */}
-            {activeTab === 'brand' && (
-              <div className="space-y-8">
-
-                {/* Brand Identity */}
-                <div className="rounded-xl border border-border bg-bg-card p-6">
-                  <h3 className="font-mono text-xs tracking-[0.2em] uppercase text-primary mb-4">// Brand Identity</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-[13px] text-text-secondary mb-1">Brand Name</p>
-                      <p className="text-[15px] text-text-primary font-semibold" style={{ fontFamily: brand.fonts.display }}>{brand.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-[13px] text-text-secondary mb-1">Tagline</p>
-                      <p className="text-[15px] text-text-primary">{brand.tagline}</p>
-                    </div>
-                    <div>
-                      <p className="text-[13px] text-text-secondary mb-1">URL</p>
-                      <p className="text-[15px] text-primary">{brand.url}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Colors */}
-                <div className="rounded-xl border border-border bg-bg-card p-6">
-                  <h3 className="font-mono text-xs tracking-[0.2em] uppercase text-primary mb-4">// Colors</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {Object.entries(brand.colors).map(([name, hex]) => (
-                      <button
-                        key={name}
-                        onClick={() => {
-                          navigator.clipboard.writeText(hex)
-                          setCopiedField(name)
-                          setTimeout(() => setCopiedField(null), 1500)
-                        }}
-                        className="group text-left p-3 rounded-lg border border-border hover:border-primary/30 transition-all"
-                      >
-                        <div
-                          className="w-full h-10 rounded-md mb-2 border border-white/10"
-                          style={{ backgroundColor: hex }}
-                        />
-                        <p className="text-[12px] text-text-secondary capitalize">
-                          {name.replace(/([A-Z])/g, ' $1').trim()}
-                        </p>
-                        <p className="text-[13px] font-mono text-text-primary group-hover:text-primary transition-colors">
-                          {copiedField === name ? 'Copied!' : hex}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Typography */}
-                <div className="rounded-xl border border-border bg-bg-card p-6">
-                  <h3 className="font-mono text-xs tracking-[0.2em] uppercase text-primary mb-4">// Typography</h3>
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg border border-border">
-                      <p className="text-[12px] font-mono text-text-secondary mb-2">Display — {brand.fonts.display}</p>
-                      <p className="text-2xl text-text-primary" style={{ fontFamily: brand.fonts.display, fontWeight: 700 }}>
-                        The quick brown fox jumps over the lazy dog
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-lg border border-border">
-                      <p className="text-[12px] font-mono text-text-secondary mb-2">Body — {brand.fonts.body}</p>
-                      <p className="text-lg text-text-primary" style={{ fontFamily: brand.fonts.body }}>
-                        The quick brown fox jumps over the lazy dog
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-lg border border-border">
-                      <p className="text-[12px] font-mono text-text-secondary mb-2">Mono — {brand.fonts.mono}</p>
-                      <p className="text-base text-text-primary" style={{ fontFamily: brand.fonts.mono }}>
-                        The quick brown fox jumps over the lazy dog
-                      </p>
-                    </div>
-                    <div className="mt-3">
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(brand.fontsUrl)
-                          setCopiedField('fontsUrl')
-                          setTimeout(() => setCopiedField(null), 1500)
-                        }}
-                        className="text-[13px] font-mono text-text-secondary hover:text-primary transition-colors"
-                      >
-                        {copiedField === 'fontsUrl' ? '✓ Copied Google Fonts URL' : '📋 Copy Google Fonts import URL'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email Templates */}
-                <div className="rounded-xl border border-border bg-bg-card p-6">
-                  <h3 className="font-mono text-xs tracking-[0.2em] uppercase text-primary mb-2">// Email Templates</h3>
-                  <p className="text-[13px] text-text-secondary mb-4">
-                    Copy these into Supabase → Authentication → Email Templates
-                  </p>
-
-                  {/* Template selector */}
-                  <div className="flex gap-1 bg-bg border border-border rounded-lg p-1 mb-4">
-                    {(['invitation', 'confirmation', 'resetPassword', 'magicLink'] as const).map(tmpl => (
-                      <button
-                        key={tmpl}
-                        onClick={() => setEmailPreview(tmpl)}
-                        className={`flex-1 px-2 py-1.5 rounded-md text-[12px] font-mono transition-all capitalize ${
-                          emailPreview === tmpl
-                            ? 'bg-primary/10 text-primary border border-primary/30'
-                            : 'text-text-secondary hover:text-text-primary border border-transparent'
-                        }`}
-                      >
-                        {tmpl.replace(/([A-Z])/g, ' $1').trim()}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Preview */}
-                  <div className="rounded-lg border border-border overflow-hidden mb-4" style={{ height: 480 }}>
-                    <iframe
-                      ref={emailPreviewRef}
-                      srcDoc={emailTemplates[emailPreview]}
-                      title="Email preview"
-                      className="w-full h-full border-0"
-                      sandbox="allow-same-origin"
-                    />
-                  </div>
-
-                  {/* Copy button */}
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(emailTemplates[emailPreview])
-                      setCopiedField('email')
-                      setTimeout(() => setCopiedField(null), 2000)
-                    }}
-                    className="px-4 py-2 bg-primary text-bg font-semibold rounded-lg text-sm hover:bg-primary-hover transition-colors"
-                  >
-                    {copiedField === 'email' ? '✓ HTML Copied!' : `Copy ${emailPreview.replace(/([A-Z])/g, ' $1').trim()} HTML`}
-                  </button>
-                </div>
-
-              </div>
-            )}
+            {activeTab === 'brand' && <BrandGuide />}
 
             {/* ═══════════════════════════════════════════════════ */}
             {/* Invitations Tab                                    */}
