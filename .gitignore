@@ -23,3 +23,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local-only
+titilinks/
+_archive/
+audit/screenshots/
