@@ -45,6 +45,8 @@ type FormData = {
   company: string
   website: string
   message: string
+  /** Honeypot (S5): hidden from humans, never filled by them. Server drops the post if set. */
+  website_hp: string
 }
 
 const TOTAL_STEPS = 3
@@ -62,7 +64,9 @@ export function Contact() {
     company: '',
     website: '',
     message: '',
+    website_hp: '',
   })
+  const [errorMessage, setErrorMessage] = useState('')
 
   const { value: contactEnabled, loading: settingLoading } = useSiteSetting('contact_form_enabled')
   const leftRef = useRef<HTMLDivElement>(null)
@@ -104,6 +108,7 @@ export function Contact() {
 
   const handleSubmit = async () => {
     setStatus('sending')
+    setErrorMessage('')
     try {
       const res = await fetch('https://cflhanugkedxeybbydha.supabase.co/functions/v1/contact-form', {
         method: 'POST',
@@ -112,9 +117,16 @@ export function Contact() {
       })
       if (res.ok) {
         setStatus('sent')
-        setForm({ name: '', email: '', service: '', painPoint: '', budget: '', timeline: '', company: '', website: '', message: '' })
+        setForm({ name: '', email: '', service: '', painPoint: '', budget: '', timeline: '', company: '', website: '', message: '', website_hp: '' })
         setStep(1)
       } else {
+        // 400 = validation, 429 = rate limit. Both carry a user-safe `error` string.
+        const data = await res.json().catch(() => null) as { error?: string } | null
+        if (res.status === 429) {
+          setErrorMessage(data?.error || 'Too many messages from your network. Try again in an hour.')
+        } else if (res.status === 400) {
+          setErrorMessage(data?.error || 'Please check your details and try again.')
+        }
         setStatus('error')
       }
     } catch {
@@ -265,6 +277,20 @@ export function Contact() {
                   else handleSubmit()
                 }}
               >
+                {/* Honeypot — off-screen, untabbable, ignored by autofill. Bots fill it; the function then drops the post. */}
+                <div aria-hidden="true" className="absolute -left-[9999px] top-0 h-0 w-0 overflow-hidden">
+                  <label htmlFor="website_hp">Leave this field empty</label>
+                  <input
+                    type="text"
+                    id="website_hp"
+                    name="website_hp"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={form.website_hp}
+                    onChange={(e) => update('website_hp', e.target.value)}
+                  />
+                </div>
+
                 {step === 1 && (
                   <div className="space-y-5">
                     <p className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
@@ -431,7 +457,7 @@ export function Contact() {
 
                 {status === 'error' && (
                   <p className="text-center text-sm text-red-400 font-medium mt-4">
-                    Something went wrong. Try again or email me directly.
+                    {errorMessage || 'Something went wrong. Try again or email me directly.'}
                   </p>
                 )}
               </form>
