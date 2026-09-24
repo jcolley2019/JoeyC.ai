@@ -326,6 +326,24 @@ Deno.serve(async (req) => {
       }
     }
 
+    // No usable connected account → the only remaining path is the owner's
+    // master OAuth 1.0a tokens. That path is master_admin-only (L3-02): anyone
+    // else gets a 403 here, before the body is even parsed, and nothing is posted.
+    if (!oauth2Token) {
+      const { data: roleRow } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (roleRow?.role !== "master_admin") {
+        return new Response(JSON.stringify({ error: "No X account connected" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // If no user token, validate master credentials exist
     if (!oauth2Token && (!X_API_KEY || !X_API_SECRET || !X_ACCESS_TOKEN || !X_ACCESS_TOKEN_SECRET)) {
       return new Response(
