@@ -158,7 +158,7 @@ function buildInviteEmail(acceptUrl: string): string {
                 margin: 16px 0 0;
                 opacity: 0.4;
               ">
-                <a href="https://joeyc.ai" style="color: #1a8fff; text-decoration: none;">joeyc.ai</a>
+                <a href="https://www.joeyc.ai" style="color: #1a8fff; text-decoration: none;">joeyc.ai</a>
                 &nbsp;&middot;&nbsp;
                 <a href="https://www.tiktok.com/@buildaiwithjoey" style="color: #8892a4; text-decoration: none;">TikTok</a>
                 &nbsp;&middot;&nbsp;
@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
 
     // Create user in Supabase Auth (generates confirmation URL)
     // We suppress the default email by using generateLink instead of inviteUserByEmail
-    const siteUrl = Deno.env.get("SITE_URL") || "https://joeyc.ai";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://www.joeyc.ai";
     const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
       type: "invite",
       email,
