@@ -37,6 +37,14 @@ const MAX_TOKENS_BLOG = 8192;     // Blog generation (long-form, 2000+ words)
 const MAX_TOKENS_DERIVATIVE = 2048; // Social/thread derivatives (shorter output)
 const MAX_TOKENS_STANDARD = 4096;  // Non-cascade generation
 const DAILY_GENERATION_LIMIT = 50; // Per user per UTC day, counted per batch; keep in sync with reserve_generation()
+// Supabase kills an edge function at 400 s wall clock. Stop the model well
+// before that, so the quota row is released and the Studio is told why.
+const GENERATION_DEADLINE_MS = 300_000;
+const GENERATION_TIMEOUT_MESSAGE =
+  "The research took too long and was stopped. This did not count toward your daily limit. Try again in a minute.";
+// Text written before a tool call ("I'll research…", "Hitting a rate limit…")
+// is held back this long; past it, the text is taken to be the article.
+const NARRATION_MAX_CHARS = 600;
 
 // Anti-AI-slop writing directive — applied to ALL content types
 const ANTI_SLOP_DIRECTIVE = `
@@ -529,6 +537,63 @@ interface GenerationResult {
 
 type StreamEvent = { type: "text"; text: string } | { type: "searching" };
 
+/** Thrown by callAnthropic when GENERATION_DEADLINE_MS runs out. */
+class GenerationTimeout extends Error {
+  constructor() {
+    super(GENERATION_TIMEOUT_MESSAGE);
+  }
+}
+
+/**
+ * Keeps the model's between-search narration out of the article. Text since
+ * the last tool call is held back until either another tool call starts (the
+ * held text was narration: dropped) or it grows past NARRATION_MAX_CHARS or
+ * the generation ends (it is the article: released, and later text passes
+ * straight through until the next tool call). `content` is exactly what was
+ * released, so the stored article matches what the Studio streamed.
+ *
+ * The last "I have enough data, writing now" line has no tool call after it.
+ * With `articleStart` (the blog's ```meta fence or # title), text before the
+ * first match is dropped too, until the article has started.
+ */
+class NarrationFilter {
+  content = "";
+  private held = "";
+  private live = false;
+
+  constructor(
+    private emit: (text: string) => void = () => {},
+    private articleStart?: RegExp,
+  ) {}
+
+  text(text: string) {
+    if (this.live) return this.release(text);
+    this.held += text;
+    if (this.held.length > NARRATION_MAX_CHARS) this.flush();
+  }
+
+  toolCall() {
+    this.held = "";
+    this.live = false;
+  }
+
+  flush() {
+    this.live = true;
+    let held = this.held;
+    this.held = "";
+    const start = !this.content && this.articleStart ? held.search(this.articleStart) : -1;
+    if (start > 0) held = held.slice(start);
+    if (held) this.release(held);
+  }
+
+  private release(text: string) {
+    this.content += text;
+    this.emit(text);
+  }
+}
+
+const isToolCall = (blockType: string) => blockType.endsWith("tool_use"); // tool_use, server_tool_use, mcp_tool_use
+
 function costUsd(model: string, u: GenerationUsage): number {
   const p = MODEL_PRICING[model];
   if (!p) return 0;
@@ -545,9 +610,10 @@ function costUsd(model: string, u: GenerationUsage): number {
  *
  * `system` is [static format instructions (cache_control), per-user voice],
  * so repeated calls of the same format reuse the cached prefix.
- * With `onEvent` the request is streamed and text deltas are reported as they
- * arrive; finalMessage() still gives the complete content blocks, which is
- * what a pause_turn continuation has to send back.
+ * With `onEvent` the request is streamed and article text is reported as it
+ * arrives; finalMessage() still gives the complete content blocks, which is
+ * what a pause_turn continuation has to send back. Either way the text goes
+ * through NarrationFilter, and the call is aborted at `deadlineAt`.
  */
 async function callAnthropic(params: {
   model: string;
@@ -556,6 +622,8 @@ async function callAnthropic(params: {
   userMessage: string;
   useWebSearch: boolean;
   maxWebSearches: number;
+  deadlineAt: number;
+  articleStart?: RegExp;
   onEvent?: (e: StreamEvent) => void;
   signal?: AbortSignal;
 }): Promise<GenerationResult> {
@@ -573,72 +641,95 @@ async function callAnthropic(params: {
     cache_read_input_tokens: 0,
     web_search_requests: 0,
   };
-  let generatedContent = "";
+  const onEvent = params.onEvent;
+  const filter = new NarrationFilter(onEvent && ((text) => onEvent({ type: "text", text })), params.articleStart);
   let webSearchesUsed = false;
   let maxContinuations = 5; // Safety limit for pause_turn loops
 
-  while (maxContinuations > 0) {
-    maxContinuations--;
+  // One signal for both reasons to stop: the caller went away, or the deadline passed.
+  const abort = new AbortController();
+  const onCallerAbort = () => abort.abort();
+  params.signal?.addEventListener("abort", onCallerAbort, { once: true });
+  let timedOut = false;
+  const deadline = setTimeout(() => {
+    timedOut = true;
+    abort.abort();
+  }, Math.max(0, params.deadlineAt - Date.now()));
 
-    const body: Anthropic.MessageCreateParamsNonStreaming = {
-      model: params.model,
-      max_tokens: params.maxTokens,
-      system: params.system,
-      messages,
-      ...(tools.length > 0 ? { tools } : {}),
-      // Sonnet 5 thinks adaptively unless told not to. The prompts and token
-      // budgets here were tuned without thinking, so keep it off.
-      ...(params.model.startsWith("claude-sonnet") ? { thinking: { type: "disabled" as const } } : {}),
-    };
+  try {
+    while (maxContinuations > 0) {
+      maxContinuations--;
+      if (timedOut) throw new GenerationTimeout();
 
-    let message: Anthropic.Message;
-    if (params.onEvent) {
-      const onEvent = params.onEvent;
-      const stream = anthropic.messages.stream(body, { signal: params.signal });
-      for await (const event of stream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          onEvent({ type: "text", text: event.delta.text });
-        } else if (event.type === "content_block_start" && event.content_block.type === "server_tool_use") {
-          onEvent({ type: "searching" });
+      const body: Anthropic.MessageCreateParamsNonStreaming = {
+        model: params.model,
+        max_tokens: params.maxTokens,
+        system: params.system,
+        messages,
+        ...(tools.length > 0 ? { tools } : {}),
+        // Sonnet 5 thinks adaptively unless told not to. The prompts and token
+        // budgets here were tuned without thinking, so keep it off.
+        ...(params.model.startsWith("claude-sonnet") ? { thinking: { type: "disabled" as const } } : {}),
+      };
+
+      let message: Anthropic.Message;
+      if (onEvent) {
+        const stream = anthropic.messages.stream(body, { signal: abort.signal });
+        for await (const event of stream) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            filter.text(event.delta.text);
+          } else if (event.type === "content_block_start" && isToolCall(event.content_block.type)) {
+            filter.toolCall();
+            if (event.content_block.type === "server_tool_use") onEvent({ type: "searching" });
+          }
+        }
+        message = await stream.finalMessage();
+      } else {
+        message = await anthropic.messages.create(body, { signal: abort.signal });
+        for (const block of message.content) {
+          if (block.type === "text") filter.text(block.text);
+          else if (isToolCall(block.type)) filter.toolCall();
         }
       }
-      message = await stream.finalMessage();
-    } else {
-      message = await anthropic.messages.create(body, { signal: params.signal });
-    }
 
-    usage.input_tokens += message.usage.input_tokens || 0;
-    usage.output_tokens += message.usage.output_tokens || 0;
-    usage.cache_creation_input_tokens += message.usage.cache_creation_input_tokens || 0;
-    usage.cache_read_input_tokens += message.usage.cache_read_input_tokens || 0;
-    usage.web_search_requests += message.usage.server_tool_use?.web_search_requests || 0;
+      usage.input_tokens += message.usage.input_tokens || 0;
+      usage.output_tokens += message.usage.output_tokens || 0;
+      usage.cache_creation_input_tokens += message.usage.cache_creation_input_tokens || 0;
+      usage.cache_read_input_tokens += message.usage.cache_read_input_tokens || 0;
+      usage.web_search_requests += message.usage.server_tool_use?.web_search_requests || 0;
 
-    for (const block of message.content) {
-      if (block.type === "text") {
-        generatedContent += block.text;
-      } else if (block.type === "web_search_tool_result") {
-        webSearchesUsed = true;
+      for (const block of message.content) {
+        if (block.type === "web_search_tool_result") webSearchesUsed = true;
       }
-    }
 
-    // If stop_reason is pause_turn, continue by sending the response back
-    if (message.stop_reason === "pause_turn") {
-      messages = [...messages, { role: "assistant", content: message.content }];
-      continue;
-    }
+      // If stop_reason is pause_turn, continue by sending the response back.
+      // Held text stays held: the continuation may open with another search.
+      if (message.stop_reason === "pause_turn") {
+        messages = [...messages, { role: "assistant", content: message.content }];
+        continue;
+      }
 
-    // Done — end_turn, max_tokens or refusal
-    break;
+      // Done — end_turn, max_tokens or refusal
+      break;
+    }
+  } catch (err) {
+    if (timedOut) throw new GenerationTimeout();
+    throw err;
+  } finally {
+    clearTimeout(deadline);
+    params.signal?.removeEventListener("abort", onCallerAbort);
   }
+  filter.flush();
 
   return {
-    content: generatedContent,
+    content: filter.content,
     usage,
     webSearchesUsed: webSearchesUsed || usage.web_search_requests > 0,
   };
 }
 
 Deno.serve(async (req) => {
+  const receivedAt = Date.now();
   const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -788,6 +879,9 @@ Deno.serve(async (req) => {
       userMessage,
       useWebSearch,
       maxWebSearches: MAX_WEB_SEARCHES,
+      deadlineAt: receivedAt + GENERATION_DEADLINE_MS,
+      // The blog prompt opens the article with a ```meta fence, then the # title.
+      articleStart: isBlogWithSearch ? /```meta|^# /m : undefined,
     };
 
     // Store the result, log it, and build the usage payload the Studio shows.
@@ -865,6 +959,7 @@ Deno.serve(async (req) => {
             else send("error", { error: outcome.error });
           } catch (err) {
             console.error("Blog stream error:", err);
+            // Timeout included: nothing was stored, so the press does not count.
             await releasePending(adminClient, user.id, batchId);
             send("error", { error: err instanceof Error ? err.message : "Generation failed" });
           } finally {
@@ -897,6 +992,6 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("Error:", err);
     if (reserved) await releasePending(reserved.adminClient, reserved.userId, reserved.batchId);
-    return json({ error: err instanceof Error ? err.message : "Internal server error" }, 500);
+    return json({ error: err instanceof Error ? err.message : "Internal server error" }, err instanceof GenerationTimeout ? 504 : 500);
   }
 });
