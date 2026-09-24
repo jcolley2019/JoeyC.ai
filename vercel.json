@@ -15,15 +15,28 @@
   "rewrites": [
     {
       "source": "/sitemap.xml",
-      "destination": "https://cflhanugkedxeybbydha.supabase.co/functions/v1/sitemap"
+      "destination": "/api/sitemap"
     },
     {
       "source": "/rss.xml",
-      "destination": "https://cflhanugkedxeybbydha.supabase.co/functions/v1/rss"
+      "destination": "/api/rss"
+    },
+    {
+      "source": "/blog",
+      "destination": "/api/blog"
+    },
+    {
+      "source": "/blog/:slug",
+      "destination": "/api/blog?slug=:slug"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/blog.ts": {
+      "includeFiles": "dist/index.html"
+    }
+  }
 }

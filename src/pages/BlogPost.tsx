@@ -2,20 +2,8 @@ import { useState, useEffect } from 'react'
 import { Seo, SITE_URL } from '../components/Seo'
 import { useParams, Link } from 'react-router-dom'
 import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
-import rehypeHighlight from 'rehype-highlight'
-import javascript from 'highlight.js/lib/languages/javascript'
-import typescript from 'highlight.js/lib/languages/typescript'
-import json from 'highlight.js/lib/languages/json'
-import bash from 'highlight.js/lib/languages/bash'
-import python from 'highlight.js/lib/languages/python'
-import css from 'highlight.js/lib/languages/css'
-import xml from 'highlight.js/lib/languages/xml'
 import 'highlight.js/styles/github-dark-dimmed.min.css'
-
-// Only the grammars the blog actually uses; the full highlight.js set is ~170 KB.
-const highlightLanguages = { javascript, typescript, json, bash, python, css, xml, html: xml }
+import { remarkPlugins, rehypePlugins, stripLeadingH1, readingTimeMinutes } from '../lib/markdown'
 import { supabase } from '../lib/supabase'
 import type { BlogPost as BlogPostType } from '../types'
 import type { Components } from 'react-markdown'
@@ -209,18 +197,10 @@ export function BlogPostPage() {
     )
   }
 
-  const readingTime = Math.max(1, Math.ceil(post.content.split(/\s+/).length / 200))
+  const readingTime = readingTimeMinutes(post.content)
 
-  // The page renders post.title as the visible H1, so always drop a leading markdown H1
-  // (after any leading blank lines or `---` breaks) to avoid two H1s.
-  const contentLines = post.content.split('\n')
-  let firstIdx = 0
-  while (firstIdx < contentLines.length && /^\s*(?:-{3,}|\*{3,}|_{3,})?\s*$/.test(contentLines[firstIdx])) firstIdx += 1
-  const articleContent = (
-    /^#\s+\S/.test(contentLines[firstIdx] ?? '')
-      ? contentLines.slice(firstIdx + 1)
-      : contentLines.slice(firstIdx)
-  ).join('\n').trim()
+  // The page renders post.title as the visible H1; drop a leading markdown H1 (shared helper).
+  const articleContent = stripLeadingH1(post.content)
 
   return (
     <div className="min-h-screen bg-bg noise-overlay">
@@ -322,8 +302,8 @@ export function BlogPostPage() {
       {/* Article body */}
       <article className="max-w-3xl mx-auto px-6 py-12">
         <Markdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw, [rehypeHighlight, { languages: highlightLanguages }]]}
+          remarkPlugins={remarkPlugins}
+          rehypePlugins={rehypePlugins}
           components={mdComponents}
         >
           {articleContent}
