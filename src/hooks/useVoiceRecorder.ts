@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 interface SpeechRecognitionEvent {
   results: SpeechRecognitionResultList
@@ -33,11 +33,17 @@ export function useVoiceRecorder({ onFinalTranscript }: UseVoiceRecorderOptions)
   const [interimText, setInterimText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
+  // Latest callback, updated in an effect (not during render) so the ref rule is satisfied
   const onFinalRef = useRef(onFinalTranscript)
-  onFinalRef.current = onFinalTranscript
+  useEffect(() => { onFinalRef.current = onFinalTranscript }, [onFinalTranscript])
 
   // Track which results we've already processed
   const processedIndexRef = useRef(0)
+
+  // Refs mirroring isRecording/isPaused for use inside recognition callbacks. Declared before
+  // createRecognition so the compiler sees them as refs where they are read and written (A4).
+  const isPausedRef = useRef(false)
+  const isRecordingRef = useRef(false)
 
   const isSupported = typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
@@ -93,10 +99,6 @@ export function useVoiceRecorder({ onFinalTranscript }: UseVoiceRecorderOptions)
 
     return recognition
   }, [])
-
-  // Refs to track state in callbacks
-  const isPausedRef = useRef(false)
-  const isRecordingRef = useRef(false)
 
   const startRecording = useCallback(() => {
     if (!isSupported) {

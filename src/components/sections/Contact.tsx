@@ -52,6 +52,35 @@ type FormData = {
 
 const TOTAL_STEPS = 3
 
+function RadioGroup({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly string[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          className={`px-4 py-3 rounded-xl border text-sm text-left transition-all ${
+            value === opt
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-border bg-bg-card text-text-secondary hover:border-primary/30'
+          }`}
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function Contact() {
   const [step, setStep] = useState(1)
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
@@ -146,33 +175,6 @@ export function Contact() {
   const inputClass =
     'w-full px-4 py-3.5 rounded-xl bg-bg-card border border-border text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-[#4a6fa5]/60 focus:ring-1 focus:ring-[#4a6fa5]/30 focus:shadow-[0_0_15px_rgba(74,111,165,0.1)] transition-all text-sm'
   const labelClass = 'block font-mono text-xs tracking-wide uppercase text-text-secondary mb-2'
-
-  const RadioGroup = ({
-    options,
-    value,
-    onChange,
-  }: {
-    options: readonly string[]
-    value: string
-    onChange: (v: string) => void
-  }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={`px-4 py-3 rounded-xl border text-sm text-left transition-all ${
-            value === opt
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-border bg-bg-card text-text-secondary hover:border-primary/30'
-          }`}
-        >
-          {opt}
-        </button>
-      ))}
-    </div>
-  )
 
   return (
     <section id="contact" className="py-28 px-6">
