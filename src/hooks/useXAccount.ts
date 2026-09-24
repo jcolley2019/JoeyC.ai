@@ -18,6 +18,12 @@ export function useXAccount() {
   // Check connection status
   const checkStatus = useCallback(async () => {
     try {
+      // No session means no X account to look up; skip the function call entirely (L5-08)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setStatus({ connected: false, x_username: null, x_display_name: null, token_expires_at: null, connected_at: null })
+        return
+      }
       const { data, error: fnError } = await supabase.functions.invoke('x-oauth', {
         body: { action: 'status' },
       })

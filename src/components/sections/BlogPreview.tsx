@@ -18,7 +18,7 @@ export function BlogPreview() {
   useEffect(() => {
     supabase
       .from('blog_posts')
-      .select('*')
+      .select('slug, title, excerpt, published_at')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
       .limit(4)

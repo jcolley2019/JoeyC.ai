@@ -5,7 +5,17 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeHighlight from 'rehype-highlight'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import json from 'highlight.js/lib/languages/json'
+import bash from 'highlight.js/lib/languages/bash'
+import python from 'highlight.js/lib/languages/python'
+import css from 'highlight.js/lib/languages/css'
+import xml from 'highlight.js/lib/languages/xml'
 import 'highlight.js/styles/github-dark-dimmed.min.css'
+
+// Only the grammars the blog actually uses; the full highlight.js set is ~170 KB.
+const highlightLanguages = { javascript, typescript, json, bash, python, css, xml, html: xml }
 import { supabase } from '../lib/supabase'
 import type { BlogPost as BlogPostType } from '../types'
 import type { Components } from 'react-markdown'
@@ -140,26 +150,50 @@ export function BlogPostPage() {
   const [post, setPost] = useState<BlogPostType | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!slug) return
+    let cancelled = false
+    setLoading(true)
+    setNotFound(false)
+    setLoadError(null)
     supabase
       .from('blog_posts')
       .select('*')
       .eq('slug', slug)
       .eq('status', 'published')
-      .single()
+      .maybeSingle()
       .then(({ data, error }) => {
-        if (error || !data) setNotFound(true)
+        if (cancelled) return
+        if (error) setLoadError(error.message)
+        else if (!data) setNotFound(true)
         else setPost(data)
         setLoading(false)
+      }, (err: unknown) => {
+        if (cancelled) return
+        setLoadError(err instanceof Error ? err.message : 'Failed to load post')
+        setLoading(false)
       })
+    return () => { cancelled = true }
   }, [slug])
 
   if (loading) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-bg flex flex-col items-center justify-center px-6 text-center">
+        <h1 className="text-2xl font-bold mb-2">Could not load this post</h1>
+        <p className="text-sm text-text-secondary mb-4">{loadError}</p>
+        <Link to="/blog" className="text-primary hover:underline text-sm">
+          Back to blog
+        </Link>
       </div>
     )
   }
@@ -187,7 +221,7 @@ export function BlogPostPage() {
   return (
     <div className="min-h-screen bg-bg noise-overlay">
       <Helmet>
-        <title>{post.title} — JoeyC.ai</title>
+        <title>{`${post.title} — JoeyC.ai`}</title>
         <meta name="description" content={post.excerpt} />
         <meta name="author" content="Joey Colley" />
         <link rel="canonical" href={`https://joeyc.ai/blog/${post.slug}`} />
@@ -308,7 +342,7 @@ export function BlogPostPage() {
       <article className="max-w-3xl mx-auto px-6 py-12">
         <Markdown
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw, rehypeHighlight]}
+          rehypePlugins={[rehypeRaw, [rehypeHighlight, { languages: highlightLanguages }]]}
           components={mdComponents}
         >
           {articleContent}
