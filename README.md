@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+# joeyc.ai
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Personal site and blog for Joey Colley, plus a gated Content Studio (`/command-center`) that turns a YouTube link, text or voice note into blog posts, social captions, threads and video scripts with Claude.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 19 + TypeScript 5.9, Vite 7, Tailwind CSS 4, GSAP, react-router 7
+- Supabase (Postgres + RLS, Auth, Storage, Edge Functions on Deno)
+- Deployed on Vercel as a single-page app; `/sitemap.xml` and `/rss.xml` are rewritten to edge functions (see `vercel.json`)
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `npm run dev` — Vite dev server
+- `npm run build` — `tsc -b` then `vite build` into `dist/`
+- `npm run typecheck` — `tsc -b --noEmit`
+- `npm run lint` — ESLint over `src/` and `supabase/functions/`
+- `npm run preview` — serve the production build locally
 
-## Expanding the ESLint configuration
+Node `>=22.12 <25` (see `.nvmrc`).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Environment variables
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Client (`.env`, never committed): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Edge functions (Supabase secrets): `ANTHROPIC_API_KEY`, `PERPLEXITY_API_KEY`, `RESEND_API_KEY`, `SITE_URL`, `ENV`, `BLOG_CREDENTIALS_KEY`, `CONTACT_IP_SALT`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`, `X_OAUTH_CLIENT_ID`, `X_OAUTH_CLIENT_SECRET`, plus the platform-provided `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Edge functions (`supabase/functions/`)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+`verify_jwt` is the gateway flag from `supabase/config.toml`; it only requires *some* valid JWT (the anon key qualifies), so every function also checks auth in code. Redeploy a function after changing its flag.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| function | verify_jwt | purpose |
+|---|---|---|
+| generate-content | true | Claude content generation (user session required) |
+| blog-connection | true | External blog publishing credentials |
+| post-to-x | true | Post to X; master account fallback is master_admin only |
+| x-oauth | true | X OAuth 1.0a / 2.0 PKCE flow |
+| translate | true | Claude translation (user session required) |
+| youtube-transcript | true | Transcript fetch (user session required) |
+| perplexity-hashtags | false | Hashtag research (checks auth in code) |
+| admin-users | false | Admin user management (checks role in code) |
+| send-invite | false | Invite emails via Resend (checks role in code) |
+| rss | false | Public RSS feed |
+| sitemap | false | Public sitemap |
+| contact-form | false | Public contact form: validated, escaped, rate-limited |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Database schema and RLS live in `supabase/migrations/`.
