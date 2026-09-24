@@ -1,4 +1,17 @@
 {
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/blog/now-i-have-everything-i-need-let-me-write-the-full-blog-article",
+      "destination": "/blog/openai-killed-sora-what-it-means-for-ai-creators",
+      "permanent": true
+    },
+    {
+      "source": "/rss",
+      "destination": "/rss.xml",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/sitemap.xml",
@@ -6,10 +19,6 @@
     },
     {
       "source": "/rss.xml",
-      "destination": "https://cflhanugkedxeybbydha.supabase.co/functions/v1/rss"
-    },
-    {
-      "source": "/rss",
       "destination": "https://cflhanugkedxeybbydha.supabase.co/functions/v1/rss"
     },
     {

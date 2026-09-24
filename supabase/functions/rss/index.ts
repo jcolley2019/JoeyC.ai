@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const SITE_URL = "https://joeyc.ai";
+const SITE_URL = "https://www.joeyc.ai";
 
 function escapeXml(str: string): string {
   return str
@@ -58,7 +58,7 @@ ${categories}
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${SITE_URL}/rss" rel="self" type="application/rss+xml" />
     <image>
-      <url>${SITE_URL}/photos/joey-headshot2.png</url>
+      <url>${SITE_URL}/photos/joey-og.jpg</url>
       <title>JoeyC.ai Blog</title>
       <link>${SITE_URL}/blog</link>
     </image>

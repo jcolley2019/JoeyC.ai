@@ -224,15 +224,15 @@ export function BlogPostPage() {
         <title>{`${post.title} — JoeyC.ai`}</title>
         <meta name="description" content={post.excerpt} />
         <meta name="author" content="Joey Colley" />
-        <link rel="canonical" href={`https://joeyc.ai/blog/${post.slug}`} />
+        <link rel="canonical" href={`https://www.joeyc.ai/blog/${post.slug}`} />
 
         {/* Open Graph */}
         <meta property="og:title" content={post.title} />
         <meta property="og:description" content={post.excerpt} />
         <meta property="og:type" content="article" />
-        <meta property="og:url" content={`https://joeyc.ai/blog/${post.slug}`} />
+        <meta property="og:url" content={`https://www.joeyc.ai/blog/${post.slug}`} />
         <meta property="og:site_name" content="JoeyC.ai" />
-        <meta property="og:image" content={post.cover_image || 'https://joeyc.ai/photos/joey-og.jpg'} />
+        <meta property="og:image" content={post.cover_image || 'https://www.joeyc.ai/photos/joey-og.jpg'} />
         <meta property="article:author" content="Joey Colley" />
         {post.published_at && (
           <meta property="article:published_time" content={post.published_at} />
@@ -248,7 +248,7 @@ export function BlogPostPage() {
         <meta name="twitter:card" content={post.cover_image ? 'summary_large_image' : 'summary'} />
         <meta name="twitter:title" content={post.title} />
         <meta name="twitter:description" content={post.excerpt} />
-        <meta name="twitter:image" content={post.cover_image || 'https://joeyc.ai/photos/joey-og.jpg'} />
+        <meta name="twitter:image" content={post.cover_image || 'https://www.joeyc.ai/photos/joey-og.jpg'} />
 
         {/* JSON-LD BlogPosting Schema */}
         <script type="application/ld+json">{JSON.stringify({
@@ -256,19 +256,19 @@ export function BlogPostPage() {
           '@type': 'BlogPosting',
           headline: post.title,
           description: post.excerpt,
-          url: `https://joeyc.ai/blog/${post.slug}`,
+          url: `https://www.joeyc.ai/blog/${post.slug}`,
           datePublished: post.published_at || post.created_at,
           dateModified: post.updated_at,
           ...(post.cover_image ? { image: post.cover_image } : {}),
           author: {
             '@type': 'Person',
             name: 'Joey Colley',
-            url: 'https://joeyc.ai',
+            url: 'https://www.joeyc.ai',
           },
           publisher: {
             '@type': 'Person',
             name: 'Joey Colley',
-            url: 'https://joeyc.ai',
+            url: 'https://www.joeyc.ai',
           },
         })}</script>
       </Helmet>

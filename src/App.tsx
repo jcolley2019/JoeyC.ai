@@ -13,7 +13,7 @@ const personSchema = {
   '@context': 'https://schema.org',
   '@type': 'Person',
   name: 'Joey Colley',
-  url: 'https://joeyc.ai',
+  url: 'https://www.joeyc.ai',
   jobTitle: 'AI Builder & Content Creator',
   description: 'Self-taught AI builder documenting the journey of building real apps with AI tools like Claude, Lovable, and Replit.',
   sameAs: [
@@ -30,14 +30,14 @@ export default function App() {
       <Helmet>
         <title>JoeyC.ai — Practical AI for Everyone</title>
         <meta name="description" content="Joey Colley — I build apps, websites & automations with AI and show you how. No CS degree required." />
-        <link rel="canonical" href="https://joeyc.ai" />
+        <link rel="canonical" href="https://www.joeyc.ai" />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="JoeyC.ai — Practical AI for Everyone" />
         <meta property="og:description" content="Joey Colley — I build apps, websites & automations with AI and show you how. No CS degree required." />
-        <meta property="og:url" content="https://joeyc.ai" />
-        <meta property="og:image" content="https://joeyc.ai/photos/og-image.png" />
+        <meta property="og:url" content="https://www.joeyc.ai" />
+        <meta property="og:image" content="https://www.joeyc.ai/photos/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:site_name" content="JoeyC.ai" />
@@ -46,7 +46,7 @@ export default function App() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="JoeyC.ai — Practical AI for Everyone" />
         <meta name="twitter:description" content="Joey Colley — I build apps, websites & automations with AI and show you how." />
-        <meta name="twitter:image" content="https://joeyc.ai/photos/og-image.png" />
+        <meta name="twitter:image" content="https://www.joeyc.ai/photos/og-image.png" />
 
         {/* JSON-LD Person Schema */}
         <script type="application/ld+json">{JSON.stringify(personSchema)}</script>

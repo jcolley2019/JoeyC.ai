@@ -5,7 +5,7 @@
 export const brand = {
   name: 'JoeyC.ai',
   tagline: 'Built Different. Built with AI.',
-  url: 'https://joeyc.ai',
+  url: 'https://www.joeyc.ai',
 
   colors: {
     primary: '#1a8fff',

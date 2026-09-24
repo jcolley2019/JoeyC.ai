@@ -30,7 +30,7 @@ export const socials: SocialLink[] = [
   },
   {
     platform: 'Website',
-    url: 'https://joeyc.ai',
+    url: 'https://www.joeyc.ai',
     icon: FaGlobe,
   },
 ]
