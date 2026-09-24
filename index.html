@@ -4,60 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Joey Colley — Practical AI for Everyone. I build apps, websites & automations with AI and show you how." />
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://www.joeyc.ai" />
-    <meta property="og:title" content="JoeyC.ai — Practical AI for Everyone" />
-    <meta property="og:description" content="Joey Colley — Practical AI for Everyone. I build apps, websites & automations with AI and show you how." />
-    <meta property="og:image" content="https://www.joeyc.ai/photos/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-
-    <!-- Twitter/X -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="JoeyC.ai — Practical AI for Everyone" />
-    <meta name="twitter:description" content="Joey Colley — Practical AI for Everyone. I build apps, websites & automations with AI and show you how." />
-    <meta name="twitter:image" content="https://www.joeyc.ai/photos/og-image.png" />
-
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Rajdhani:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="alternate" type="application/rss+xml" title="JoeyC.ai Blog" href="https://www.joeyc.ai/rss.xml" />
-    <title>JoeyC.ai — Practical AI for Everyone</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Google Translate — auto-translates based on browser language -->
-    <div id="google_translate_element" style="display:none"></div>
-    <script>
-      function googleTranslateElementInit() {
-        new google.translate.TranslateElement({
-          pageLanguage: 'en',
-          autoDisplay: false,
-          layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-        }, 'google_translate_element');
-
-        // Auto-trigger translation based on browser language
-        var userLang = (navigator.language || navigator.userLanguage || 'en').split('-')[0];
-        if (userLang !== 'en') {
-          // Wait for Google Translate to initialize, then trigger
-          var attempts = 0;
-          var tryTranslate = setInterval(function() {
-            var select = document.querySelector('.goog-te-combo');
-            if (select) {
-              select.value = userLang;
-              select.dispatchEvent(new Event('change'));
-              clearInterval(tryTranslate);
-            }
-            if (++attempts > 50) clearInterval(tryTranslate);
-          }, 100);
-        }
-      }
-    </script>
-    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   </body>
 </html>

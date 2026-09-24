@@ -100,8 +100,7 @@ function HeroName() {
   return (
     <div ref={containerRef} className="w-full overflow-hidden leading-none">
       <h2
-        className="notranslate hero-bg-text font-black text-white text-center uppercase select-none pointer-events-none whitespace-nowrap"
-        translate="no"
+        className="hero-bg-text font-black text-white text-center uppercase select-none pointer-events-none whitespace-nowrap"
         style={{
           fontFamily: "'Rajdhani', sans-serif",
           fontSize: 'clamp(3rem, 16vw, 18rem)',
@@ -220,8 +219,7 @@ export function Sandbox() {
                 {/* Row 1: JoeyC.ai */}
                 <div className="flex items-center justify-center w-full mb-2">
                   <span
-                    className="notranslate font-display font-bold"
-                    translate="no"
+                    className="font-display font-bold"
                     style={{
                       fontSize: 'clamp(22px, 3vw, 42px)',
                       color: '#1a8fff',
@@ -280,7 +278,7 @@ export function Sandbox() {
           {/* === BOTTOM: JOEY COLLEY === */}
           <div className="w-full">
             <div className="hero-fallback-subtitle">
-              <span className="notranslate joeyc-title" translate="no" style={{
+              <span className="joeyc-title" style={{
                 fontFamily: "'Orbitron', sans-serif",
                 fontSize: 'clamp(18px, 2.5vw, 28px)',
                 color: '#1a8fff',

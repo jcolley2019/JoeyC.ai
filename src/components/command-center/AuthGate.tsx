@@ -183,7 +183,7 @@ export function AuthGate({ onLogin, children, isAuthenticated }: AuthGateProps) 
             href="/"
             className="text-sm text-text-secondary hover:text-primary transition-colors"
           >
-            ← Back to <span className="notranslate" translate="no">JoeyC.ai</span>
+            ← Back to JoeyC.ai
           </a>
         </div>
       </div>

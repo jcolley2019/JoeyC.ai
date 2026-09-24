@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Helmet } from 'react-helmet-async'
+import { Seo, SITE_URL } from '../components/Seo'
 import { useParams, Link } from 'react-router-dom'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -224,58 +224,35 @@ export function BlogPostPage() {
 
   return (
     <div className="min-h-screen bg-bg noise-overlay">
-      <Helmet>
-        <title>{`${post.title} — JoeyC.ai`}</title>
-        <meta name="description" content={post.excerpt} />
-        <meta name="author" content="Joey Colley" />
-        <link rel="canonical" href={`https://www.joeyc.ai/blog/${post.slug}`} />
-
-        {/* Open Graph */}
-        <meta property="og:title" content={post.title} />
-        <meta property="og:description" content={post.excerpt} />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content={`https://www.joeyc.ai/blog/${post.slug}`} />
-        <meta property="og:site_name" content="JoeyC.ai" />
-        <meta property="og:image" content={post.cover_image || 'https://www.joeyc.ai/photos/joey-og.jpg'} />
-        <meta property="article:author" content="Joey Colley" />
-        {post.published_at && (
-          <meta property="article:published_time" content={post.published_at} />
-        )}
-        {post.updated_at && (
-          <meta property="article:modified_time" content={post.updated_at} />
-        )}
-        {(post.tags || []).map(tag => (
-          <meta key={tag} property="article:tag" content={tag} />
-        ))}
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content={post.cover_image ? 'summary_large_image' : 'summary'} />
-        <meta name="twitter:title" content={post.title} />
-        <meta name="twitter:description" content={post.excerpt} />
-        <meta name="twitter:image" content={post.cover_image || 'https://www.joeyc.ai/photos/joey-og.jpg'} />
-
-        {/* JSON-LD BlogPosting Schema */}
-        <script type="application/ld+json">{JSON.stringify({
+      <Seo
+        title={`${post.title} — JoeyC.ai`}
+        description={post.excerpt}
+        canonical={`${SITE_URL}/blog/${post.slug}`}
+        ogType="article"
+        ogImage={post.cover_image || `${SITE_URL}/photos/joey-og.jpg`}
+        twitterCard={post.cover_image ? 'summary_large_image' : 'summary'}
+        article={{ author: 'Joey Colley', publishedTime: post.published_at, modifiedTime: post.updated_at, tags: post.tags || [] }}
+        jsonLd={[{
           '@context': 'https://schema.org',
           '@type': 'BlogPosting',
           headline: post.title,
           description: post.excerpt,
-          url: `https://www.joeyc.ai/blog/${post.slug}`,
+          url: `${SITE_URL}/blog/${post.slug}`,
           datePublished: post.published_at || post.created_at,
           dateModified: post.updated_at,
           ...(post.cover_image ? { image: post.cover_image } : {}),
           author: {
             '@type': 'Person',
             name: 'Joey Colley',
-            url: 'https://www.joeyc.ai',
+            url: SITE_URL,
           },
           publisher: {
             '@type': 'Person',
             name: 'Joey Colley',
-            url: 'https://www.joeyc.ai',
+            url: SITE_URL,
           },
-        })}</script>
-      </Helmet>
+        }]}
+      />
 
       {/* Article header */}
       <div className="border-b border-border/30 bg-gradient-to-b from-primary/[0.03] to-transparent">
@@ -313,7 +290,7 @@ export function BlogPostPage() {
             <div className="flex items-center gap-3">
               <img src="/photos/joey-headshot1.webp" alt="Joey Colley" className="w-10 h-10 rounded-full object-cover" />
               <div>
-                <p className="notranslate text-sm text-text-primary font-medium" translate="no">Joey Colley</p>
+                <p className="text-sm text-text-primary font-medium">Joey Colley</p>
                 <div className="flex items-center gap-2 text-xs font-mono text-text-secondary">
                   <time>
                     {new Date(post.published_at!).toLocaleDateString('en-US', {
@@ -357,7 +334,7 @@ export function BlogPostPage() {
           <div className="flex items-center gap-4 mb-6">
             <img src="/photos/joey-headshot1.webp" alt="Joey Colley" className="w-12 h-12 rounded-full object-cover" />
             <div>
-              <p className="notranslate font-semibold text-text-primary" translate="no">Joey Colley</p>
+              <p className="font-semibold text-text-primary">Joey Colley</p>
               <p className="text-sm text-text-secondary">
                 Building apps with AI and sharing the journey on{' '}
                 <a href="https://www.tiktok.com/@buildaiwithjoey" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors">

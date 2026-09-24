@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Helmet } from 'react-helmet-async'
+import { Seo, SITE_URL } from '../components/Seo'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { BlogPost } from '../types'
@@ -82,21 +82,14 @@ export function BlogList() {
 
   return (
     <div className="min-h-screen bg-bg noise-overlay">
-      <Helmet>
-        <title>Blog — JoeyC.ai</title>
-        <meta name="description" content="AI experiments, build logs, and lessons learned — by Joey Colley." />
-        <link rel="canonical" href="https://www.joeyc.ai/blog" />
-        <meta property="og:title" content="Blog — JoeyC.ai" />
-        <meta property="og:description" content="AI experiments, build logs, and lessons learned — by Joey Colley." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.joeyc.ai/blog" />
-        <meta property="og:image" content="https://www.joeyc.ai/photos/joey-og.jpg" />
-        <meta property="og:site_name" content="JoeyC.ai" />
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="Blog — JoeyC.ai" />
-        <meta name="twitter:description" content="AI experiments, build logs, and lessons learned — by Joey Colley." />
-        <meta name="twitter:image" content="https://www.joeyc.ai/photos/joey-og.jpg" />
-      </Helmet>
+      <Seo
+        title="Blog — JoeyC.ai"
+        description="AI experiments, build logs, and lessons learned — by Joey Colley."
+        canonical={`${SITE_URL}/blog`}
+        ogType="website"
+        ogImage={`${SITE_URL}/photos/joey-og.jpg`}
+        twitterCard="summary"
+      />
 
       {/* Hero header */}
       <div className="border-b border-border/50 bg-gradient-to-b from-primary/[0.03] to-transparent">

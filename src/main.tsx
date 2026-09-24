@@ -1,7 +1,6 @@
 import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { HelmetProvider } from 'react-helmet-async'
 import './index.css'
 import App from './App'
 import { LanguageProvider } from './hooks/useLanguage'
@@ -31,42 +30,44 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason)
 })
 
+// The blog prerender (api/blog.ts) injects head tags marked data-prerender; drop them before
+// React renders its own so every route ends up with exactly one of each.
+document.querySelectorAll('[data-prerender]').forEach(el => el.remove())
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <HelmetProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <ErrorBoundary>
-          <Suspense fallback={<Loading />}>
-            <Routes>
-              <Route path="/" element={<App />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/x-callback" element={<XCallback />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/blog" element={<BlogList />} />
-              <Route path="/blog/:slug" element={<BlogPostPage />} />
-              <Route path="/sandbox" element={<Sandbox />} />
-              <Route
-                path="/command-center"
-                element={
-                  <LanguageProvider>
-                    <CommandCenter />
-                  </LanguageProvider>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requireAdmin>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </ErrorBoundary>
-      </BrowserRouter>
-    </HelmetProvider>
+    <BrowserRouter>
+      <ScrollToTop />
+      <ErrorBoundary>
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route path="/" element={<App />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/x-callback" element={<XCallback />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/blog" element={<BlogList />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/sandbox" element={<Sandbox />} />
+            <Route
+              path="/command-center"
+              element={
+                <LanguageProvider>
+                  <CommandCenter />
+                </LanguageProvider>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
+    </BrowserRouter>
   </StrictMode>,
 )

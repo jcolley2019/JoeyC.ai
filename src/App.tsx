@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async'
+import { Seo, SITE_URL } from './components/Seo'
 import { Navbar } from './components/layout/Navbar'
 import { Hero } from './components/sections/Hero'
 import { About } from './components/sections/About'
@@ -27,30 +27,13 @@ const personSchema = {
 export default function App() {
   return (
     <div className="min-h-screen bg-bg noise-overlay" style={{ overflowX: 'hidden', maxWidth: '100vw' }}>
-      <Helmet>
-        <title>JoeyC.ai — Practical AI for Everyone</title>
-        <meta name="description" content="Joey Colley — I build apps, websites & automations with AI and show you how. No CS degree required." />
-        <link rel="canonical" href="https://www.joeyc.ai" />
-
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:title" content="JoeyC.ai — Practical AI for Everyone" />
-        <meta property="og:description" content="Joey Colley — I build apps, websites & automations with AI and show you how. No CS degree required." />
-        <meta property="og:url" content="https://www.joeyc.ai" />
-        <meta property="og:image" content="https://www.joeyc.ai/photos/og-image.png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:site_name" content="JoeyC.ai" />
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="JoeyC.ai — Practical AI for Everyone" />
-        <meta name="twitter:description" content="Joey Colley — I build apps, websites & automations with AI and show you how." />
-        <meta name="twitter:image" content="https://www.joeyc.ai/photos/og-image.png" />
-
-        {/* JSON-LD Person Schema */}
-        <script type="application/ld+json">{JSON.stringify(personSchema)}</script>
-      </Helmet>
+      <Seo
+        title="JoeyC.ai — Practical AI for Everyone"
+        description="Joey Colley — I build apps, websites & automations with AI and show you how. No CS degree required."
+        canonical={SITE_URL}
+        ogType="website"
+        jsonLd={[personSchema]}
+      />
       <MouseGlow />
       <Navbar />
       <Hero />

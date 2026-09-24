@@ -174,7 +174,7 @@ export function Content() {
             />
           </div>
           <div className="flex flex-col sm:items-center sm:mt-4">
-            <p className="notranslate font-display text-white font-bold text-[1.6rem] sm:text-[1.8rem] md:text-[2rem] leading-tight mb-3" translate="no">
+            <p className="font-display text-white font-bold text-[1.6rem] sm:text-[1.8rem] md:text-[2rem] leading-tight mb-3">
               Joey Colley
             </p>
             <div className="flex flex-col sm:items-center gap-1">

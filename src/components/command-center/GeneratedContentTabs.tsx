@@ -2,12 +2,21 @@ import { useState, useMemo, useRef, useCallback } from 'react'
 import { marked } from 'marked'
 import TurndownService from 'turndown'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
-import { saveAs } from 'file-saver'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useXPosting, parseThreadToTweets, isThreadContent } from '../../hooks/useXPosting'
 import { useBlogConnection } from '../../hooks/useBlogConnection'
 import { BlogConnectionModal } from './BlogConnectionModal'
 import type { BrandProfile } from '../../types'
+
+/** Trigger a browser download for a Blob without a library. */
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename })
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
 
 interface ContentSection {
   label: string
@@ -531,7 +540,7 @@ export function GeneratedContentTabs({ rawContent, onContentChange, onClear, onP
     const blob = await Packer.toBlob(doc)
     const title = lines.find(l => l.startsWith('# '))?.replace(/^# /, '') || 'blog-post'
     const filename = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50) + '.docx'
-    saveAs(blob, filename)
+    downloadBlob(blob, filename)
   }, [currentSection, brandProfile])
 
   // Print blog as PDF
