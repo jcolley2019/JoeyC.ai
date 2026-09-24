@@ -1,5 +1,20 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://cflhanugkedxeybbydha.supabase.co/functions/v1/sitemap"
+    },
+    {
+      "source": "/rss.xml",
+      "destination": "https://cflhanugkedxeybbydha.supabase.co/functions/v1/rss"
+    },
+    {
+      "source": "/rss",
+      "destination": "https://cflhanugkedxeybbydha.supabase.co/functions/v1/rss"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
