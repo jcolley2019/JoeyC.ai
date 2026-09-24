@@ -30,3 +30,5 @@ _archive/
 audit/screenshots/
 .claude/settings.local.json
 audit/motion/**/*.webm
+audit/motion/after/
+audit/motion/tools/diff-out*/

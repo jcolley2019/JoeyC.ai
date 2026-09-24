@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "commonjs",
+  "description": "CommonJS scope for the motion capture/diff scripts (repo root is type=module)"
+}

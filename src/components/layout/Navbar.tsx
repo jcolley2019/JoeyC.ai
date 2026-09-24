@@ -80,7 +80,8 @@ export function Navbar() {
     // Wait for overlay to fade out, then scroll via GSAP
     window.clearTimeout(scrollTimerRef.current)
     scrollTimerRef.current = window.setTimeout(contextSafe(() => {
-      gsap.to(window, { scrollTo: { y: href, offsetY: 0 }, duration: 1, ease: 'power2.inOut' })
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      gsap.to(window, { scrollTo: { y: href, offsetY: 0 }, duration: reduce ? 0 : 1, ease: 'power2.inOut' })
     }), 350)
   }, [close, contextSafe])
 

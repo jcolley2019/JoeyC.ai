@@ -36,7 +36,7 @@ export function BlogPreview() {
       })
   }, [])
 
-  // Re-runs when posts arrive (as before); revertOnUpdate clears the previous run's inline styles first.
+  // Header: hidden and observed exactly once at mount, untouched by the posts fetch.
   useGSAP((_ctx, contextSafe) => {
     if (!contextSafe) return
     const mm = gsap.matchMedia()
@@ -44,37 +44,40 @@ export function BlogPreview() {
     // Reduced motion: content stays in its final position, nothing is hidden or observed.
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       const header = headerRef.current
-      const grid = gridRef.current
-      const observers: IntersectionObserver[] = []
-
-      if (header) {
-        gsap.set(header, { opacity: 0, y: 60 })
-        const obs = new IntersectionObserver(
-          contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } }),
-          { threshold: 0.1 }
-        )
-        obs.observe(header)
-        observers.push(obs)
-      }
-
-      if (grid) {
-        const cards = Array.from(grid.querySelectorAll('.blog-preview-card'))
-        if (cards.length > 0) {
-          gsap.set(cards, { opacity: 0, x: 200 })
-          const obs = new IntersectionObserver(
-            contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(cards, { x: 0, opacity: 1, ease: 'power3.out', duration: 0.8, stagger: 0.15 }); obs.disconnect() } }),
-            { threshold: 0.2 }
-          )
-          obs.observe(grid)
-          observers.push(obs)
-        }
-      }
-
-      return () => observers.forEach(obs => obs.disconnect())
+      if (!header) return
+      gsap.set(header, { opacity: 0, y: 60 })
+      const obs = new IntersectionObserver(
+        contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(header, { opacity: 1, y: 0, duration: 0.8, ease: 'power4.out' }); obs.disconnect() } }),
+        { threshold: 0.1 }
+      )
+      obs.observe(header)
+      return () => obs.disconnect()
     })
 
     return () => mm.revert()
-  }, { scope: sectionRef, dependencies: [posts], revertOnUpdate: true })
+  }, { scope: sectionRef })
+
+  // Cards: re-runs when posts arrive (as before) so the real cards get the same entrance.
+  useGSAP((_ctx, contextSafe) => {
+    if (!contextSafe) return
+    const mm = gsap.matchMedia()
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const grid = gridRef.current
+      if (!grid) return
+      const cards = Array.from(grid.querySelectorAll('.blog-preview-card'))
+      if (cards.length === 0) return
+      gsap.set(cards, { opacity: 0, x: 200 })
+      const obs = new IntersectionObserver(
+        contextSafe(([e]: IntersectionObserverEntry[]) => { if (e.isIntersecting) { gsap.to(cards, { x: 0, opacity: 1, ease: 'power3.out', duration: 0.8, stagger: 0.15 }); obs.disconnect() } }),
+        { threshold: 0.2 }
+      )
+      obs.observe(grid)
+      return () => obs.disconnect()
+    })
+
+    return () => mm.revert()
+  }, { scope: sectionRef, dependencies: [posts] })
 
   return (
     <section ref={sectionRef} className="py-28 px-6 bg-bg-section">

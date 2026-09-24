@@ -356,14 +356,14 @@ export function Portfolio() {
       gsap.set(box, { xPercent: -50, yPercent: -50, scale: mEntryScale })
       gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: mEntryScale })
 
-      // Re-evaluated every time this context (re)runs, i.e. on every breakpoint flip
-      const mFullWidth = window.innerWidth * 0.90 - 40
-      const mFullHeight = window.innerHeight - 80  // viewport minus navbar
+      // Function-based so every ScrollTrigger refresh (resize/rotation) re-reads the viewport
+      const mFullWidth = () => window.innerWidth * 0.90 - 40
+      const mFullHeight = () => window.innerHeight - 80  // viewport minus navbar
 
       // Position grid to align with expanded box on mobile
       const grid = gridRef.current
       if (grid) {
-        grid.style.width = mFullWidth + 'px'
+        grid.style.width = mFullWidth() + 'px'
         grid.style.left = '50%'
         grid.style.top = '80px'
         grid.style.bottom = 'auto'
@@ -429,6 +429,8 @@ export function Portfolio() {
           pin: pin,
           scrub: 3,
           anticipatePin: 1,
+          invalidateOnRefresh: true,
+          onRefresh: () => { if (grid) grid.style.width = mFullWidth() + 'px' },
           onUpdate: (self) => {
             const p = self.progress
             gridRef.current?.classList.toggle('cards-interactive', p > 0.45 && p < 0.82)
@@ -472,7 +474,8 @@ export function Portfolio() {
 
       // Phase 5: Grid shifts UP to reveal cards 5 and 6 (0.50 → 0.72)
       if (grid) {
-        // Measure actual card height instead of guessing
+        // Measure actual card height instead of guessing. Measured once at setup on purpose:
+        // re-measuring on refresh sees the cards mid-transform and changes the shift distance.
         const mCardH = cards[0]?.getBoundingClientRect().height || (window.innerHeight - 120) / 6
         const mTotalH = mCardH * cards.length + 12 * (cards.length - 1)
         const mVisibleH = window.innerHeight - 80 // viewport minus top offset
@@ -521,10 +524,19 @@ export function Portfolio() {
       mTl.to(box, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
       mTl.to(lettersWrap, { opacity: 0, duration: 0.02, ease: 'power1.in' }, 0.98)
 
-      // Same-breakpoint resizes: ScrollTrigger's own debounced auto-refresh re-measures the pin.
+      // Same-breakpoint resizes: one debounced refresh re-invalidates the function-based values.
       // A breakpoint flip reverts this whole context (timeline, ScrollTrigger, gsap.set styles)
-      // and re-runs the matching one with fresh innerWidth/innerHeight values.
+      // and re-runs the matching one.
+      let mResizeTimer = 0
+      const mDebouncedResize = () => {
+        window.clearTimeout(mResizeTimer)
+        mResizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200)
+      }
+      window.addEventListener('resize', mDebouncedResize)
+
       return () => {
+        window.removeEventListener('resize', mDebouncedResize)
+        window.clearTimeout(mResizeTimer)
         cards.forEach((card, i) => card.removeEventListener('touchend', tapHandlers[i]))
         restore()
       }
@@ -559,9 +571,9 @@ export function Portfolio() {
       gsap.set(lettersWrap, { xPercent: -50, yPercent: -50, scale: entryScale })
 
       // Calculate expansion targets — clamped to avoid exceeding viewport on smaller screens
-      // (re-evaluated on every breakpoint flip)
-      const fullWidth = Math.min(window.innerWidth * 0.95, window.innerWidth - 40)
-      const fullHeight = window.innerHeight - 100
+      // (function-based: re-read on every ScrollTrigger refresh, i.e. any resize)
+      const fullWidth = () => Math.min(window.innerWidth * 0.95, window.innerWidth - 40)
+      const fullHeight = () => window.innerHeight - 100
 
       // ── Pre-compute random scatter values ──
       const letterTargets = letters.map((_, i) => {
@@ -601,6 +613,7 @@ export function Portfolio() {
           pin: pin,
           scrub: 1,
           anticipatePin: 1,
+          invalidateOnRefresh: true,
           onUpdate: (self) => {
             const p = self.progress
             gridRef.current?.classList.toggle('cards-interactive', p > 0.50 && p < 0.75)
@@ -719,8 +732,19 @@ export function Portfolio() {
         ease: 'power1.in',
       }, 0.98)
 
-      // Same-breakpoint resizes: ScrollTrigger's own debounced auto-refresh re-measures the pin.
-      return restore
+      // Same-breakpoint resizes: one debounced refresh re-invalidates the function-based values.
+      let resizeTimer = 0
+      const debouncedResize = () => {
+        window.clearTimeout(resizeTimer)
+        resizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200)
+      }
+      window.addEventListener('resize', debouncedResize)
+
+      return () => {
+        window.removeEventListener('resize', debouncedResize)
+        window.clearTimeout(resizeTimer)
+        restore()
+      }
     })
 
     return () => mm.revert()

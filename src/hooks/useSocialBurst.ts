@@ -12,9 +12,30 @@ const BURST_ICONS: Record<string, string> = {
 }
 
 let burstCounter = 0
+let audioCtx: AudioContext | null = null
+
+function getAudioContext(): AudioContext | null {
+  if (audioCtx) return audioCtx
+  try {
+    const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!Ctor) return null
+    audioCtx = new Ctor()
+    // Contexts created before a user gesture start suspended; resume on the first gesture.
+    const resume = () => { audioCtx?.resume().catch(() => {}) }
+    if (audioCtx.state === 'suspended') {
+      window.addEventListener('pointerdown', resume, { once: true, passive: true })
+      window.addEventListener('keydown', resume, { once: true, passive: true })
+    }
+    return audioCtx
+  } catch {
+    return null
+  }
+}
 
 function playBurstSound() {
-  const ctx = new AudioContext()
+  const ctx = getAudioContext()
+  if (!ctx) return
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {})
   const osc = ctx.createOscillator()
   const gain = ctx.createGain()
   osc.connect(gain)
@@ -38,7 +59,11 @@ export function useSocialBurst() {
     const svgTemplate = BURST_ICONS[platform]
     if (!svgTemplate) return
 
-    playBurstSound()
+    try {
+      playBurstSound()
+    } catch {
+      // audio is decoration; the icon burst goes ahead regardless
+    }
 
     const viewportH = window.innerHeight
     const isDesktop = window.innerWidth >= 768
