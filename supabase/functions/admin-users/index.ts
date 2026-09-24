@@ -1,7 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeadersFor } from "../_shared/cors.ts";
+import { requireEnv } from "../_shared/env.ts";
 
-// Hard-coded protection — these accounts can never be deleted
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+// Hard-coded protection — these accounts can never be deleted. Server-side
+// only; the admin UI reads the per-user `protected` flag instead.
 const PROTECTED_EMAILS = ["joey@joeyc.ai", "jcolley2019@gmail.com"];
 
 // ── Shared auth + admin verification ─────────────────────────
@@ -10,8 +16,8 @@ async function verifyMasterAdmin(req: Request) {
   if (!authHeader) throw new Error("Unauthorized");
 
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     { global: { headers: { Authorization: authHeader } } }
   );
 
@@ -23,8 +29,8 @@ async function verifyMasterAdmin(req: Request) {
   if (authError || !user) throw new Error("Unauthorized");
 
   const adminClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY
   );
 
   const { data: roleData } = await adminClient
@@ -61,13 +67,19 @@ async function handleGet(req: Request) {
     ])
   );
 
-  const users = (authUsers || []).map((u) => ({
-    id: u.id,
-    email: u.email || "No email",
-    created_at: u.created_at,
-    last_sign_in_at: u.last_sign_in_at || null,
-    role: roleMap.get(u.id) || "user",
-  }));
+  // `protected` is the only thing the client learns about the guard below;
+  // the email list itself never leaves the server (L3-16).
+  const users = (authUsers || []).map((u) => {
+    const role = roleMap.get(u.id) || "user";
+    return {
+      id: u.id,
+      email: u.email || "No email",
+      created_at: u.created_at,
+      last_sign_in_at: u.last_sign_in_at || null,
+      role,
+      protected: role === "master_admin" || PROTECTED_EMAILS.includes(u.email ?? ""),
+    };
+  });
 
   const { data: activityData } = await adminClient
     .from("activity_log")

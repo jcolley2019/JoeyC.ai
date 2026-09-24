@@ -1,22 +1,37 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeadersFor } from "../_shared/cors.ts";
+import { requireEnv } from "../_shared/env.ts";
+
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 // Encryption key for blog credentials — set via: supabase secrets set BLOG_CREDENTIALS_KEY=...
-const CREDENTIALS_KEY = Deno.env.get("BLOG_CREDENTIALS_KEY") || "default-key-change-me";
+// Fails closed: without it the function does not boot (L3-10).
+const CREDENTIALS_KEY = requireEnv("BLOG_CREDENTIALS_KEY");
 
-// ── Simple AES-GCM Encryption ────────────────────────────────────────
+// Rows written before JCAI-FIX-06 used a fixed salt, and — if the secret was
+// never set — this public fallback key. Both are accepted on READ only, so old
+// rows can still be decrypted once and re-encrypted in the v2 format below.
+const LEGACY_SALT = "blog-creds-salt";
+const LEGACY_FALLBACK_KEY = "default-key-change-me";
 
-async function deriveKey(password: string): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
+// v2 format: "v2:" + base64(salt[16] | iv[12] | ciphertext). The salt is random
+// per row, so identical credentials never produce related keys or ciphertexts.
+const V2_PREFIX = "v2:";
+
+// ── AES-GCM Encryption ───────────────────────────────────────────────
+
+async function deriveKey(password: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(password),
+    new TextEncoder().encode(password),
     { name: "PBKDF2" },
     false,
     ["deriveKey"]
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: encoder.encode("blog-creds-salt"), iterations: 100000, hash: "SHA-256" },
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
     keyMaterial,
     { name: "AES-GCM", length: 256 },
     false,
@@ -24,25 +39,52 @@ async function deriveKey(password: string): Promise<CryptoKey> {
   );
 }
 
+const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+const fromBase64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
 async function encrypt(data: string): Promise<string> {
-  const key = await deriveKey(CREDENTIALS_KEY);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encoded = new TextEncoder().encode(data);
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
-  // Combine IV + ciphertext, base64 encode
-  const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
-  combined.set(iv);
-  combined.set(new Uint8Array(ciphertext), iv.length);
-  return btoa(String.fromCharCode(...combined));
+  const key = await deriveKey(CREDENTIALS_KEY, salt);
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(data))
+  );
+  const combined = new Uint8Array(salt.length + iv.length + ciphertext.length);
+  combined.set(salt);
+  combined.set(iv, salt.length);
+  combined.set(ciphertext, salt.length + iv.length);
+  return V2_PREFIX + toBase64(combined);
 }
 
-async function decrypt(encoded: string): Promise<string> {
-  const key = await deriveKey(CREDENTIALS_KEY);
-  const combined = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
-  const iv = combined.slice(0, 12);
-  const ciphertext = combined.slice(12);
+async function decryptWith(
+  password: string,
+  salt: Uint8Array<ArrayBuffer>,
+  iv: Uint8Array<ArrayBuffer>,
+  ciphertext: Uint8Array<ArrayBuffer>,
+): Promise<string> {
+  const key = await deriveKey(password, salt);
   const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
   return new TextDecoder().decode(plaintext);
+}
+
+/** Decrypt either format. `legacy` tells the caller to re-encrypt and store the row. */
+async function decrypt(encoded: string): Promise<{ plaintext: string; legacy: boolean }> {
+  if (encoded.startsWith(V2_PREFIX)) {
+    const combined = fromBase64(encoded.slice(V2_PREFIX.length));
+    const plaintext = await decryptWith(CREDENTIALS_KEY, combined.slice(0, 16), combined.slice(16, 28), combined.slice(28));
+    return { plaintext, legacy: false };
+  }
+
+  const combined = fromBase64(encoded);
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const salt = new TextEncoder().encode(LEGACY_SALT);
+  try {
+    return { plaintext: await decryptWith(CREDENTIALS_KEY, salt, iv, ciphertext), legacy: true };
+  } catch {
+    // Written while BLOG_CREDENTIALS_KEY was unset.
+    return { plaintext: await decryptWith(LEGACY_FALLBACK_KEY, salt, iv, ciphertext), legacy: true };
+  }
 }
 
 // ── WordPress REST API Publishing ────────────────────────────────────
@@ -187,8 +229,8 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -203,8 +245,8 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY
     );
 
     const body = await req.json();
@@ -325,8 +367,18 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Decrypt credentials
-      const credentials = JSON.parse(await decrypt(conn.credentials_encrypted));
+      // Decrypt credentials; rows in the pre-FIX-06 format are re-encrypted
+      // with a per-row salt on this first read.
+      const { plaintext, legacy } = await decrypt(conn.credentials_encrypted);
+      const credentials = JSON.parse(plaintext);
+      if (legacy) {
+        const { error: upgradeError } = await adminClient
+          .from("user_blog_connections")
+          .update({ credentials_encrypted: await encrypt(plaintext), updated_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .eq("platform", platform);
+        if (upgradeError) console.error("Credential re-encryption failed:", upgradeError.message);
+      }
       const html = markdownToHtml(content);
 
       let result: { url: string };

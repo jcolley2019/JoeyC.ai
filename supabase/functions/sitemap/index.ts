@@ -1,11 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { requireEnv } from "../_shared/env.ts";
+
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
 
 const SITE_URL = "https://www.joeyc.ai";
 
 Deno.serve(async () => {
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
   );
 
   // Fetch all published blog posts

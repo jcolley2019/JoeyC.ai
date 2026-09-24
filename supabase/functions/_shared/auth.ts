@@ -1,4 +1,8 @@
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { requireEnv } from "./env.ts";
+
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
 
 export type RequireUserResult =
   | { ok: true; user: User; token: string }
@@ -37,8 +41,8 @@ export async function requireUser(
   }
 
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     { global: { headers: { Authorization: authHeader } } },
   );
 

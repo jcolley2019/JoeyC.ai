@@ -1,10 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { encode as base64UrlEncode } from "https://deno.land/std@0.208.0/encoding/base64url.ts";
 import { corsHeadersFor } from "../_shared/cors.ts";
+import { requireEnv } from "../_shared/env.ts";
+
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 // OAuth 2.0 Client credentials (from X Developer Console → JOEYCAI app)
-const X_CLIENT_ID = Deno.env.get("X_OAUTH_CLIENT_ID")!;
-const X_CLIENT_SECRET = Deno.env.get("X_OAUTH_CLIENT_SECRET")!;
+const X_CLIENT_ID = requireEnv("X_OAUTH_CLIENT_ID");
+const X_CLIENT_SECRET = requireEnv("X_OAUTH_CLIENT_SECRET");
 
 // Scopes needed for posting tweets and reading user profile
 const SCOPES = ["tweet.read", "tweet.write", "users.read", "offline.access"];
@@ -137,8 +142,8 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -217,8 +222,8 @@ Deno.serve(async (req) => {
 
       // Upsert into x_accounts (one X account per user)
       const adminClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY
       );
 
       const { error: upsertError } = await adminClient
@@ -264,8 +269,8 @@ Deno.serve(async (req) => {
     // Refreshes an expired access token
     if (action === "refresh") {
       const adminClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY
       );
 
       const { data: xAccount, error: fetchError } = await adminClient
@@ -304,8 +309,8 @@ Deno.serve(async (req) => {
     // Removes the user's X account connection
     if (action === "disconnect") {
       const adminClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY
       );
 
       await adminClient

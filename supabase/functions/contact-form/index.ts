@@ -13,6 +13,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { escapeHtml } from "../_shared/html.ts";
+import { requireEnv } from "../_shared/env.ts";
+
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -190,8 +194,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
     );
 
     // Rate limit: count this IP hash's rows in the last hour.

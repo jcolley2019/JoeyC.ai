@@ -1,7 +1,8 @@
 import { requireUser } from "../_shared/auth.ts";
 import { corsHeadersFor } from "../_shared/cors.ts";
+import { requireEnv } from "../_shared/env.ts";
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+const ANTHROPIC_API_KEY = requireEnv("ANTHROPIC_API_KEY");
 
 // Hard cap on input size so an authenticated caller cannot burn a max-size
 // Sonnet call per request (L3-01). The Studio sends one input panel's text.

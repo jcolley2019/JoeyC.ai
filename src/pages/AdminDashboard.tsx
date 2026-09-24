@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useAdmin } from '../hooks/useAdmin'
 import { supabase } from '../lib/supabase'
-import { MASTER_EMAILS } from '../lib/constants'
 import { BrandGuide } from '../components/command-center/BrandGuide'
 import type { Invitation, ActivityLogEntry } from '../types'
 
@@ -13,9 +12,12 @@ interface AdminUser {
   created_at: string
   last_sign_in_at: string | null
   role: string | null
+  /** Set by admin-users for accounts the server refuses to delete. */
+  protected?: boolean
 }
 
-const isProtected = (email: string) => MASTER_EMAILS.includes(email)
+// Fallback to the role for responses from an admin-users build without the flag.
+const isProtected = (u: AdminUser) => u.protected ?? u.role === 'master_admin'
 
 export function AdminDashboard() {
   const { session, loading: authLoading, logout } = useAuth()
@@ -100,7 +102,7 @@ export function AdminDashboard() {
   }
 
   const toggleAllUsers = () => {
-    const selectable = users.filter(u => !isProtected(u.email))
+    const selectable = users.filter(u => !isProtected(u))
     if (selectedUsers.size === selectable.length) {
       setSelectedUsers(new Set())
     } else {
@@ -313,7 +315,7 @@ export function AdminDashboard() {
     </button>
   )
 
-  const selectableUsers = users.filter(u => !isProtected(u.email))
+  const selectableUsers = users.filter(u => !isProtected(u))
 
   return (
     <div className="min-h-screen bg-bg">
@@ -437,7 +439,7 @@ export function AdminDashboard() {
                             <Checkbox
                               checked={selectedUsers.has(u.id)}
                               onChange={() => toggleUser(u.id)}
-                              disabled={isProtected(u.email)}
+                              disabled={isProtected(u)}
                             />
                           </td>
                           <td className="px-4 py-3 text-[14px] text-[#e2e8f0]">{u.email}</td>

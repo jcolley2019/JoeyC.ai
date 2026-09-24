@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { MASTER_EMAILS } from '../lib/constants'
+import { useAdmin } from './useAdmin'
 import type { BrandProfile } from '../types'
 
 const CACHE_PREFIX = 'brand-profile-'
@@ -9,7 +9,7 @@ export function useBrandProfile() {
   const [profile, setProfile] = useState<BrandProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const { isMasterAdmin, loading: roleLoading } = useAdmin()
 
   // Fetch profile on mount
   useEffect(() => {
@@ -22,9 +22,7 @@ export function useBrandProfile() {
       }
 
       const uid = session.user.id
-      const email = session.user.email ?? null
       setUserId(uid)
-      setUserEmail(email)
 
       // Try localStorage cache first for instant render
       try {
@@ -65,7 +63,6 @@ export function useBrandProfile() {
       if (!session?.user) {
         setProfile(null)
         setUserId(null)
-        setUserEmail(null)
         setLoading(false)
       }
     })
@@ -134,8 +131,8 @@ export function useBrandProfile() {
     return publicUrl
   }, [userId, saveProfile])
 
-  // Master admins always count as onboarded
-  const isOnboarded = (userEmail !== null && MASTER_EMAILS.includes(userEmail)) || profile?.onboarding_completed === true
+  // Master admins always count as onboarded (by role, not by a bundled email list)
+  const isOnboarded = isMasterAdmin || profile?.onboarding_completed === true
 
-  return { profile, loading, saveProfile, uploadLogo, isOnboarded }
+  return { profile, loading: loading || roleLoading, saveProfile, uploadLogo, isOnboarded }
 }

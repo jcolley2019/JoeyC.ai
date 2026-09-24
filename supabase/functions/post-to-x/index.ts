@@ -1,12 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { encode as base64Encode } from "https://deno.land/std@0.208.0/encoding/base64.ts";
 import { corsHeadersFor } from "../_shared/cors.ts";
+import { requireEnv } from "../_shared/env.ts";
+
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
 // Master X API credentials — OAuth 1.0a (Joey's account, fallback)
-const X_API_KEY = Deno.env.get("X_API_KEY")!;
-const X_API_SECRET = Deno.env.get("X_API_SECRET")!;
-const X_ACCESS_TOKEN = Deno.env.get("X_ACCESS_TOKEN")!;
-const X_ACCESS_TOKEN_SECRET = Deno.env.get("X_ACCESS_TOKEN_SECRET")!;
+const X_API_KEY = requireEnv("X_API_KEY");
+const X_API_SECRET = requireEnv("X_API_SECRET");
+const X_ACCESS_TOKEN = requireEnv("X_ACCESS_TOKEN");
+const X_ACCESS_TOKEN_SECRET = requireEnv("X_ACCESS_TOKEN_SECRET");
 
 // OAuth 2.0 client credentials (for refreshing user tokens)
 const X_CLIENT_ID = Deno.env.get("X_OAUTH_CLIENT_ID") || "";
@@ -257,8 +262,8 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -276,8 +281,8 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY
     );
 
     // ── Resolve auth method ──────────────────────────────────────────
