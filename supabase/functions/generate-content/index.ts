@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { corsHeadersFor } from "../_shared/cors.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 
@@ -54,12 +55,6 @@ Write like a real human. The following are BANNED — never use them:
 - Prioritize hashtags with active engagement over generic or stale ones
 - Mix trending hashtags (riding current waves) with niche hashtags (targeted reach) and evergreen hashtags (consistent discovery)
 - Every hashtag MUST include the # symbol`;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 function getSystemPrompt(
   outputFormat: string,
@@ -569,6 +564,7 @@ async function callAnthropic(params: {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

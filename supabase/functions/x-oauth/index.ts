@@ -1,15 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { encode as base64UrlEncode } from "https://deno.land/std@0.208.0/encoding/base64url.ts";
+import { corsHeadersFor } from "../_shared/cors.ts";
 
 // OAuth 2.0 Client credentials (from X Developer Console → JOEYCAI app)
 const X_CLIENT_ID = Deno.env.get("X_OAUTH_CLIENT_ID")!;
 const X_CLIENT_SECRET = Deno.env.get("X_OAUTH_CLIENT_SECRET")!;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 // Scopes needed for posting tweets and reading user profile
 const SCOPES = ["tweet.read", "tweet.write", "users.read", "offline.access"];
@@ -126,6 +121,7 @@ async function getXUserInfo(
 // ── Main Handler ─────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

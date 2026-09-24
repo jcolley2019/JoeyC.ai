@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { encode as base64Encode } from "https://deno.land/std@0.208.0/encoding/base64.ts";
+import { corsHeadersFor } from "../_shared/cors.ts";
 
 // Master X API credentials — OAuth 1.0a (Joey's account, fallback)
 const X_API_KEY = Deno.env.get("X_API_KEY")!;
@@ -12,12 +13,6 @@ const X_CLIENT_ID = Deno.env.get("X_OAUTH_CLIENT_ID") || "";
 const X_CLIENT_SECRET = Deno.env.get("X_OAUTH_CLIENT_SECRET") || "";
 
 const X_API_BASE = "https://api.x.com/2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 // ── OAuth 1.0a Signature ─────────────────────────────────────────────
 // X API v2 still requires OAuth 1.0a HMAC-SHA1 for user-context requests
@@ -246,6 +241,7 @@ async function postThread(
 // ── Main Handler ─────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

@@ -1,13 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { corsHeadersFor } from "../_shared/cors.ts";
 
 // Encryption key for blog credentials — set via: supabase secrets set BLOG_CREDENTIALS_KEY=...
 const CREDENTIALS_KEY = Deno.env.get("BLOG_CREDENTIALS_KEY") || "default-key-change-me";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 // ── Simple AES-GCM Encryption ────────────────────────────────────────
 
@@ -177,6 +172,7 @@ function markdownToHtml(md: string): string {
 // ── Main Handler ─────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

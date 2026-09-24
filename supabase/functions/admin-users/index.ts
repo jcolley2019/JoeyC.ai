@@ -1,10 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeadersFor } from "../_shared/cors.ts";
 
 // Hard-coded protection — these accounts can never be deleted
 const PROTECTED_EMAILS = ["joey@joeyc.ai", "jcolley2019@gmail.com"];
@@ -217,6 +212,7 @@ async function handlePost(req: Request) {
 
 // ── Edge Function ────────────────────────────────────────────
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
