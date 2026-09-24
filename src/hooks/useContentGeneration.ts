@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { OutputFormat, Platform, GenerationUsage, GenerationLimits, BrandProfile } from '../types'
+import type { OutputFormat, Platform, GenerationUsage, GenerationLimits } from '../types'
+
+// Mirrors MAX_INPUT_CHARS in supabase/functions/generate-content/validate.ts.
+const MAX_INPUT_CHARS = 30_000
 
 interface GenerateParams {
   input_type: 'youtube' | 'text' | 'voice'
@@ -8,10 +11,10 @@ interface GenerateParams {
   output_format: OutputFormat
   platform?: Platform
   cascade_source?: string // Blog content to derive from
-  use_perplexity?: boolean
-  all_platforms?: Platform[]
   real_time_hashtags?: string // Pre-researched hashtags to pass through
-  brand_context?: Partial<BrandProfile>
+  // One id per generate() press, sent on every call of the cascade: the server
+  // counts the daily quota per batch, not per model call.
+  batch_id: string
 }
 
 interface GenerateMultiParams {
@@ -21,7 +24,6 @@ interface GenerateMultiParams {
   platforms: Platform[]
   cascade: boolean // Whether to use blog-first cascade flow
   usePerplexity: boolean // Whether to use Perplexity for hashtag research
-  brand_context?: Partial<BrandProfile> // Brand profile for content personalization
 }
 
 interface GenerateResult {
@@ -30,14 +32,27 @@ interface GenerateResult {
   limits: GenerationLimits
 }
 
+/** Turn a non-2xx edge-function response into a user-facing message. */
+async function functionErrorMessage(fnError: Error & { context?: unknown }): Promise<string> {
+  let body: { error?: string; reset_at?: string } | null = null
+  if (fnError.context instanceof Response) {
+    try { body = await fnError.context.clone().json() } catch { /* not JSON */ }
+  }
+  let msg = body?.error || fnError.message || 'Generation failed'
+  if (body?.reset_at) {
+    const local = new Date(body.reset_at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+    msg += ` That is ${local} your time.`
+  }
+  return msg
+}
+
 async function callGenerate(params: GenerateParams): Promise<GenerateResult> {
   const { data, error: fnError } = await supabase.functions.invoke('generate-content', {
     body: params,
   })
   if (fnError) {
-    // Try to extract the actual error message from the response
-    const msg = data?.error || fnError.message || 'Generation failed'
-    console.error('Edge function error:', msg, data)
+    const msg = await functionErrorMessage(fnError)
+    console.error('Edge function error:', msg)
     throw new Error(msg)
   }
   return {
@@ -112,7 +127,11 @@ export function useContentGeneration() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
+      if (params.input_text.length > MAX_INPUT_CHARS) {
+        throw new Error(`Input is too long (${params.input_text.length.toLocaleString()} characters; max ${MAX_INPUT_CHARS.toLocaleString()}). Shorten it and try again.`)
+      }
 
+      const batch_id = crypto.randomUUID()
       const allResults: GenerateResult[] = []
       const hasBlog = params.output_formats.includes('blog')
       const otherFormats = params.output_formats.filter(f => f !== 'blog')
@@ -147,7 +166,7 @@ export function useContentGeneration() {
           input_type: params.input_type,
           input_text: params.input_text,
           output_format: 'blog',
-          brand_context: params.brand_context,
+          batch_id,
         })
         allResults.push(blogResult)
 
@@ -166,8 +185,8 @@ export function useContentGeneration() {
                   output_format: 'social',
                   platform,
                   cascade_source: blogResult.content,
-                  use_perplexity: false, // Already researched
                   real_time_hashtags: realTimeHashtags,
+                  batch_id,
                 },
               })
             }
@@ -180,8 +199,8 @@ export function useContentGeneration() {
                 input_text: params.input_text,
                 output_format: format,
                 cascade_source: blogResult.content,
-                use_perplexity: false,
                 real_time_hashtags: realTimeHashtags,
+                batch_id,
               },
             })
           }
@@ -217,9 +236,8 @@ export function useContentGeneration() {
                   input_text: params.input_text,
                   output_format: 'social',
                   platform,
-                  use_perplexity: false, // Already researched upfront
                   real_time_hashtags: realTimeHashtags,
-                  all_platforms: params.platforms,
+                  batch_id,
                 },
               })
             }
@@ -232,7 +250,7 @@ export function useContentGeneration() {
                 input_text: params.input_text,
                 output_format: format,
                 real_time_hashtags: realTimeHashtags,
-                ...(format === 'blog' && params.brand_context ? { brand_context: params.brand_context } : {}),
+                batch_id,
               },
             })
           }

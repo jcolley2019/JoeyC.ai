@@ -201,11 +201,10 @@ export function CommandCenter() {
       platforms,
       cascade,
       usePerplexity: !!perplexityHashtags.value,
-      brand_context: brandProfile ?? undefined,
     }).then(() => {
       setHistoryKey(k => k + 1)
     })
-  }, [inputText, inputType, outputFormats, platforms, cascade, generate, showBlogClarify, hasBlog, blogClarifyData, perplexityHashtags.value, brandProfile])
+  }, [inputText, inputType, outputFormats, platforms, cascade, generate, showBlogClarify, hasBlog, blogClarifyData, perplexityHashtags.value])
 
   // Fires one video generation call per selected platform for tabbed output
   const fireVideoGeneration = useCallback((mediaData: { mediaType: 'video' | 'image'; aiPlatform: string }, igFormat?: string) => {
@@ -424,7 +423,6 @@ export function CommandCenter() {
                       platforms,
                       cascade,
                       usePerplexity: !!perplexityHashtags.value,
-                      brand_context: brandProfile ?? undefined,
                     }).then(() => setHistoryKey(k => k + 1))
                   }}
                 />

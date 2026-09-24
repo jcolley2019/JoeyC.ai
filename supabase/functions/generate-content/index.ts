@@ -1,6 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeadersFor } from "../_shared/cors.ts";
 import { requireEnv } from "../_shared/env.ts";
+import { validateRequest } from "./validate.ts";
 
 const SUPABASE_URL = requireEnv("SUPABASE_URL");
 const SUPABASE_ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
@@ -20,7 +21,7 @@ const MAX_WEB_SEARCHES = 5;       // Max web search invocations per blog post
 const MAX_TOKENS_BLOG = 8192;     // Blog generation (long-form, 2000+ words)
 const MAX_TOKENS_DERIVATIVE = 2048; // Social/thread derivatives (shorter output)
 const MAX_TOKENS_STANDARD = 4096;  // Non-cascade generation
-const DAILY_GENERATION_LIMIT = 50; // Per user per day
+const DAILY_GENERATION_LIMIT = 50; // Per user per UTC day, counted per batch; keep in sync with reserve_generation()
 
 // Anti-AI-slop writing directive — applied to ALL content types
 const ANTI_SLOP_DIRECTIVE = `
@@ -448,21 +449,78 @@ function getDerivativePrompt(outputFormat: string, platform?: string): string {
   return base;
 }
 
-async function checkDailyLimit(
-  adminClient: ReturnType<typeof createClient>,
-  userId: string
-): Promise<{ allowed: boolean; used: number }> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+// ── Daily quota (JCAI-FIX-06/C1) ───────────────────────────────────────
+// One unit per Studio button press ("batch"), reserved atomically by the
+// public.reserve_generation() Postgres function — see
+// supabase/migrations/20260924190000_generation_quota.sql.
 
-  const { count } = await adminClient
+type Db = SupabaseClient;
+
+/** Next UTC midnight, when the per-day batch count starts over. */
+function nextUtcMidnight(now = new Date()): string {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)).toISOString();
+}
+
+type Reservation =
+  | { ok: true; used: number }
+  | { ok: false; status: number; body: Record<string, unknown> };
+
+/**
+ * userClient MUST carry the caller's JWT: the Postgres function reads
+ * auth.uid() and rejects the service role.
+ */
+async function reserveGeneration(userClient: Db, batchId: string): Promise<Reservation> {
+  const { data, error } = await userClient.rpc("reserve_generation", { p_batch_id: batchId });
+  if (!error) return { ok: true, used: Number(data) };
+
+  if (error.message === "quota_exceeded") {
+    return {
+      ok: false,
+      status: 429,
+      body: {
+        error: `Daily limit reached (${DAILY_GENERATION_LIMIT} generations). Resets at 00:00 UTC.`,
+        daily_used: DAILY_GENERATION_LIMIT,
+        daily_limit: DAILY_GENERATION_LIMIT,
+        reset_at: nextUtcMidnight(),
+      },
+    };
+  }
+  console.error("reserve_generation failed:", error.message);
+  return { ok: false, status: 500, body: { error: "Could not check the daily limit. Try again." } };
+}
+
+/** Drop the batch's placeholder so a batch that produced nothing does not count. */
+async function releasePending(adminClient: Db, userId: string, batchId: string) {
+  const { error } = await adminClient
     .from("content_generations")
-    .select("*", { count: "exact", head: true })
+    .delete()
     .eq("user_id", userId)
-    .gte("created_at", today.toISOString());
+    .eq("batch_id", batchId)
+    .eq("output_format", "pending");
+  if (error) console.error("release pending failed:", error.message);
+}
 
-  const used = count || 0;
-  return { allowed: used < DAILY_GENERATION_LIMIT, used };
+/**
+ * Store a result. The first successful call of a batch turns the placeholder
+ * row into the real one; later calls insert. Two calls finishing at once
+ * cannot both claim it: the second UPDATE re-checks output_format after the
+ * first commits, matches nothing, and falls through to the insert.
+ */
+async function saveGeneration(adminClient: Db, userId: string, batchId: string, row: Record<string, unknown>) {
+  const { data: claimed, error: claimError } = await adminClient
+    .from("content_generations")
+    .update(row)
+    .eq("user_id", userId)
+    .eq("batch_id", batchId)
+    .eq("output_format", "pending")
+    .select("id");
+  if (claimError) console.error("claim pending failed:", claimError.message);
+  if (claimed && claimed.length > 0) return;
+
+  const { error } = await adminClient
+    .from("content_generations")
+    .insert({ ...row, user_id: userId, batch_id: batchId });
+  if (error) console.error("content_generations insert failed:", error.message);
 }
 
 async function callAnthropic(params: {
@@ -557,10 +615,6 @@ async function callAnthropic(params: {
     break;
   }
 
-  if (!generatedContent) {
-    generatedContent = "No content generated";
-  }
-
   return {
     content: generatedContent,
     usage: totalUsage,
@@ -574,26 +628,29 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  // Set while this call holds the batch's reservation; released on failure or empty output.
+  let reserved: { adminClient: Db; userId: string; batchId: string } | null = null;
+
   try {
     // Get the auth token - check Authorization header first, then apikey
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "No authorization header" }, 401);
     }
 
-    // Verify the user using the access token from the request
-    const supabase = createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY,
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
+    // Verify the user using the access token from the request. The same
+    // client carries the user's JWT into reserve_generation().
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
 
     const token = authHeader.replace("Bearer ", "");
     const {
@@ -602,34 +659,20 @@ Deno.serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      console.error("Auth failed:", authError?.message, "Header present:", !!authHeader, "Header prefix:", authHeader?.substring(0, 10));
-      return new Response(JSON.stringify({ error: "Unauthorized", detail: authError?.message }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("Auth failed:", authError?.message);
+      return json({ error: "Unauthorized" }, 401);
     }
 
-    const adminClient = createClient(
-      SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY
-    );
-
-    // Check daily limit
-    const { allowed, used } = await checkDailyLimit(adminClient, user.id);
-    if (!allowed) {
-      return new Response(
-        JSON.stringify({
-          error: `Daily limit reached (${DAILY_GENERATION_LIMIT} generations). Resets at midnight.`,
-          daily_used: used,
-          daily_limit: DAILY_GENERATION_LIMIT,
-        }),
-        {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return json({ error: "Request body must be valid JSON" }, 400);
     }
-
+    const validation = validateRequest(rawBody);
+    if (!validation.ok) {
+      return json({ error: validation.error }, 400);
+    }
     const {
       input_type,
       input_text,
@@ -637,18 +680,27 @@ Deno.serve(async (req) => {
       platform,
       cascade_source,  // If provided, this is blog content to derive from
       real_time_hashtags, // Pre-researched hashtags from Perplexity (passed from client)
-      brand_context,      // Brand profile for content personalization
-    } = await req.json();
+    } = validation.value;
+    // Clients from before JCAI-FIX-06 send no batch_id: each call is then its own batch.
+    const batchId = validation.value.batch_id ?? crypto.randomUUID();
 
-    if (!output_format) {
-      return new Response(
-        JSON.stringify({ error: "output_format is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Reserve (or join) this batch's slot in today's quota — atomic in Postgres.
+    const reservation = await reserveGeneration(supabase, batchId);
+    if (!reservation.ok) {
+      return json(reservation.body, reservation.status);
     }
+    reserved = { adminClient, userId: user.id, batchId };
+
+    // Brand profile comes from the database, never from the request body (L3-17).
+    const { data: brandRow, error: brandError } = await adminClient
+      .from("brand_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (brandError) console.error("brand_profiles fetch failed:", brandError.message);
+    const brand_context = (brandRow ?? undefined) as Record<string, unknown> | undefined;
 
     // Determine generation mode
     const isCascadeDerivative = !!cascade_source;
@@ -716,54 +768,52 @@ Deno.serve(async (req) => {
       maxWebSearches: MAX_WEB_SEARCHES,
     });
 
+    // Empty output is not stored and does not count toward the quota.
+    if (!result.content.trim()) {
+      await releasePending(adminClient, user.id, batchId);
+      reserved = null;
+      return json({ error: "The model returned no content. This did not count toward your daily limit." }, 502);
+    }
+
     // Save to database with usage tracking
-    await adminClient.from("content_generations").insert({
-      user_id: user.id,
-      input_type: isCascadeDerivative ? (input_type || "text") : input_type,
+    await saveGeneration(adminClient, user.id, batchId, {
+      input_type,
       input_text: isCascadeDerivative ? `[Derived from blog] ${(cascade_source as string).substring(0, 200)}...` : input_text,
       output_format,
       platform: platform || null,
       generated_content: result.content,
     });
+    reserved = null;
 
     // Log activity metadata (privacy-safe — no content)
     await adminClient.from("activity_log").insert({
       user_id: user.id,
       action: "content_generation",
       metadata: {
-        input_type: isCascadeDerivative ? (input_type || "text") : input_type,
+        input_type,
         output_format,
         platform: platform || null,
         cascade: isCascadeDerivative,
       },
     });
 
-    return new Response(
-      JSON.stringify({
-        content: result.content,
-        usage: {
-          input_tokens: result.usage.input_tokens,
-          output_tokens: result.usage.output_tokens,
-          model,
-          web_search_used: result.webSearchesUsed,
-        },
-        limits: {
-          daily_used: used + 1,
-          daily_limit: DAILY_GENERATION_LIMIT,
-        },
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return json({
+      content: result.content,
+      usage: {
+        input_tokens: result.usage.input_tokens,
+        output_tokens: result.usage.output_tokens,
+        model,
+        web_search_used: result.webSearchesUsed,
+      },
+      limits: {
+        daily_used: reservation.used,
+        daily_limit: DAILY_GENERATION_LIMIT,
+        reset_at: nextUtcMidnight(),
+      },
+    });
   } catch (err) {
     console.error("Error:", err);
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Internal server error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    if (reserved) await releasePending(reserved.adminClient, reserved.userId, reserved.batchId);
+    return json({ error: err instanceof Error ? err.message : "Internal server error" }, 500);
   }
 });
