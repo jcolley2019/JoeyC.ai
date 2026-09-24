@@ -199,6 +199,7 @@ export function Hero() {
         <img
           src="/photos/joey-headshot2.webp"
           alt=""
+          fetchPriority="high"
           className="hero-photo pointer-events-none select-none"
           style={{
             height: 'clamp(300px, 65vh, 700px)',

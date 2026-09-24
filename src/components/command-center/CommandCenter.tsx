@@ -23,6 +23,7 @@ import { useXAccount } from '../../hooks/useXAccount'
 import type { BlogClarifyData } from './BlogClarifyForm'
 import type { OutputFormat, Platform } from '../../types'
 import { deriveTitleAndSlug } from '../../lib/publish'
+import { ensureStudioFonts } from '../../lib/studioFonts'
 
 // AI platform keywords to detect in brain dump text
 const VIDEO_PLATFORM_KEYWORDS = ['veo', 'sora', 'kling', 'higgsfield', 'seedance', 'runway', 'pika', 'hailuo']
@@ -50,6 +51,9 @@ export function CommandCenter() {
   const { status: xStatus, connecting: xConnecting, connect: xConnect, disconnect: xDisconnect } = useXAccount()
   const [skippedOnboarding, setSkippedOnboarding] = useState(false)
   const [showBrandSettings, setShowBrandSettings] = useState(false)
+
+  // Studio-only Google Fonts (style presets, luxe mode) — injected once on mount (P1)
+  useEffect(() => { ensureStudioFonts() }, [])
 
   // Auto-logout when user closes/refreshes the tab
   useEffect(() => {

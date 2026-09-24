@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { brand, emailTemplates } from '../../lib/brand'
+import { ensureStudioFonts } from '../../lib/studioFonts'
 
 const colorEntries: { name: string; key: string; hex: string; role: string }[] = [
   { name: 'Primary', key: 'primary', hex: brand.colors.primary, role: 'Brand blue · CTAs · Links' },
@@ -45,6 +46,9 @@ export function BrandGuide() {
   const [emailPreview, setEmailPreview] = useState<'invitation' | 'confirmation' | 'resetPassword' | 'magicLink'>('invitation')
   const emailPreviewRef = useRef<HTMLIFrameElement>(null)
   const guideRef = useRef<HTMLDivElement>(null)
+
+  // Cormorant Garamond / Playfair samples: fonts are not in index.html (P1)
+  useEffect(() => { ensureStudioFonts() }, [])
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
