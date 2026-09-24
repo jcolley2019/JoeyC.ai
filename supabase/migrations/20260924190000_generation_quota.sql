@@ -26,6 +26,22 @@ alter table public.content_generations
 create index if not exists content_generations_user_created_batch_idx
   on public.content_generations (user_id, created_at, batch_id);
 
+-- ── 1b. Let the placeholder row through the existing CHECK constraints ──────
+-- The live table restricts input_type to youtube/text/voice and output_format
+-- to social/blog/thread/video, and input_text is NOT NULL. The placeholder
+-- uses 'pending' for both enums and '' for input_text; the Studio history
+-- filters output_format = 'pending' out.
+
+alter table public.content_generations
+  drop constraint if exists content_generations_input_type_check,
+  add  constraint content_generations_input_type_check
+    check (input_type = any (array['youtube','text','voice','pending']));
+
+alter table public.content_generations
+  drop constraint if exists content_generations_output_format_check,
+  add  constraint content_generations_output_format_check
+    check (output_format = any (array['social','blog','thread','video','pending']));
+
 -- ── 2. reserve_generation(batch_id) ─────────────────────────────────────────
 -- Called by generate-content with the CALLER'S JWT (a supabase-js client built
 -- with the request's Authorization header), never with the service role:
@@ -90,9 +106,9 @@ begin
   end if;
 
   insert into public.content_generations
-    (user_id, batch_id, input_type, output_format, generated_content)
+    (user_id, batch_id, input_type, input_text, output_format, generated_content)
   values
-    (v_uid, p_batch_id, 'pending', 'pending', '');
+    (v_uid, p_batch_id, 'pending', '', 'pending', '');
 
   return v_used + 1;
 end;
