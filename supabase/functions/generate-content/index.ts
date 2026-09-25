@@ -1,5 +1,5 @@
-import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.128.0";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import Anthropic from "@anthropic-ai/sdk";
 import { corsHeadersFor } from "../_shared/cors.ts";
 import { requireEnv } from "../_shared/env.ts";
 import { validateRequest } from "./validate.ts";

@@ -1,4 +1,4 @@
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient, type User } from "@supabase/supabase-js";
 import { requireEnv } from "./env.ts";
 
 const SUPABASE_URL = requireEnv("SUPABASE_URL");

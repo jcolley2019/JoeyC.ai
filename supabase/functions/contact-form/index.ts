@@ -11,7 +11,7 @@
 //
 // No user session by design (verify_jwt = false in config.toml).
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "@supabase/supabase-js";
 import { escapeHtml } from "../_shared/html.ts";
 import { requireEnv } from "../_shared/env.ts";
 

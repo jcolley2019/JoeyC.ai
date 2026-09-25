@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "@supabase/supabase-js";
 import { corsHeadersFor } from "../_shared/cors.ts";
 import { requireEnv } from "../_shared/env.ts";
 

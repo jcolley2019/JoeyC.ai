@@ -395,43 +395,57 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # only checks that SOME valid JWT is present — the public anon key qualifies —
 # so every function still performs its own auth check in code.
 # Do not change a value here without redeploying that function.
+# import_map: every function resolves bare specifiers through the shared
+# supabase/functions/deno.json (JCAI-FIX-08/T3); the CLI does not find it on its own.
 
 [functions.generate-content]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 [functions.blog-connection]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 [functions.post-to-x]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 [functions.x-oauth]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 # JCAI-FIX-01/S1 (L3-01, L3-09): previously OFF, now ON. In-function
 # requireUser() gate added at the same time.
 [functions.translate]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 [functions.youtube-transcript]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 [functions.perplexity-hashtags]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.admin-users]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.send-invite]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.rss]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.sitemap]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 # Public contact form: no user session by design; abuse controls live in the
 # function itself (JCAI-FIX-01/S5).
 [functions.contact-form]
 verify_jwt = false
+import_map = "./functions/deno.json"

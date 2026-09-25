@@ -1,5 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { encode as base64UrlEncode } from "https://deno.land/std@0.208.0/encoding/base64url.ts";
+import { createClient } from "@supabase/supabase-js";
+import { encodeBase64Url as base64UrlEncode } from "@std/encoding/base64url";
 import { corsHeadersFor } from "../_shared/cors.ts";
 import { requireEnv } from "../_shared/env.ts";
 
