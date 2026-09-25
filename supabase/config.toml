@@ -436,14 +436,6 @@ import_map = "./functions/deno.json"
 verify_jwt = false
 import_map = "./functions/deno.json"
 
-[functions.rss]
-verify_jwt = false
-import_map = "./functions/deno.json"
-
-[functions.sitemap]
-verify_jwt = false
-import_map = "./functions/deno.json"
-
 # Public contact form: no user session by design; abuse controls live in the
 # function itself (JCAI-FIX-01/S5).
 [functions.contact-form]
