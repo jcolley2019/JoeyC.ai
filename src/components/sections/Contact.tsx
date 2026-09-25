@@ -318,7 +318,7 @@ export function Contact() {
                 {step === 1 && (
                   <div className="space-y-5">
                     <p aria-live="polite" className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
-                      Step 1 of {TOTAL_STEPS}: About You
+                      <span className="sr-only">Step 1 of {TOTAL_STEPS}: </span>About You
                     </p>
                     <div>
                       <label htmlFor="name" className={labelClass}>Name</label>
@@ -372,7 +372,7 @@ export function Contact() {
                 {step === 2 && (
                   <div className="space-y-5">
                     <p aria-live="polite" className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
-                      Step 2 of {TOTAL_STEPS}: Project Details
+                      <span className="sr-only">Step 2 of {TOTAL_STEPS}: </span>Project Details
                     </p>
                     <div>
                       <span id="label-pain" className={labelClass}>Biggest pain point</span>
@@ -407,7 +407,7 @@ export function Contact() {
                 {step === 3 && (
                   <div className="space-y-5">
                     <p aria-live="polite" className="font-mono text-xs text-primary tracking-wide uppercase mb-1">
-                      Step 3 of {TOTAL_STEPS}: A Little More Context
+                      <span className="sr-only">Step 3 of {TOTAL_STEPS}: </span>A Little More Context
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
