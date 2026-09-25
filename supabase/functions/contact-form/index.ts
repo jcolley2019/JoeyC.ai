@@ -69,7 +69,7 @@ function json(cors: Record<string, string>, body: unknown, status = 200): Respon
 /** Drop C0/C1 control characters. Multi-line fields keep \n and \t. */
 function stripControl(value: string, multiline: boolean): string {
   // deno-lint-ignore no-control-regex
-  const re = multiline ? /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g : /[\u0000-\u001F\u007F-\u009F]/g;
+  const re = multiline ? /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g : /[\u0000-\u001F\u007F-\u009F]/g; // eslint-disable-line no-control-regex -- stripping control characters is this validator's purpose
   return value.replace(re, "").replace(/\r\n?/g, multiline ? "\n" : " ");
 }
 

@@ -97,7 +97,7 @@ export function CommandCenter() {
   const toggleLuxeMode = useCallback(() => {
     setLuxeMode(prev => {
       const next = !prev
-      try { localStorage.setItem('cc-theme', next ? 'luxe' : 'dark') } catch {}
+      try { localStorage.setItem('cc-theme', next ? 'luxe' : 'dark') } catch { /* storage unavailable: preference is not persisted */ }
       return next
     })
   }, [])
@@ -159,6 +159,37 @@ export function CommandCenter() {
 
   const hasBlog = outputFormats.includes('blog')
 
+  // Fires one video generation call per selected platform for tabbed output
+  const fireVideoGeneration = useCallback((mediaData: { mediaType: 'video' | 'image'; aiPlatform: string }, igFormat?: string) => {
+    const perPlatformSections = platforms.map(p => {
+      const ratio = p === 'tiktok' ? '9:16 (1080x1920)'
+        : p === 'youtube' ? '16:9 (1920x1080)'
+        : p === 'pinterest' ? '2:3 (1000x1500)'
+        : p === 'linkedin' ? '1.91:1 (1200x628)'
+        : p === 'instagram' ? (
+          igFormat === 'reel' ? '9:16 (1080x1920)' :
+          igFormat === 'square' ? '1:1 (1080x1080)' :
+          igFormat === 'landscape' ? '1.91:1 (1080x566)' : '9:16 (1080x1920)'
+        ) : '9:16 (1080x1920)'
+      return `Generate a ${mediaData.mediaType} prompt for ${p.toUpperCase()}.\nAspect Ratio: ${ratio}`
+    })
+
+    const enhancedInput = `${inputText}\n\n---\nMedia type: ${mediaData.mediaType}\nAI Platform: ${mediaData.aiPlatform}\nTarget Platforms: ${platforms.join(', ')}\n\nGenerate ONE separate prompt section for EACH platform below. Label each section clearly with the platform name as a header.\n\n${perPlatformSections.join('\n\n')}`
+
+    generate({
+      input_type: inputType,
+      input_text: enhancedInput,
+      output_formats: ['video'],
+      platforms,
+      cascade: false,
+      usePerplexity: false,
+    }).then(() => {
+      setHistoryKey(k => k + 1)
+      setInstagramFormat(null)
+      setPendingMediaData(null)
+    })
+  }, [inputText, inputType, platforms, generate])
+
   const handleGenerate = useCallback(() => {
     if (!inputText.trim()) return
 
@@ -217,38 +248,7 @@ export function CommandCenter() {
     }).then(() => {
       setHistoryKey(k => k + 1)
     })
-  }, [inputText, inputType, outputFormats, platforms, cascade, generate, showBlogClarify, hasBlog, blogClarifyData, perplexityHashtags.value])
-
-  // Fires one video generation call per selected platform for tabbed output
-  const fireVideoGeneration = useCallback((mediaData: { mediaType: 'video' | 'image'; aiPlatform: string }, igFormat?: string) => {
-    const perPlatformSections = platforms.map(p => {
-      const ratio = p === 'tiktok' ? '9:16 (1080x1920)'
-        : p === 'youtube' ? '16:9 (1920x1080)'
-        : p === 'pinterest' ? '2:3 (1000x1500)'
-        : p === 'linkedin' ? '1.91:1 (1200x628)'
-        : p === 'instagram' ? (
-          igFormat === 'reel' ? '9:16 (1080x1920)' :
-          igFormat === 'square' ? '1:1 (1080x1080)' :
-          igFormat === 'landscape' ? '1.91:1 (1080x566)' : '9:16 (1080x1920)'
-        ) : '9:16 (1080x1920)'
-      return `Generate a ${mediaData.mediaType} prompt for ${p.toUpperCase()}.\nAspect Ratio: ${ratio}`
-    })
-
-    const enhancedInput = `${inputText}\n\n---\nMedia type: ${mediaData.mediaType}\nAI Platform: ${mediaData.aiPlatform}\nTarget Platforms: ${platforms.join(', ')}\n\nGenerate ONE separate prompt section for EACH platform below. Label each section clearly with the platform name as a header.\n\n${perPlatformSections.join('\n\n')}`
-
-    generate({
-      input_type: inputType,
-      input_text: enhancedInput,
-      output_formats: ['video'],
-      platforms,
-      cascade: false,
-      usePerplexity: false,
-    }).then(() => {
-      setHistoryKey(k => k + 1)
-      setInstagramFormat(null)
-      setPendingMediaData(null)
-    })
-  }, [inputText, inputType, platforms, generate])
+  }, [inputText, inputType, outputFormats, platforms, cascade, generate, showBlogClarify, hasBlog, blogClarifyData, perplexityHashtags.value, instagramFormat, fireVideoGeneration])
 
   const handleMediaWizardComplete = useCallback((data: { mediaType: 'video' | 'image'; aiPlatform: string; instagramFormat?: string }) => {
     setShowMediaWizard(false)
@@ -524,7 +524,7 @@ export function CommandCenter() {
                     const derived = deriveTitleAndSlug(content)
                     if (!derived.ok) throw new Error(derived.error)
                     const { title, slug, body } = derived.post
-                    const excerpt = body.replace(/[#*_`>\[\]()!]/g, '').replace(/\n+/g, ' ').slice(0, 200).trim()
+                    const excerpt = body.replace(/[#*_`>[\]()!]/g, '').replace(/\n+/g, ' ').slice(0, 200).trim()
 
                     // Auto-detect tags from content
                     const tagPatterns = [/AI/i, /Claude/i, /GPT/i, /automation/i, /TikTok/i, /Instagram/i, /social media/i, /React/i, /Supabase/i, /n8n/i]

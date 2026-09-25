@@ -26,7 +26,7 @@ export function useSiteSetting(key: string, defaultValue = true) {
         setLoading(false)
       })
     return () => { cancelled = true }
-  }, [key])
+  }, [key, defaultValue])
 
   const update = useCallback(async (newValue: boolean) => {
     setValue(newValue)

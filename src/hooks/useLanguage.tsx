@@ -1,14 +1,14 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext } from 'react'
 
-type Lang = 'en' | 'es'
+export type Lang = 'en' | 'es'
 
-interface LanguageContextValue {
+export interface LanguageContextValue {
   lang: Lang
   setLang: (lang: Lang) => void
   t: (key: string) => string
 }
 
-const translations: Record<string, Record<Lang, string>> = {
+export const translations: Record<string, Record<Lang, string>> = {
   // === CommandCenter ===
   'cc.header': { en: '// command center', es: '// centro de comando' },
   'cc.title': { en: 'Content Studio', es: 'Estudio de Contenido' },
@@ -175,36 +175,12 @@ const translations: Record<string, Record<Lang, string>> = {
   },
 }
 
-const LanguageContext = createContext<LanguageContextValue>({
+// The provider lives in LanguageProvider.tsx so this module exports no components (fast refresh)
+export const LanguageContext = createContext<LanguageContextValue>({
   lang: 'en',
   setLang: () => {},
   t: (key: string) => key,
 })
-
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => {
-    try {
-      return (localStorage.getItem('cc_lang') as Lang) || 'en'
-    } catch {
-      return 'en'
-    }
-  })
-
-  const setLang = useCallback((newLang: Lang) => {
-    setLangState(newLang)
-    try { localStorage.setItem('cc_lang', newLang) } catch {}
-  }, [])
-
-  const t = useCallback((key: string): string => {
-    return translations[key]?.[lang] || translations[key]?.en || key
-  }, [lang])
-
-  return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
-      {children}
-    </LanguageContext.Provider>
-  )
-}
 
 export function useLanguage() {
   return useContext(LanguageContext)

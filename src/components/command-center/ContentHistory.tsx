@@ -19,21 +19,20 @@ export function ContentHistory() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
+    const loadHistory = async () => {
+      const { data } = await supabase
+        .from('content_generations')
+        .select('*')
+        // Quota placeholders (reserve_generation) are not history entries.
+        .neq('output_format', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      setGenerations(data || [])
+      setLoading(false)
+    }
     loadHistory()
   }, [])
-
-  const loadHistory = async () => {
-    const { data } = await supabase
-      .from('content_generations')
-      .select('*')
-      // Quota placeholders (reserve_generation) are not history entries.
-      .neq('output_format', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(50)
-
-    setGenerations(data || [])
-    setLoading(false)
-  }
 
   const handleCopySelected = async () => {
     if (selected.size === 0) return

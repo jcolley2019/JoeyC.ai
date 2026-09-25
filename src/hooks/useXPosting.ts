@@ -21,7 +21,7 @@ export function parseThreadToTweets(content: string): string[] {
   const threadPart = content.split(/\*{0,2}📌\s*QUOTE TWEET\*{0,2}/i)[0]
 
   // Match numbered tweets: **1/** or 1/ or **1.** patterns
-  const tweetBlocks = threadPart.split(/(?:^|\n)\s*\*{0,2}(\d+)[\/.)]\*{0,2}\s*/gm)
+  const tweetBlocks = threadPart.split(/(?:^|\n)\s*\*{0,2}(\d+)[/.)]\*{0,2}\s*/gm)
 
   // The split produces: [preamble, "1", tweet1, "2", tweet2, ...]
   // Skip index 0 (preamble), then pairs of (number, content)
@@ -47,7 +47,7 @@ export function parseThreadToTweets(content: string): string[] {
  */
 export function isThreadContent(content: string): boolean {
   // Check for the numbered tweet pattern
-  return /\*{0,2}[12][\/.)]\*{0,2}\s/.test(content)
+  return /\*{0,2}[12][/.)]\*{0,2}\s/.test(content)
 }
 
 /**

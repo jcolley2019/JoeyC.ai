@@ -140,13 +140,19 @@ export function BlogPostPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadedSlug, setLoadedSlug] = useState(slug)
+
+  // Navigating to another post resets the view during render; the effect only fetches
+  if (slug !== loadedSlug) {
+    setLoadedSlug(slug)
+    setLoading(true)
+    setNotFound(false)
+    setLoadError(null)
+  }
 
   useEffect(() => {
     if (!slug) return
     let cancelled = false
-    setLoading(true)
-    setNotFound(false)
-    setLoadError(null)
     supabase
       .from('blog_posts')
       .select('*')

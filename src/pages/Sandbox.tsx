@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { MouseGlow } from '../components/ui/MouseGlow'
 
@@ -9,15 +9,15 @@ import { MouseGlow } from '../components/ui/MouseGlow'
  */
 
 function Particles() {
-  const particles = useMemo(() =>
+  // Random positions are drawn once per mount (useState initialiser), never during a re-render
+  const [particles] = useState(() =>
     Array.from({ length: 60 }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
       delay: Math.random() * 15,
       duration: 12 + Math.random() * 18,
       size: 3 + Math.random() * 1,
-    })),
-    []
+    }))
   )
 
   return (

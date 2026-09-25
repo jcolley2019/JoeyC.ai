@@ -47,24 +47,24 @@ export function MediaPromptWizard({ open, platforms, onComplete, onClose }: Medi
   const needsInstagramStep = platforms.includes('instagram')
   const totalSteps = needsInstagramStep ? 3 : 2
 
-  // Animate in/out
-  useEffect(() => {
-    if (open) {
-      requestAnimationFrame(() => setVisible(true))
-    } else {
-      setVisible(false)
-    }
-  }, [open])
-
-  // Reset state when opened
-  useEffect(() => {
+  // Reset state when opened, hide when closed (during render, not in an effect)
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
     if (open) {
       setStep(0)
       setMediaType(null)
       setAiPlatform(null)
       setOtherPlatform('')
       setInstagramFormat(null)
+    } else {
+      setVisible(false)
     }
+  }
+
+  // Animate in on the frame after opening
+  useEffect(() => {
+    if (open) requestAnimationFrame(() => setVisible(true))
   }, [open])
 
   // ESC to close

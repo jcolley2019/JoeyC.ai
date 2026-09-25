@@ -149,7 +149,7 @@ export function OnboardingWizard({ open, onComplete, onSkip, onThemeChange }: On
 
   const handleThemeSelect = (theme: 'dark' | 'luxe') => {
     setThemeChoice(theme)
-    try { localStorage.setItem('cc-theme', theme === 'luxe' ? 'luxe' : 'dark') } catch {}
+    try { localStorage.setItem('cc-theme', theme === 'luxe' ? 'luxe' : 'dark') } catch { /* storage unavailable: preference is not persisted */ }
     onThemeChange?.(theme)
   }
 

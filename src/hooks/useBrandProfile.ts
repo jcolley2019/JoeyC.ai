@@ -45,10 +45,10 @@ export function useBrandProfile() {
           setFetched({ uid, profile: cached })
         } else if (data) {
           setFetched({ uid, profile: data as BrandProfile })
-          try { localStorage.setItem(CACHE_PREFIX + uid, JSON.stringify(data)) } catch {}
+          try { localStorage.setItem(CACHE_PREFIX + uid, JSON.stringify(data)) } catch { /* storage unavailable: cache is best-effort */ }
         } else {
           setFetched({ uid, profile: null })
-          try { localStorage.removeItem(CACHE_PREFIX + uid) } catch {}
+          try { localStorage.removeItem(CACHE_PREFIX + uid) } catch { /* storage unavailable: cache is best-effort */ }
         }
       })
 
@@ -89,7 +89,7 @@ export function useBrandProfile() {
 
     if (data) {
       setFetched({ uid: userId, profile: data as BrandProfile })
-      try { localStorage.setItem(CACHE_PREFIX + userId, JSON.stringify(data)) } catch {}
+      try { localStorage.setItem(CACHE_PREFIX + userId, JSON.stringify(data)) } catch { /* storage unavailable: cache is best-effort */ }
     }
   }, [userId])
 

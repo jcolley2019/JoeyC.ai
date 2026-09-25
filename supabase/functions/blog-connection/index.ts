@@ -200,7 +200,7 @@ function markdownToHtml(md: string): string {
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/^\> (.+)$/gm, "<blockquote>$1</blockquote>")
+    .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
     .replace(/^- (.+)$/gm, "<li>$1</li>")
     .replace(/\n{2,}/g, "</p><p>")
     .replace(/^(.+)$/gm, (line) => {

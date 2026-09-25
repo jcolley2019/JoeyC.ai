@@ -44,11 +44,17 @@ export function BlogList() {
     return data || []
   }, [])
 
-  // Initial load + reset on tag change
-  useEffect(() => {
+  // Switching tags clears the list in the click handler; the effect only fetches
+  const selectTag = (tag: string | null) => {
+    if (tag === activeTag) return
+    setActiveTag(tag)
     setLoading(true)
     setPosts([])
     setHasMore(true)
+  }
+
+  // Initial load + reload on tag change
+  useEffect(() => {
     fetchPosts(activeTag, 0).then(data => {
       setPosts(data)
       setHasMore(data.length === PAGE_SIZE)
@@ -123,7 +129,7 @@ export function BlogList() {
         <div className="max-w-5xl mx-auto px-6 pt-8">
           <div className="flex flex-wrap gap-2 min-h-[2.125rem]">
             <button
-              onClick={() => setActiveTag(null)}
+              onClick={() => selectTag(null)}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
                 activeTag === null
                   ? 'bg-primary text-bg border border-primary'
@@ -135,7 +141,7 @@ export function BlogList() {
             {allTags.map(tag => (
               <button
                 key={tag}
-                onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                onClick={() => selectTag(activeTag === tag ? null : tag)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
                   activeTag === tag
                     ? 'bg-primary text-bg border border-primary'
@@ -178,7 +184,7 @@ export function BlogList() {
             </h2>
             <p className="text-text-secondary">
               {activeTag ? (
-                <button onClick={() => setActiveTag(null)} className="text-primary hover:underline">
+                <button onClick={() => selectTag(null)} className="text-primary hover:underline">
                   Clear filter
                 </button>
               ) : 'First post coming soon. Stay tuned.'}

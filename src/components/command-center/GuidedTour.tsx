@@ -76,10 +76,12 @@ export function GuidedTour({ active, onClose }: GuidedTourProps) {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [currentStep])
 
-  useEffect(() => {
-    if (!active) return
-    setStep(0)
-  }, [active])
+  // Restart from the first step each time the tour is activated (reset during render, not in an effect)
+  const [wasActive, setWasActive] = useState(active)
+  if (active !== wasActive) {
+    setWasActive(active)
+    if (active) setStep(0)
+  }
 
   useEffect(() => {
     if (!active) return

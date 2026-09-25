@@ -126,7 +126,7 @@ const ProjectCard = forwardRef<HTMLDivElement, { project: Project }>(
         }
         vid.currentTime = startTime
       }
-    }, [project.video])
+    }, [project.video, startTime])
 
     return (
       <div
@@ -506,7 +506,7 @@ export function Portfolio() {
           x: (i: number) => mCardExitX[i],
           opacity: 0,
           scale: 0.6,
-          rotation: (_i: number) => gsap.utils.random(-5, 5),
+          rotation: () => gsap.utils.random(-5, 5),
           duration: 0.08,
           stagger: 0.008,
           ease: 'power3.in',

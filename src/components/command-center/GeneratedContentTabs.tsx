@@ -188,19 +188,10 @@ const turndownService = new TurndownService({
   codeBlockStyle: 'fenced',
 })
 
-function BlogView({ content, editing, onSave }: { content: string; editing: boolean; onSave: (markdown: string) => void }) {
+// Edits are read back by the parent through getBlogViewMarkdown(), not through a callback
+function BlogView({ content, editing }: { content: string; editing: boolean }) {
   const html = useMemo(() => marked.parse(content, { async: false }) as string, [content])
   const editorRef = useRef<HTMLDivElement>(null)
-
-  const handleSave = useCallback(() => {
-    if (!editorRef.current) return
-    const md = turndownService.turndown(editorRef.current.innerHTML)
-    onSave(md)
-  }, [onSave])
-
-  // Expose save handler via ref callback
-  const saveRef = useRef(handleSave)
-  saveRef.current = handleSave
 
   return (
     <div
@@ -279,13 +270,13 @@ function SocialBody({ text }: { text: string }) {
         const lines = block.split('\n').filter(Boolean)
 
         // Check if this block is a numbered list (lines start with 1., 2., etc.)
-        const isNumberedList = lines.length > 1 && lines.every(l => /^\d+[\.\)]\s/.test(l))
+        const isNumberedList = lines.length > 1 && lines.every(l => /^\d+[.)]\s/.test(l))
         if (isNumberedList) {
           return (
             <ol key={bi} className="list-decimal list-inside space-y-1.5 mb-3 last:mb-0">
               {lines.map((line, li) => (
                 <li key={li} className="text-sm text-text-primary leading-relaxed">
-                  {line.replace(/^\d+[\.\)]\s*/, '')}
+                  {line.replace(/^\d+[.)]\s*/, '')}
                 </li>
               ))}
             </ol>
@@ -293,13 +284,13 @@ function SocialBody({ text }: { text: string }) {
         }
 
         // Check if this block is a bullet list (lines start with • or - )
-        const isBulletList = lines.length > 1 && lines.every(l => /^[•\-]\s/.test(l))
+        const isBulletList = lines.length > 1 && lines.every(l => /^[•-]\s/.test(l))
         if (isBulletList) {
           return (
             <ul key={bi} className="list-disc list-inside space-y-1.5 mb-3 last:mb-0">
               {lines.map((line, li) => (
                 <li key={li} className="text-sm text-text-primary leading-relaxed">
-                  {line.replace(/^[•\-]\s*/, '')}
+                  {line.replace(/^[•-]\s*/, '')}
                 </li>
               ))}
             </ul>
@@ -368,7 +359,7 @@ function SocialView({ content }: { content: string }) {
 function ThreadView({ content }: { content: string }) {
   // Parse tweets: split on --- separators, numbered prefixes (1/, 2.), or double newlines before numbers
   const tweets = content
-    .split(/\n*---\n*|\n\n(?=\*?\*?\d+[\.\)\/])/)
+    .split(/\n*---\n*|\n\n(?=\*?\*?\d+[.)/])/)
     .map(t => t.trim())
     .filter(Boolean)
     // Clean each tweet: strip markdown symbols, number prefixes, header markers
@@ -377,7 +368,7 @@ function ThreadView({ content }: { content: string }) {
         .replace(/^#+\s*/gm, '')              // header markers
         .replace(/\*\*(.+?)\*\*/g, '$1')      // bold **text**
         .replace(/\*(.+?)\*/g, '$1')          // italic *text*
-        .replace(/^\*?\*?\d+[\.\)\/]\*?\*?\s*/, '') // number prefix like "1/" or "**2.**"
+        .replace(/^\*?\*?\d+[.)/]\*?\*?\s*/, '') // number prefix like "1/" or "**2.**"
         .trim()
     })
     .filter(Boolean)
@@ -742,7 +733,6 @@ ${brandProfile?.display_name ? `<div class="author-bio"><strong>About the Author
                 <BlogView
                   content={currentSection.content}
                   editing={editing}
-                  onSave={() => {}}
                 />
               </div>
             )}

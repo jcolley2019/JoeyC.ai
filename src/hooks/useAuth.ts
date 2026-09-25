@@ -1,4 +1,4 @@
-import { useAuthContext } from '../features/auth/AuthProvider'
+import { useAuthContext } from '../features/auth/authContext'
 
 /**
  * Session, role and login/logout from the single AuthProvider (A1). Every consumer shares

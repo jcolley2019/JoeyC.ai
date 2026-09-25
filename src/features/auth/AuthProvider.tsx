@@ -1,21 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
-import type { UserRole } from '../../types'
-
-type Role = UserRole['role'] | null
-
-interface AuthContextValue {
-  session: Session | null
-  /** True until the initial session has been read (and, when signed in, the role has been fetched). */
-  loading: boolean
-  role: Role
-  isMasterAdmin: boolean
-  login: (email: string, password: string) => Promise<void>
-  logout: () => Promise<void>
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
+import { AuthContext, type AuthContextValue, type Role } from './authContext'
 
 /**
  * The single auth subscription for the whole app (A1 / L4-12).
@@ -89,10 +75,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }), [session, sessionReady, roleLoaded, role])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuthContext(): AuthContextValue {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>')
-  return ctx
 }

@@ -12,7 +12,6 @@ export function Content() {
   const socialGridRef = useRef<HTMLDivElement>(null)
   const { onMouseEnter } = useSocialBurst()
   const [tappedPlatform, setTappedPlatform] = useState<string | null>(null)
-  const tappedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Per-card primed state and timers
   const primedRef = useRef<Record<string, boolean>>({})
@@ -44,7 +43,7 @@ export function Content() {
     const clientY = isTouchEvent
       ? (e.nativeEvent as TouchEvent).changedTouches?.[0]?.clientY ?? 0
       : (e as React.MouseEvent).clientY
-    const fakeEvent = { currentTarget: e.currentTarget, clientX, clientY } as any
+    const fakeEvent = { currentTarget: e.currentTarget, clientX, clientY } as unknown as React.MouseEvent<HTMLElement>
     onMouseEnter(fakeEvent, social.platform)
 
     if (primedRef.current[social.platform]) {
@@ -53,7 +52,6 @@ export function Content() {
       setTappedPlatform(null)
       window.open(social.url, '_blank', 'noopener,noreferrer')
     } else {
-      if (tappedTimeoutRef.current) clearTimeout(tappedTimeoutRef.current)
       Object.keys(primedRef.current).forEach(k => {
         if (primedRef.current[k]) {
           clearTimeout(timerRef.current[k])
@@ -72,9 +70,10 @@ export function Content() {
   }
 
   useEffect(() => {
+    // timerRef.current is one object mutated in place, so capturing it here sees every timer
+    const timers = timerRef.current
     return () => {
-      if (tappedTimeoutRef.current) clearTimeout(tappedTimeoutRef.current)
-      Object.values(timerRef.current).forEach(t => clearTimeout(t))
+      Object.values(timers).forEach(t => clearTimeout(t))
     }
   }, [])
 

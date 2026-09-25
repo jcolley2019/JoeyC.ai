@@ -3,13 +3,13 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App'
-import { LanguageProvider } from './hooks/useLanguage'
+import { LanguageProvider } from './hooks/LanguageProvider'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ScrollToTop } from './components/ScrollToTop'
 import { NotFound } from './pages/NotFound'
-import { Seo } from './components/Seo'
+import { NoIndex, PageLoading as Loading } from './components/RouteParts'
 
 const BlogList = lazy(() => import('./pages/BlogList').then(m => ({ default: m.BlogList })))
 const BlogPostPage = lazy(() => import('./pages/BlogPost').then(m => ({ default: m.BlogPostPage })))
@@ -21,17 +21,6 @@ const CommandCenter = lazy(() =>
   import('./components/command-center/CommandCenter').then(m => ({ default: m.CommandCenter }))
 )
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })))
-
-/** Private and utility routes: never indexed; each still gets a real title. */
-const NoIndex = ({ title }: { title: string }) => (
-  <Seo title={`${title} — JoeyC.ai`} description="JoeyC.ai" noindex />
-)
-
-const Loading = () => (
-  <div className="min-h-screen bg-bg flex items-center justify-center">
-    <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
-  </div>
-)
 
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason)
