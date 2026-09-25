@@ -38,6 +38,7 @@ export function useXAccount() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- false positive: checkStatus awaits getSession() before any setState
     checkStatus()
   }, [checkStatus])
 

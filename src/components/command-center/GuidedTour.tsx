@@ -114,7 +114,7 @@ export function GuidedTour({ active, onClose }: GuidedTourProps) {
 
   // Calculate popover position
   const gap = 12
-  let popoverStyle: React.CSSProperties = {}
+  let popoverStyle: React.CSSProperties
   const popoverPosition = currentStep.position
 
   if (popoverPosition === 'bottom') {

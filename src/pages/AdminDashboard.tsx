@@ -134,6 +134,7 @@ export function AdminDashboard() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- false positive: fetchData awaits getSession() before any setState
     if (userId) fetchData()
   }, [userId, fetchData])
 

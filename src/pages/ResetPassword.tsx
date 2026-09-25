@@ -16,18 +16,15 @@ const MIN_LENGTH = 8
  */
 export function ResetPassword() {
   const navigate = useNavigate()
-  const [status, setStatus] = useState<'checking' | 'ready' | 'invalid'>('checking')
+  // Supabase bounces expired/consumed links back with an error in the URL: invalid from the first render.
+  const [status, setStatus] = useState<'checking' | 'ready' | 'invalid'>(initialAuthParams.error ? 'invalid' : 'checking')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    // Supabase bounces expired/consumed links back with an error in the URL.
-    if (initialAuthParams.error) {
-      setStatus('invalid')
-      return
-    }
+    if (initialAuthParams.error) return
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') setStatus('ready')

@@ -41,6 +41,7 @@ export function useBlogConnection() {
     }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- false positive: checkStatus awaits the function call before any setState
   useEffect(() => { checkStatus() }, [checkStatus])
 
   const connect = useCallback(async (params: ConnectParams): Promise<boolean> => {

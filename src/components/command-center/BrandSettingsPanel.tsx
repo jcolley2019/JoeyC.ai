@@ -42,29 +42,33 @@ export function BrandSettingsPanel({ open, onClose, profile, onSave, onUploadLog
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Populate form from profile
-  useEffect(() => {
-    if (!profile) return
-    setDisplayName(profile.display_name ?? '')
-    setTitleField(profile.title ?? '')
-    setBio(profile.bio ?? '')
-    setWebsiteUrl(profile.website_url ?? '')
-    setTiktok(profile.tiktok_handle ?? '')
-    setInstagram(profile.instagram_handle ?? '')
-    setPinterest(profile.pinterest_handle ?? '')
-    setYoutube(profile.youtube_handle ?? '')
-    setLinkedin(profile.linkedin_handle ?? '')
-    setStylePreset(profile.style_preset)
-    setAccentColor(profile.accent_color)
-    setHasBrandingKit(profile.has_branding_kit)
-    setBrandKitNotes(profile.brand_kit_notes ?? '')
-    setLogoUrl(profile.logo_url)
-  }, [profile, open])
+  // Populate form from profile whenever the profile changes or the panel opens/closes
+  // (during render, not in an effect); null first so the initial render populates too
+  const [populatedFor, setPopulatedFor] = useState<{ profile: typeof profile; open: boolean } | null>(null)
+  if (populatedFor === null || populatedFor.profile !== profile || populatedFor.open !== open) {
+    setPopulatedFor({ profile, open })
+    if (profile) {
+      setDisplayName(profile.display_name ?? '')
+      setTitleField(profile.title ?? '')
+      setBio(profile.bio ?? '')
+      setWebsiteUrl(profile.website_url ?? '')
+      setTiktok(profile.tiktok_handle ?? '')
+      setInstagram(profile.instagram_handle ?? '')
+      setPinterest(profile.pinterest_handle ?? '')
+      setYoutube(profile.youtube_handle ?? '')
+      setLinkedin(profile.linkedin_handle ?? '')
+      setStylePreset(profile.style_preset)
+      setAccentColor(profile.accent_color)
+      setHasBrandingKit(profile.has_branding_kit)
+      setBrandKitNotes(profile.brand_kit_notes ?? '')
+      setLogoUrl(profile.logo_url)
+    }
+    if (populatedFor !== null && populatedFor.open && !open) setVisible(false)
+  }
 
-  // Animate
+  // Animate in on the frame after opening
   useEffect(() => {
     if (open) requestAnimationFrame(() => setVisible(true))
-    else setVisible(false)
   }, [open])
 
   const handleSave = useCallback(async () => {

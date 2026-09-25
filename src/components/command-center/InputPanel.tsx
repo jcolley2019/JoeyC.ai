@@ -223,8 +223,10 @@ export function InputPanel({ inputText, onInputTextChange, onInputTypeChange, ex
                         key={i}
                         className="w-[3px] bg-red-400 rounded-full animate-pulse"
                         style={{
+                          // eslint-disable-next-line react-hooks/purity -- bars re-randomise on each 1 s recording tick by design (live waveform look)
                           height: `${8 + Math.random() * 10}px`,
                           animationDelay: `${i * 0.15}s`,
+                          // eslint-disable-next-line react-hooks/purity -- same: fresh pulse speed per tick
                           animationDuration: `${0.4 + Math.random() * 0.3}s`,
                         }}
                       />

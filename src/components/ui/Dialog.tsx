@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react'
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]'
@@ -45,7 +45,10 @@ export function Dialog({
   const localRef = useRef<HTMLDivElement>(null)
   const containerRef = ref ?? localRef
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  // Keep the latest onClose for the Escape handler; synced after commit, before any keypress can read it
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     const container = containerRef.current

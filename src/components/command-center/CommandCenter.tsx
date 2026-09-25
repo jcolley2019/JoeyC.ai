@@ -108,7 +108,10 @@ export function CommandCenter() {
   const [platforms, setPlatforms] = useState<Platform[]>(['tiktok'])
 
   // When the YT/LI toggle changes, swap any selected platform that's no longer enabled
-  useEffect(() => {
+  // (during render, not in an effect)
+  const [platformsToggle, setPlatformsToggle] = useState(extraIsYoutube)
+  if (extraIsYoutube !== platformsToggle) {
+    setPlatformsToggle(extraIsYoutube)
     setPlatforms(prev => {
       const swapFrom = extraIsYoutube ? 'linkedin' : 'youtube'
       const swapTo = extraIsYoutube ? 'youtube' : 'linkedin'
@@ -117,7 +120,7 @@ export function CommandCenter() {
       }
       return prev
     })
-  }, [extraIsYoutube])
+  }
   const [cascade] = useState(true)
   const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'success' | 'error'>('idle')
   const [publishError, setPublishError] = useState<string | null>(null)
@@ -139,12 +142,12 @@ export function CommandCenter() {
   // Generated content for tabbed view
   const [generatedContent, setGeneratedContent] = useState<string | null>(null)
 
-  // Sync result to generated content
-  useEffect(() => {
-    if (result !== null) {
-      setGeneratedContent(result)
-    }
-  }, [result])
+  // Copy each new generation result into the editable content (during render, not in an effect)
+  const [syncedResult, setSyncedResult] = useState<typeof result>(null)
+  if (result !== syncedResult) {
+    setSyncedResult(result)
+    if (result !== null) setGeneratedContent(result)
+  }
 
   // Close dropdown on outside click
   useEffect(() => {
