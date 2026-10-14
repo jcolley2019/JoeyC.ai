@@ -4,6 +4,9 @@ import App from './App'
 import { LanguageProvider } from './hooks/LanguageProvider'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { NotFound } from './pages/NotFound'
+// Not lazy: <Contact /> is already in the entry chunk via App, and a lazy page would swap the
+// prerendered /contact content for the loading spinner before rendering.
+import { ContactPage } from './pages/ContactPage'
 import { NoIndex, PageLoading as Loading } from './components/RouteParts'
 
 const BlogList = lazy(() => import('./pages/BlogList').then(m => ({ default: m.BlogList })))
@@ -28,6 +31,7 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<><NoIndex title="Reset password" /><ResetPassword /></>} />
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/sandbox" element={<><NoIndex title="Sandbox" /><Sandbox /></>} />
         <Route
           path="/command-center"

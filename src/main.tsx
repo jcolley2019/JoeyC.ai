@@ -11,7 +11,7 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason)
 })
 
-// The blog prerender (api/blog.ts) injects head tags marked data-prerender; drop them before
+// The prerender (api/blog.ts, api/contact.ts) injects head tags marked data-prerender; drop them before
 // React renders its own so every route ends up with exactly one of each.
 document.querySelectorAll('[data-prerender]').forEach(el => el.remove())
 

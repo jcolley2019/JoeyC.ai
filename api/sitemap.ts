@@ -25,6 +25,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
   const entries: Array<{ loc: string; lastmod: string | null }> = [
     { loc: SITE_URL, lastmod: newest },
     { loc: `${SITE_URL}/blog`, lastmod: newest },
+    { loc: `${SITE_URL}/contact`, lastmod: null },
     ...posts.map(p => ({ loc: `${SITE_URL}/blog/${escapeXml(p.slug)}`, lastmod: lastmodOf(p) })),
   ]
 

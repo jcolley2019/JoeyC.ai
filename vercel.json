@@ -57,12 +57,19 @@
       "destination": "/api/blog?slug=:slug"
     },
     {
+      "source": "/contact",
+      "destination": "/api/contact"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
   "functions": {
     "api/blog.ts": {
+      "includeFiles": "dist/index.html"
+    },
+    "api/contact.ts": {
       "includeFiles": "dist/index.html"
     }
   }

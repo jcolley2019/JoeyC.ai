@@ -1,84 +1,22 @@
 /**
  * Prerendered blog: /blog (list) and /blog/:slug (post), rewritten here by vercel.json.
- * Serves dist/index.html with head tags (marked data-prerender) and a plain-HTML body so
- * crawlers and link unfurlers see real content; the SPA replaces #root on mount and strips
- * the data-prerender tags before rendering its own <Seo>.
+ * Shell, head tags and composition live in api/_prerender.ts (shared with api/contact.ts).
  */
-import fs from 'node:fs'
-import path from 'node:path'
 import {
   SITE_URL, SITE_NAME, AUTHOR,
   getSupabase, renderMarkdown, escapeHtml, firstParam,
   type VercelRequest, type VercelResponse, type PostRow,
 } from './_shared.js'
+import { CACHE_OK, readShell, headTags, compose } from './_prerender.js'
 import { stripLeadingH1, readingTimeMinutes } from '../src/lib/markdown.js'
+import { BLOG_CTA } from '../src/lib/contactPage.js'
 
 const BLOG_DESCRIPTION = 'AI experiments, build logs, and lessons learned — by Joey Colley.'
 const BLOG_OG_IMAGE = `${SITE_URL}/photos/joey-og.jpg`
-const CACHE_OK = 'public, s-maxage=300, stale-while-revalidate=86400'
 const CACHE_404 = 'public, s-maxage=60, stale-while-revalidate=600'
 
-let shellCache: string | null = null
-function readShell(): string {
-  if (shellCache) return shellCache
-  try {
-    shellCache = fs.readFileSync(path.join(process.cwd(), 'dist', 'index.html'), 'utf8')
-    return shellCache
-  } catch {
-    // fall through to the bare shell
-  }
-  console.error('api/blog: dist/index.html not found; using a bare shell')
-  shellCache = '<!doctype html><html lang="en"><head><meta charset="UTF-8" /></head><body><div id="root"></div></body></html>'
-  return shellCache
-}
-
-interface HeadInput {
-  title: string
-  description: string
-  canonical?: string
-  ogType: 'website' | 'article'
-  ogImage: string
-  twitterCard: 'summary' | 'summary_large_image'
-  noindex?: boolean
-  article?: { publishedTime?: string | null; modifiedTime?: string | null; tags?: string[] }
-  jsonLd?: Array<Record<string, unknown>>
-}
-
-function headTags(h: HeadInput): string {
-  const t: string[] = []
-  const meta = (attrs: string) => t.push(`<meta ${attrs} data-prerender />`)
-  t.push(`<title data-prerender>${escapeHtml(h.title)}</title>`)
-  meta(`name="description" content="${escapeHtml(h.description)}"`)
-  if (h.noindex) meta(`name="robots" content="noindex, nofollow"`)
-  if (h.canonical) t.push(`<link rel="canonical" href="${escapeHtml(h.canonical)}" data-prerender />`)
-  meta(`property="og:type" content="${h.ogType}"`)
-  meta(`property="og:title" content="${escapeHtml(h.title)}"`)
-  meta(`property="og:description" content="${escapeHtml(h.description)}"`)
-  if (h.canonical) meta(`property="og:url" content="${escapeHtml(h.canonical)}"`)
-  meta(`property="og:image" content="${escapeHtml(h.ogImage)}"`)
-  meta(`property="og:site_name" content="${SITE_NAME}"`)
-  if (h.article) {
-    meta(`property="article:author" content="${AUTHOR}"`)
-    if (h.article.publishedTime) meta(`property="article:published_time" content="${escapeHtml(h.article.publishedTime)}"`)
-    if (h.article.modifiedTime) meta(`property="article:modified_time" content="${escapeHtml(h.article.modifiedTime)}"`)
-    for (const tag of h.article.tags ?? []) meta(`property="article:tag" content="${escapeHtml(tag)}"`)
-  }
-  meta(`name="twitter:card" content="${h.twitterCard}"`)
-  meta(`name="twitter:title" content="${escapeHtml(h.title)}"`)
-  meta(`name="twitter:description" content="${escapeHtml(h.description)}"`)
-  meta(`name="twitter:image" content="${escapeHtml(h.ogImage)}"`)
-  for (const schema of h.jsonLd ?? []) {
-    // "<" is escaped inside JSON so a "</script>" in content cannot break out of the block.
-    t.push(`<script type="application/ld+json" data-prerender>${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>`)
-  }
-  return t.join('\n    ')
-}
-
-function compose(shell: string, head: string, body: string): string {
-  return shell
-    .replace('</head>', `    ${head}\n  </head>`)
-    .replace('<div id="root"></div>', `<div id="root">${body}</div>`)
-}
+// Same markup and classes as the CTA in src/pages/BlogPost.tsx, so the SPA swap is invisible.
+const WORK_WITH_ME_CTA = `<aside class="mt-12 rounded-xl border border-border bg-bg-card p-6 md:p-8"><h2 class="text-lg font-bold text-text-primary mb-2">${escapeHtml(BLOG_CTA.heading)}</h2><p class="text-text-secondary text-base leading-relaxed mb-5">${escapeHtml(BLOG_CTA.text)}</p><a href="/contact" class="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-bg hover:bg-primary-hover transition-colors">${escapeHtml(BLOG_CTA.link)}</a></aside>`
 
 function formatDate(iso: string | null): string {
   if (!iso) return ''
@@ -197,7 +135,7 @@ async function renderPost(res: VercelResponse, shell: string, slug: string) {
   const cover = post.cover_image
     ? `<div class="max-w-4xl mx-auto px-6 pt-10"><img src="${escapeHtml(post.cover_image)}" alt="${escapeHtml(post.title)}" class="w-full rounded-xl border border-border object-cover max-h-[28rem]" /></div>`
     : ''
-  const body = `<div class="min-h-screen bg-bg noise-overlay"><main><article><div class="max-w-4xl mx-auto px-6 pt-28 pb-10"><a href="/blog" class="text-text-secondary text-sm">All posts</a><div class="mt-8 mb-6">${tags}</div><h1 class="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-5">${escapeHtml(post.title)}</h1><div class="flex items-center gap-3"><img src="/photos/joey-headshot1.webp" alt="${AUTHOR}" class="w-10 h-10 rounded-full object-cover" /><div><p class="text-sm text-text-primary font-medium">${AUTHOR}</p><p class="text-xs font-mono text-text-secondary"><time datetime="${escapeHtml(post.published_at ?? '')}">${escapeHtml(formatDate(post.published_at))}</time> · ${minutes} min read</p></div></div></div>${cover}<div class="max-w-3xl mx-auto px-6 py-12 prose-prerender">${articleHtml}</div></article></main></div>`
+  const body = `<div class="min-h-screen bg-bg noise-overlay"><main><article><div class="max-w-4xl mx-auto px-6 pt-28 pb-10"><a href="/blog" class="text-text-secondary text-sm">All posts</a><div class="mt-8 mb-6">${tags}</div><h1 class="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-5">${escapeHtml(post.title)}</h1><div class="flex items-center gap-3"><img src="/photos/joey-headshot1.webp" alt="${AUTHOR}" class="w-10 h-10 rounded-full object-cover" /><div><p class="text-sm text-text-primary font-medium">${AUTHOR}</p><p class="text-xs font-mono text-text-secondary"><time datetime="${escapeHtml(post.published_at ?? '')}">${escapeHtml(formatDate(post.published_at))}</time> · ${minutes} min read</p></div></div></div>${cover}<div class="max-w-3xl mx-auto px-6 py-12"><div class="prose-prerender">${articleHtml}</div>${WORK_WITH_ME_CTA}</div></article></main></div>`
   send(res, 200, compose(shell, head, body))
 }
 

@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom'
 import Markdown from 'react-markdown'
 import 'highlight.js/styles/github-dark-dimmed.min.css'
 import { remarkPlugins, rehypePlugins, stripLeadingH1, readingTimeMinutes } from '../lib/markdown'
+import { BLOG_CTA } from '../lib/contactPage'
 import { supabase } from '../lib/supabase'
 import type { BlogPost as BlogPostType } from '../types'
 import type { Components } from 'react-markdown'
@@ -326,6 +327,18 @@ export function BlogPostPage() {
         >
           {articleContent}
         </Markdown>
+
+        {/* Work-with-me CTA; api/blog.ts prerenders the same block */}
+        <aside className="mt-12 rounded-xl border border-border bg-bg-card p-6 md:p-8">
+          <h2 className="text-lg font-bold text-text-primary mb-2">{BLOG_CTA.heading}</h2>
+          <p className="text-text-secondary text-base leading-relaxed mb-5">{BLOG_CTA.text}</p>
+          <Link
+            to="/contact"
+            className="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-bg hover:bg-primary-hover transition-colors"
+          >
+            {BLOG_CTA.link}
+          </Link>
+        </aside>
 
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-border/30">
